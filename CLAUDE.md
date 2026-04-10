@@ -254,7 +254,7 @@ npm run dev    # http://localhost:5177
 ```
 
 **Produccion (Dokploy):**
-- Push a `main` → Dokploy usa `Dockerfile.super-admin` (raiz del repo)
+- Push a `main` → Dokploy usa `Dockerfile` (raiz del repo)
 - Multi-stage: node build → nginx con `nginx.conf` (security headers + gzip + cache)
 - Variables de entorno se pasan como ARG en el Dockerfile
 
