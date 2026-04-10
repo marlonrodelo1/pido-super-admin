@@ -1,0 +1,41 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;0,9..40,800&display=swap');
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  height: 100%;
+  touch-action: manipulation;
+}
+
+body {
+  background: #0D0D0D;
+  margin: 0;
+  font-family: 'DM Sans', sans-serif;
+  color: #F5F5F5;
+  height: 100%;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+#root {
+  min-height: 100%;
+  min-height: 100dvh;
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+
+input, select, textarea, button {
+  font-size: 16px !important;
+}
+
+select option {
+  background: #1A1A1A;
+  color: #F5F5F5;
+  padding: 8px;
+}
