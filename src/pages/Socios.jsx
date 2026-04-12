@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { uploadImage } from '../lib/upload'
 import { ds } from '../lib/darkStyles'
-import { CheckCircle, XCircle, FileText, Eye, Save, Upload } from 'lucide-react'
+import { CheckCircle, XCircle, FileText, Eye, Save, Upload, Truck, Link2, Unlink } from 'lucide-react'
 import { toast, confirmar } from '../App'
 
 export default function Socios() {
@@ -15,6 +15,7 @@ export default function Socios() {
   const [saving, setSaving] = useState(false)
   const [solicitudes, setSolicitudes] = useState([])
   const [resenas, setResenas] = useState([])
+  const [vinculandoShipday, setVinculandoShipday] = useState(false)
   const logoRef = useRef()
 
   useEffect(() => { load() }, [])
@@ -72,6 +73,49 @@ export default function Socios() {
     if (!(await confirmar('¿Eliminar esta resena?'))) return
     await supabase.from('resenas').delete().eq('id', id)
     if (detalle) loadResenas(detalle.id)
+  }
+
+  async function vincularShipday() {
+    let email = detalle.email
+    if (!email && detalle.user_id) {
+      const { data } = await supabase.from('usuarios').select('email').eq('id', detalle.user_id).single()
+      email = data?.email
+    }
+    if (!email) { toast('Este socio no tiene email configurado', 'error'); return }
+
+    setVinculandoShipday(true)
+    try {
+      const session = (await supabase.auth.getSession()).data.session
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-shipday-carrier-id`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({ email }),
+      })
+      const data = await res.json()
+      if (data.carrier_id) {
+        await supabase.from('socios').update({ shipday_carrier_id: String(data.carrier_id) }).eq('id', detalle.id)
+        setDetalle(prev => ({ ...prev, shipday_carrier_id: String(data.carrier_id) }))
+        toast(`Vinculado a Shipday: ${data.name || data.carrier_id}`)
+        load()
+      } else {
+        toast(data.error || `No se encontro carrier en Shipday con email ${email}`, 'error')
+      }
+    } catch (err) {
+      toast('Error de conexion con Shipday', 'error')
+    }
+    setVinculandoShipday(false)
+  }
+
+  async function desvincularShipday() {
+    if (!(await confirmar('¿Desvincular este socio de Shipday?'))) return
+    await supabase.from('socios').update({ shipday_carrier_id: null }).eq('id', detalle.id)
+    setDetalle(prev => ({ ...prev, shipday_carrier_id: null }))
+    toast('Desvinculado de Shipday')
+    load()
   }
 
   const filtrados = items.filter(s => {
@@ -135,6 +179,34 @@ export default function Socios() {
               <div><span style={ds.muted}>Creado:</span> {new Date(detalle.created_at).toLocaleDateString('es-ES')}</div>
             </div>
           )}
+
+          {/* Shipday */}
+          <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <h3 style={{ fontSize: 14, fontWeight: 700, color: '#F5F5F5', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Truck size={14} /> Shipday
+              </h3>
+              {detalle.shipday_carrier_id ? (
+                <span style={{ ...ds.badge, background: 'rgba(34,197,94,0.15)', color: '#22C55E' }}>Vinculado (ID: {detalle.shipday_carrier_id})</span>
+              ) : (
+                <span style={{ ...ds.badge, background: 'rgba(239,68,68,0.15)', color: '#EF4444' }}>No vinculado</span>
+              )}
+            </div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 10 }}>
+              Email para vincular: {detalle.email || <span style={{ fontStyle: 'italic' }}>sin email — se usara el de auth</span>}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {!detalle.shipday_carrier_id ? (
+                <button onClick={vincularShipday} disabled={vinculandoShipday} style={{ ...ds.primaryBtn, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '8px 16px' }}>
+                  <Link2 size={13} /> {vinculandoShipday ? 'Buscando...' : 'Vincular Shipday'}
+                </button>
+              ) : (
+                <button onClick={desvincularShipday} style={{ ...ds.secondaryBtn, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '8px 16px', color: '#EF4444', borderColor: 'rgba(239,68,68,0.3)' }}>
+                  <Unlink size={13} /> Desvincular
+                </button>
+              )}
+            </div>
+          </div>
 
           {/* Documentación */}
           <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
