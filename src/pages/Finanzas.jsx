@@ -14,7 +14,6 @@ function StatCard({ label, value, color = '#F5F5F5' }) {
 export default function Finanzas() {
   const [tab, setTab] = useState('resumen')
   const [balancesRest, setBalancesRest] = useState([])
-  const [balancesSocio, setBalancesSocio] = useState([])
   const [movimientos, setMovimientos] = useState([])
   const [resumen, setResumen] = useState({ comisionesTotal: 0, pagadoRest: 0, pagadoSocio: 0, pendiente: 0 })
   const [facturas, setFacturas] = useState([])
@@ -22,7 +21,6 @@ export default function Finanzas() {
   useEffect(() => {
     loadResumen()
     loadBalancesRest()
-    loadBalancesSocio()
     loadMovimientos()
     loadFacturas()
   }, [])
@@ -52,12 +50,6 @@ export default function Finanzas() {
     setBalancesRest(data || [])
   }
 
-  async function loadBalancesSocio() {
-    const { data } = await supabase.from('balances_socio').select('*, socios(nombre, nombre_comercial)')
-      .order('created_at', { ascending: false }).limit(50)
-    setBalancesSocio(data || [])
-  }
-
   async function loadMovimientos() {
     const { data } = await supabase.from('movimientos_cuenta').select('*')
       .order('created_at', { ascending: false }).limit(100)
@@ -67,13 +59,11 @@ export default function Finanzas() {
   async function marcarPagado(tabla, id) {
     await supabase.from(tabla).update({ estado: 'pagado', pagado_at: new Date().toISOString() }).eq('id', id)
     loadBalancesRest()
-    loadBalancesSocio()
   }
 
   const tabs = [
     { id: 'resumen', label: 'Resumen' },
     { id: 'restaurantes', label: 'Balance Restaurantes' },
-    { id: 'socios', label: 'Balance Socios' },
     { id: 'facturas', label: 'Facturas' },
     { id: 'movimientos', label: 'Movimientos' },
   ]
@@ -129,38 +119,6 @@ export default function Finanzas() {
             </div>
           ))}
           {balancesRest.length === 0 && <div style={{ padding: 32, textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>Sin balances</div>}
-        </div>
-      )}
-
-      {tab === 'socios' && (
-        <div style={ds.table}>
-          <div style={ds.tableHeader}>
-            <span style={{ flex: 1 }}>Socio</span>
-            <span style={{ width: 90 }}>Comisiones</span>
-            <span style={{ width: 80 }}>Envios</span>
-            <span style={{ width: 80 }}>Propinas</span>
-            <span style={{ width: 90 }}>Total pagar</span>
-            <span style={{ width: 90 }}>Efectivo</span>
-            <span style={{ width: 80 }}>Estado</span>
-            <span style={{ width: 70 }}></span>
-          </div>
-          {balancesSocio.map(b => (
-            <div key={b.id} style={ds.tableRow}>
-              <span style={{ flex: 1, fontWeight: 700, fontSize: 13 }}>{b.socios?.nombre_comercial || b.socios?.nombre || '-'}</span>
-              <span style={{ width: 90, fontSize: 12 }}>{b.comisiones_tarjeta?.toFixed(2)}EUR</span>
-              <span style={{ width: 80, fontSize: 12 }}>{b.envios_tarjeta?.toFixed(2)}EUR</span>
-              <span style={{ width: 80, fontSize: 12 }}>{b.propinas_tarjeta?.toFixed(2)}EUR</span>
-              <span style={{ width: 90, fontSize: 12, fontWeight: 700, color: '#16A34A' }}>{b.total_pagar_socio?.toFixed(2)}EUR</span>
-              <span style={{ width: 90, fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{b.total_efectivo_recaudado?.toFixed(2)}EUR</span>
-              <span style={{ width: 80 }}>
-                <span style={{ ...ds.badge, background: b.estado === 'pagado' ? 'rgba(22,163,74,0.15)' : 'rgba(245,158,11,0.15)', color: b.estado === 'pagado' ? '#4ADE80' : '#FBBF24' }}>{b.estado}</span>
-              </span>
-              <span style={{ width: 70 }}>
-                {b.estado === 'pendiente' && <button onClick={() => marcarPagado('balances_socio', b.id)} style={styles.payBtn}>Pagar</button>}
-              </span>
-            </div>
-          ))}
-          {balancesSocio.length === 0 && <div style={{ padding: 32, textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>Sin balances</div>}
         </div>
       )}
 

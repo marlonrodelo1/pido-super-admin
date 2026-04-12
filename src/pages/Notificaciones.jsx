@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { ds } from '../lib/darkStyles'
-import { Send, Bell, Users, Store, Truck, CheckCircle, Clock } from 'lucide-react'
+import { Send, Bell, Users, Store, CheckCircle, Clock } from 'lucide-react'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -13,7 +13,7 @@ export default function Notificaciones() {
   const [enviando, setEnviando] = useState(false)
   const [resultado, setResultado] = useState(null)
   const [historial, setHistorial] = useState([])
-  const [stats, setStats] = useState({ clientes: 0, restaurantes: 0, socios: 0 })
+  const [stats, setStats] = useState({ clientes: 0, restaurantes: 0 })
 
   useEffect(() => { loadStats(); loadHistorial() }, [])
 
@@ -23,7 +23,6 @@ export default function Notificaciones() {
     setStats({
       clientes: data.filter(d => d.user_type === 'cliente').length,
       restaurantes: data.filter(d => d.user_type === 'restaurante').length,
-      socios: data.filter(d => d.user_type === 'socio').length,
     })
   }
 
@@ -46,18 +45,11 @@ export default function Notificaciones() {
       if (destino === 'todos') targetType = 'all'
       else if (destino === 'clientes') targetType = 'all_clientes'
       else if (destino === 'restaurantes') targetType = 'all_restaurantes'
-      else if (destino === 'socios') targetType = 'all_socios'
-
-      // Enviar push a todos los dispositivos del grupo
-      const { data: subs } = await supabase.from('push_subscriptions').select('*')
-        .eq(destino === 'todos' ? 'id' : 'user_type',
-          destino === 'todos' ? destino : destino === 'clientes' ? 'cliente' : destino === 'restaurantes' ? 'restaurante' : 'socio')
-
       // Enviar a cada suscripción individualmente
       let enviados = 0
       const subsToSend = destino === 'todos'
         ? (await supabase.from('push_subscriptions').select('*')).data || []
-        : (await supabase.from('push_subscriptions').select('*').eq('user_type', destino === 'clientes' ? 'cliente' : destino === 'restaurantes' ? 'restaurante' : 'socio')).data || []
+        : (await supabase.from('push_subscriptions').select('*').eq('user_type', destino === 'clientes' ? 'cliente' : 'restaurante')).data || []
 
       // Usar la edge function para cada usuario único
       const uniqueTargets = new Map()
@@ -104,10 +96,9 @@ export default function Notificaciones() {
   }
 
   const destinos = [
-    { id: 'todos', label: 'Todos', icon: Users, desc: `${stats.clientes + stats.restaurantes + stats.socios} dispositivos` },
+    { id: 'todos', label: 'Todos', icon: Users, desc: `${stats.clientes + stats.restaurantes} dispositivos` },
     { id: 'clientes', label: 'Clientes', icon: Users, desc: `${stats.clientes} dispositivos` },
     { id: 'restaurantes', label: 'Restaurantes', icon: Store, desc: `${stats.restaurantes} dispositivos` },
-    { id: 'socios', label: 'Socios / Riders', icon: Truck, desc: `${stats.socios} dispositivos` },
   ]
 
   return (
@@ -116,12 +107,12 @@ export default function Notificaciones() {
         <h1 style={ds.h1}>Notificaciones Push</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Bell size={16} color="rgba(255,255,255,0.4)" />
-          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>{stats.clientes + stats.restaurantes + stats.socios} suscripciones activas</span>
+          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>{stats.clientes + stats.restaurantes} suscripciones activas</span>
         </div>
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
         <div style={ds.card}>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>Clientes</div>
           <div style={{ fontSize: 24, fontWeight: 800, color: '#3B82F6' }}>{stats.clientes}</div>
@@ -129,10 +120,6 @@ export default function Notificaciones() {
         <div style={ds.card}>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>Restaurantes</div>
           <div style={{ fontSize: 24, fontWeight: 800, color: '#FF6B2C' }}>{stats.restaurantes}</div>
-        </div>
-        <div style={ds.card}>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>Socios</div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: '#22C55E' }}>{stats.socios}</div>
         </div>
       </div>
 
@@ -143,7 +130,7 @@ export default function Notificaciones() {
         {/* Destino */}
         <div style={{ marginBottom: 16 }}>
           <label style={ds.label}>Enviar a</label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
             {destinos.map(d => {
               const sel = destino === d.id
               return (

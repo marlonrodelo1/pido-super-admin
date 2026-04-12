@@ -189,18 +189,6 @@ export default function Configuracion() {
                   onChange={e => setConfigVal('comision_plataforma', e.target.value)} style={ds.formInput} />
                 <div style={styles.hint}>Se cobra al restaurante por cada pedido</div>
               </div>
-              <div>
-                <label style={ds.label}>Comisión socio - Reparto (%)</label>
-                <input type="number" min={0} max={50} value={config.comision_socio_reparto ?? '10'}
-                  onChange={e => setConfigVal('comision_socio_reparto', e.target.value)} style={ds.formInput} />
-                <div style={styles.hint}>Se cobra al socio por pedidos de delivery</div>
-              </div>
-              <div>
-                <label style={ds.label}>Comisión socio - Recogida (%)</label>
-                <input type="number" min={0} max={50} value={config.comision_socio_recogida ?? '5'}
-                  onChange={e => setConfigVal('comision_socio_recogida', e.target.value)} style={ds.formInput} />
-                <div style={styles.hint}>Se cobra al socio por pedidos de recogida</div>
-              </div>
             </div>
           </div>
 

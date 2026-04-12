@@ -84,7 +84,7 @@ export default function SoporteAdmin() {
               background: selected?.socio_id === c.socio_id ? 'rgba(255,107,44,0.12)' : 'transparent',
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 700, fontSize: 13, color: '#F5F5F5' }}>{c.socio?.nombre_comercial || 'Socio'}</span>
+                <span style={{ fontWeight: 700, fontSize: 13, color: '#F5F5F5' }}>{c.socio?.nombre_comercial || 'Usuario'}</span>
                 {c.sinLeer > 0 && <span style={styles.unread}>{c.sinLeer}</span>}
               </div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.ultimo}</div>
@@ -99,7 +99,7 @@ export default function SoporteAdmin() {
           {selected ? (
             <>
               <div style={styles.chatHeader}>
-                <span style={{ fontWeight: 700, fontSize: 14, color: '#F5F5F5' }}>{selected.socio?.nombre || 'Socio'}</span>
+                <span style={{ fontWeight: 700, fontSize: 14, color: '#F5F5F5' }}>{selected.socio?.nombre || 'Usuario'}</span>
                 <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{selected.socio?.nombre_comercial}</span>
               </div>
               <div style={styles.chatMessages}>

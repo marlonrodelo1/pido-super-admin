@@ -6,7 +6,6 @@ export default function Pedidos() {
   const [items, setItems] = useState([])
   const [filtro, setFiltro] = useState('todos')
   const [filtroPago, setFiltroPago] = useState('todos')
-  const [filtroCanal, setFiltroCanal] = useState('todos')
   const [detalle, setDetalle] = useState(null)
   const [detalleItems, setDetalleItems] = useState([])
 
@@ -38,7 +37,6 @@ export default function Pedidos() {
   const filtrados = items.filter(p => {
     if (filtro !== 'todos' && p.estado !== filtro) return false
     if (filtroPago !== 'todos' && p.metodo_pago !== filtroPago) return false
-    if (filtroCanal !== 'todos' && p.canal !== filtroCanal) return false
     return true
   })
 
@@ -56,7 +54,7 @@ export default function Pedidos() {
               <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
                 <span style={{ ...ds.badge, background: (estadoColor[detalle.estado] || '#6B7280') + '15', color: estadoColor[detalle.estado] }}>{detalle.estado}</span>
                 <span style={{ ...ds.badge, background: detalle.metodo_pago === 'tarjeta' ? 'rgba(29,78,216,0.15)' : 'rgba(245,158,11,0.15)', color: detalle.metodo_pago === 'tarjeta' ? '#60A5FA' : '#FBBF24' }}>{detalle.metodo_pago}</span>
-                <span style={{ ...ds.badge, background: detalle.canal === 'pido' ? 'rgba(255,107,44,0.15)' : 'rgba(22,101,52,0.15)', color: detalle.canal === 'pido' ? '#FF6B2C' : '#4ADE80' }}>{detalle.canal}</span>
+                <span style={{ ...ds.badge, background: 'rgba(255,107,44,0.15)', color: '#FF6B2C' }}>PIDO</span>
               </div>
             </div>
             {detalle.estado !== 'cancelado' && detalle.estado !== 'entregado' && (
@@ -115,12 +113,6 @@ export default function Pedidos() {
             {p.charAt(0).toUpperCase() + p.slice(1)}
           </button>
         ))}
-        <div style={{ width: 1, background: 'rgba(255,255,255,0.08)', margin: '0 4px' }} />
-        {['todos', 'pido', 'pidogo'].map(c => (
-          <button key={c} onClick={() => setFiltroCanal(c)} style={{ ...ds.filterBtn, background: filtroCanal === c ? '#8B5CF6' : 'rgba(255,255,255,0.08)', color: filtroCanal === c ? '#fff' : 'rgba(255,255,255,0.5)' }}>
-            {c === 'todos' ? 'Canales' : c.toUpperCase()}
-          </button>
-        ))}
       </div>
 
       <div style={ds.table}>
@@ -139,7 +131,7 @@ export default function Pedidos() {
             <span style={{ width: 80, fontSize: 12 }}>{p.total?.toFixed(2)}EUR</span>
             <span style={{ width: 90 }}><span style={{ ...ds.badge, background: (estadoColor[p.estado] || '#6B7280') + '15', color: estadoColor[p.estado] }}>{p.estado}</span></span>
             <span style={{ width: 70 }}><span style={{ ...ds.badge, background: p.metodo_pago === 'tarjeta' ? 'rgba(29,78,216,0.15)' : 'rgba(245,158,11,0.15)', color: p.metodo_pago === 'tarjeta' ? '#60A5FA' : '#FBBF24' }}>{p.metodo_pago}</span></span>
-            <span style={{ width: 70 }}><span style={{ ...ds.badge, background: p.canal === 'pido' ? 'rgba(255,107,44,0.15)' : 'rgba(22,101,52,0.15)', color: p.canal === 'pido' ? '#FF6B2C' : '#4ADE80' }}>{p.canal}</span></span>
+            <span style={{ width: 70 }}><span style={{ ...ds.badge, background: 'rgba(255,107,44,0.15)', color: '#FF6B2C' }}>PIDO</span></span>
             <span style={{ flex: 1, fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{new Date(p.created_at).toLocaleString('es-ES')}</span>
             <span style={{ width: 50 }}><button onClick={() => verDetalle(p)} style={ds.actionBtn}>Ver</button></span>
           </div>

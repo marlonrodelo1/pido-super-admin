@@ -147,7 +147,7 @@ export default function Usuarios() {
                   <span style={{ fontWeight: 700, fontSize: 13, color: '#F5F5F5' }}>{p.codigo}</span>
                   <span style={{ ...ds.badge, background: (estadoColor[p.estado] || '#6B7280') + '20', color: estadoColor[p.estado] || '#6B7280', fontSize: 10 }}>{p.estado?.replace('_', ' ')}</span>
                   <span style={{ fontSize: 10, color: p.metodo_pago === 'tarjeta' ? '#60A5FA' : '#4ADE80' }}>{p.metodo_pago === 'tarjeta' ? '💳' : '💵'}</span>
-                  {p.canal && <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', fontWeight: 600 }}>{p.canal === 'pidogo' ? 'PIDOGO' : 'PIDO'}</span>}
+                  <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', fontWeight: 600 }}>PIDO</span>
                 </div>
                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{p.establecimientos?.nombre || '—'} · {new Date(p.created_at).toLocaleDateString('es-ES')}</div>
               </div>

@@ -5,7 +5,6 @@ import Sidebar from './components/Sidebar'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Establecimientos from './pages/Establecimientos'
-import Socios from './pages/Socios'
 import Usuarios from './pages/Usuarios'
 import Pedidos from './pages/Pedidos'
 import SoporteAdmin from './pages/SoporteAdmin'
@@ -36,7 +35,6 @@ function AppContent() {
       <main style={{ flex: 1, marginLeft: 240, padding: '28px 32px', background: '#0D0D0D', minHeight: '100vh' }}>
         {seccion === 'dashboard' && <Dashboard />}
         {seccion === 'establecimientos' && <Establecimientos />}
-        {seccion === 'socios' && <Socios />}
         {seccion === 'usuarios' && <Usuarios />}
         {seccion === 'pedidos' && <Pedidos />}
         {seccion === 'mapa' && <MapaAdmin />}
