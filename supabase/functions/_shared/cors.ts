@@ -6,6 +6,9 @@ const ALLOWED_ORIGINS: string[] = [
   'http://localhost:5175',
   'http://localhost:5176',
   'http://localhost:5177',
+  'https://localhost',
+  'capacitor://localhost',
+  'http://localhost',
 ]
 
 // Regex to match any subdomain of pidoo.es (e.g. https://admin.pidoo.es, https://partner.pidoo.es)
