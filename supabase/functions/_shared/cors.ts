@@ -18,7 +18,7 @@ const SUBDOMAIN_REGEX = /^https:\/\/([a-z0-9-]+\.)?pidoo\.es$/
  * Check if the given origin is allowed by our CORS policy.
  */
 function isOriginAllowed(origin: string | null): boolean {
-  if (!origin) return false
+  if (!origin) return true // Apps nativas (Capacitor) pueden no enviar Origin
   if (ALLOWED_ORIGINS.includes(origin)) return true
   if (SUBDOMAIN_REGEX.test(origin)) return true
   return false
@@ -37,7 +37,7 @@ export function getCorsHeaders(req: Request): Record<string, string> {
   }
 
   if (isOriginAllowed(origin)) {
-    headers['Access-Control-Allow-Origin'] = origin!
+    headers['Access-Control-Allow-Origin'] = origin || '*'
     headers['Vary'] = 'Origin'
   }
 
