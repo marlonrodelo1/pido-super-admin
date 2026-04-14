@@ -3,6 +3,21 @@ import { supabase } from '../lib/supabase'
 import { ds } from '../lib/darkStyles'
 import { Trash2, Truck, DollarSign, MapPin } from 'lucide-react'
 
+// Sanitizar HTML para prevenir XSS (mismo patron que PaginaLegal.jsx)
+function sanitizeHtml(html) {
+  if (!html) return ''
+  const doc = new DOMParser().parseFromString(html, 'text/html')
+  doc.querySelectorAll('script, iframe, object, embed, form').forEach(el => el.remove())
+  doc.querySelectorAll('*').forEach(el => {
+    for (const attr of [...el.attributes]) {
+      if (attr.name.startsWith('on') || attr.value.includes('javascript:')) {
+        el.removeAttribute(attr.name)
+      }
+    }
+  })
+  return doc.body.innerHTML
+}
+
 export default function Configuracion() {
   // Configuración de plataforma (desde DB)
   const [config, setConfig] = useState({})
@@ -259,7 +274,7 @@ export default function Configuracion() {
             </div>
             <div style={{ marginBottom: 12, background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 16, border: '1px solid rgba(255,255,255,0.06)' }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', marginBottom: 8 }}>Vista previa</div>
-              <div style={{ fontSize: 13, lineHeight: 1.7, color: '#F5F5F5' }} dangerouslySetInnerHTML={{ __html: legalForm.contenido }} />
+              <div style={{ fontSize: 13, lineHeight: 1.7, color: '#F5F5F5' }} dangerouslySetInnerHTML={{ __html: sanitizeHtml(legalForm.contenido) }} />
             </div>
             <button onClick={guardarPaginaLegal} disabled={savingLegal} style={{ ...ds.primaryBtn, width: '100%' }}>
               {savingLegal ? 'Guardando...' : 'Guardar página'}
