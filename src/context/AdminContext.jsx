@@ -14,6 +14,16 @@ export function AdminProvider({ children }) {
       setAccessDenied(false)
       return
     }
+
+    // Primero comprueba el rol en user_metadata del JWT (sin query a BD)
+    const rolJWT = session.user.user_metadata?.rol
+    if (rolJWT === 'superadmin') {
+      setUser(session.user)
+      setAccessDenied(false)
+      return
+    }
+
+    // Fallback: consulta tabla usuarios (por si el usuario no tiene user_metadata)
     const { data } = await supabase
       .from('usuarios')
       .select('rol')
