@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { ds } from '../lib/darkStyles'
-import { Eye, EyeOff, Truck, Save } from 'lucide-react'
+import { Eye, EyeOff, Truck, Save, UserCheck, UserX } from 'lucide-react'
 import { toast } from '../App'
 
 const EDGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update_socio_admin`
@@ -26,8 +26,9 @@ export default function Socios() {
   const [apiKey, setApiKey]       = useState('')
   const [keyVisible, setKeyVisible] = useState(false)
   const [shipStatus, setShipStatus] = useState('not_set')
-  const [verifying, setVerifying] = useState(false)
-  const [saving, setSaving]       = useState(false)
+  const [verifying, setVerifying]   = useState(false)
+  const [saving, setSaving]         = useState(false)
+  const [toggling, setToggling]     = useState(false)
 
   useEffect(() => { load() }, [])
 
@@ -60,6 +61,31 @@ export default function Socios() {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${session.access_token}`,
       'apikey': ANON_KEY,
+    }
+  }
+
+  async function toggleActivo() {
+    setToggling(true)
+    const nuevoEstado = !detalle.activo
+    try {
+      const res = await fetch(EDGE_URL, {
+        method: 'POST',
+        headers: await getAuthHeaders(),
+        body: JSON.stringify({ action: 'toggle_activo', socio_id: detalle.id, activo: nuevoEstado }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        toast(data.error || 'Error al cambiar estado', 'error')
+        return
+      }
+      const updated = { ...detalle, activo: nuevoEstado }
+      setDetalle(updated)
+      setItems(prev => prev.map(s => s.id === detalle.id ? updated : s))
+      toast(nuevoEstado ? 'Socio activado — ya puede entrar a rider.pidoo.es' : 'Socio desactivado')
+    } catch {
+      toast('Error de conexión', 'error')
+    } finally {
+      setToggling(false)
     }
   }
 
@@ -157,6 +183,21 @@ export default function Socios() {
               )}
               <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{detalle.email}</div>
             </div>
+            <button
+              onClick={toggleActivo}
+              disabled={toggling}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '9px 16px', borderRadius: 10, border: 'none',
+                background: detalle.activo ? 'rgba(239,68,68,0.15)' : 'rgba(22,163,74,0.15)',
+                color: detalle.activo ? '#EF4444' : '#16A34A',
+                fontSize: 13, fontWeight: 700, cursor: toggling ? 'not-allowed' : 'pointer',
+                opacity: toggling ? 0.6 : 1, fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              {detalle.activo ? <UserX size={15} /> : <UserCheck size={15} />}
+              {toggling ? 'Guardando...' : detalle.activo ? 'Desactivar' : 'Activar socio'}
+            </button>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, fontSize: 13, color: '#F5F5F5' }}>

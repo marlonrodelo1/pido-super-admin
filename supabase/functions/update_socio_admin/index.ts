@@ -34,7 +34,7 @@ serve(async (req: Request) => {
     }
 
     // 3. Leer body y ejecutar accion
-    const { action, shipday_api_key, socio_id } = await req.json()
+    const { action, shipday_api_key, socio_id, activo } = await req.json()
 
     if (action === 'verify') {
       if (!shipday_api_key?.trim()) {
@@ -58,6 +58,24 @@ serve(async (req: Request) => {
       const { error } = await svc
         .from('socios')
         .update({ shipday_api_key: shipday_api_key?.trim() || null })
+        .eq('id', socio_id)
+      if (error) {
+        return Response.json({ error: error.message }, { status: 500, headers: CORS })
+      }
+      return Response.json({ success: true }, { status: 200, headers: CORS })
+    }
+
+    if (action === 'toggle_activo') {
+      if (!socio_id) {
+        return Response.json({ error: 'socio_id is required' }, { status: 400, headers: CORS })
+      }
+      const svc = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      )
+      const { error } = await svc
+        .from('socios')
+        .update({ activo: !!activo })
         .eq('id', socio_id)
       if (error) {
         return Response.json({ error: error.message }, { status: 500, headers: CORS })
