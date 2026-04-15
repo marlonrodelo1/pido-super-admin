@@ -73,9 +73,9 @@ serve(async (req: Request) => {
     const { data: pedido, error: pedidoError } = await supabase
       .from('pedidos')
       .select(`
-        id, codigo, establecimiento_id, usuario_id, socio_id,
+        id, codigo, establecimiento_id, usuario_id,
         direccion_entrega, lat_entrega, lng_entrega,
-        establecimientos(nombre, direccion, latitud, longitud, telefono),
+        establecimientos(nombre, direccion, latitud, longitud, telefono, shipday_api_key),
         usuarios(nombre, apellido, telefono)
       `)
       .eq('id', pedido_id)
@@ -102,25 +102,13 @@ serve(async (req: Request) => {
       )
     }
 
-    // Determine which API key to use
-    let apiKey = Deno.env.get('SHIPDAY_CARRIER_API_KEY') || ''
-
-    if (pedido.socio_id) {
-      const { data: socio } = await supabase
-        .from('socios')
-        .select('shipday_api_key')
-        .eq('id', pedido.socio_id)
-        .single()
-
-      if (socio?.shipday_api_key) {
-        apiKey = socio.shipday_api_key
-      }
-    }
+    // Usar la API key de Shipday del restaurante
+    const apiKey = pedido.establecimientos?.shipday_api_key || ''
 
     if (!apiKey) {
       return Response.json(
-        { error: 'Shipday API key not configured' },
-        { status: 500, headers: CORS }
+        { error: 'Este restaurante no tiene una cuenta de Shipday configurada' },
+        { status: 400, headers: CORS }
       )
     }
 
