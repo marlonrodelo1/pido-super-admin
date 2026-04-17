@@ -5,7 +5,7 @@ import { ds } from '../lib/darkStyles'
 import { Plus, X, Upload, Save, Trash2 } from 'lucide-react'
 import { toast, confirmar } from '../App'
 import CargaMasivaModal from '../components/CargaMasivaModal'
-import ShipdayCard from '../components/ShipdayCard'
+import RidersCard from '../components/RidersCard'
 
 const CATEGORIAS_PADRE = ['comida', 'farmacia', 'marketplace']
 
@@ -69,7 +69,6 @@ export default function Establecimientos() {
       email: est?.email || '', telefono: est?.telefono || '', direccion: est?.direccion || '',
       radio_cobertura_km: est?.radio_cobertura_km || 5, descripcion: est?.descripcion || '',
       banner_url: est?.banner_url || '', logo_url: est?.logo_url || '',
-      shipday_api_key: est?.shipday_api_key || '',
     }
   }
 
@@ -278,13 +277,10 @@ export default function Establecimientos() {
           )}
         </div>
 
-        {/* Integración Shipday */}
-        <ShipdayCard
+        {/* Repartidores vinculados */}
+        <RidersCard
           establecimiento={detalle}
-          onKeyUpdated={(newKey) => {
-            setDetalle({ ...detalle, shipday_api_key: newKey })
-            load()
-          }}
+          onChanged={() => load()}
         />
 
         {/* Categorías generales */}
@@ -553,9 +549,8 @@ export default function Establecimientos() {
                 </label>
               </div>
               <div style={{ gridColumn: '1/-1' }}><label style={ds.label}>Descripción</label><textarea value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} rows={2} style={{ ...ds.formInput, resize: 'vertical' }} /></div>
-              <div style={{ gridColumn: '1/-1' }}>
-                <label style={ds.label}>API Key Shipday <span style={{ color: 'rgba(255,255,255,0.35)', fontWeight: 400, textTransform: 'none', fontSize: 10 }}>(para activar delivery)</span></label>
-                <input value={form.shipday_api_key} onChange={e => setForm({ ...form, shipday_api_key: e.target.value })} placeholder="Pegar API key de Shipday del restaurante" style={ds.formInput} />
+              <div style={{ gridColumn: '1/-1', fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 4 }}>
+                Tras crear el restaurante, añade sus repartidores desde la ficha para activar Delivery.
               </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
