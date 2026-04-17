@@ -21,7 +21,7 @@ export default function RidersCard({ establecimiento, onChanged }) {
 
   async function load() {
     const { data } = await supabase.from('restaurante_riders')
-      .select('prioridad, rider_accounts(id, nombre, telefono, activa)')
+      .select('prioridad, rider_accounts(id, nombre, telefono, activa, estado)')
       .eq('establecimiento_id', establecimiento.id)
       .order('prioridad', { ascending: true })
     setVinc(data || [])
@@ -49,8 +49,8 @@ export default function RidersCard({ establecimiento, onChanged }) {
     onChanged?.()
   }
 
-  const online = vinc.filter(v => status[v.rider_accounts?.id]?.is_online).length
-  const total = vinc.filter(v => v.rider_accounts?.activa).length
+  const online = vinc.filter(v => v.rider_accounts?.estado === 'activa' && status[v.rider_accounts?.id]?.is_online).length
+  const total = vinc.filter(v => v.rider_accounts?.activa && v.rider_accounts?.estado === 'activa').length
 
   const headerBadge = (() => {
     if (total === 0) return { bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.35)', color: '#F87171', label: 'Sin repartidores vinculados' }
@@ -99,7 +99,11 @@ export default function RidersCard({ establecimiento, onChanged }) {
                   </div>
                   <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{r.telefono || 'Sin teléfono'}</div>
                 </div>
-                {!r.activa ? (
+                {r.estado === 'pendiente' ? (
+                  <span style={{ ...ds.badge, background: 'rgba(245,158,11,0.15)', color: '#FBBF24', marginRight: 8 }}>Pendiente</span>
+                ) : r.estado === 'rechazada' ? (
+                  <span style={{ ...ds.badge, background: 'rgba(239,68,68,0.15)', color: '#F87171', marginRight: 8 }}>Rechazado</span>
+                ) : !r.activa ? (
                   <span style={{ ...ds.badge, background: 'rgba(239,68,68,0.15)', color: '#F87171', marginRight: 8 }}>Inactivo</span>
                 ) : st?.last_error ? (
                   <span style={{ ...ds.badge, background: 'rgba(245,158,11,0.15)', color: '#FBBF24', marginRight: 8 }} title={st.last_error}>Error</span>
@@ -147,7 +151,7 @@ function AddRiderModal({ establecimiento, vinculados, onClose, onSaved }) {
   const [verifyResult, setVerifyResult] = useState(null)
 
   useEffect(() => {
-    supabase.from('rider_accounts').select('*').eq('activa', true).order('nombre')
+    supabase.from('rider_accounts').select('*').eq('activa', true).eq('estado', 'activa').order('nombre')
       .then(({ data }) => setRiders(data || []))
   }, [])
 
@@ -197,7 +201,12 @@ function AddRiderModal({ establecimiento, vinculados, onClose, onSaved }) {
     if (!nombre.trim() || !apiKey.trim()) return toast('Nombre y API key obligatorios', 'error')
     setSaving(true)
     const { data: nuevo, error: e1 } = await supabase.from('rider_accounts')
-      .insert({ nombre: nombre.trim(), telefono: telefono.trim() || null, shipday_api_key: apiKey.trim(), activa: true })
+      .insert({
+        nombre: nombre.trim(), telefono: telefono.trim() || null,
+        shipday_api_key: apiKey.trim(),
+        activa: true, estado: 'activa', aprobado_en: new Date().toISOString(),
+        establecimiento_origen_id: establecimiento.id,
+      })
       .select().single()
     if (e1) { toast('Error: ' + e1.message, 'error'); setSaving(false); return }
     const { error: e2 } = await supabase.from('restaurante_riders').insert({

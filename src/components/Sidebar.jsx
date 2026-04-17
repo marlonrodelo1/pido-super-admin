@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react'
 import { LayoutGrid, Store, User, ClipboardList, MessageCircle, DollarSign, Settings, LogOut, Map, Bell, RotateCcw, Truck } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', Icon: LayoutGrid },
@@ -15,6 +17,23 @@ const menuItems = [
 ]
 
 export default function Sidebar({ active, onChange, onLogout }) {
+  const [pendientes, setPendientes] = useState(0)
+
+  useEffect(() => {
+    loadPendientes()
+    const channel = supabase.channel('sidebar-pendientes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rider_accounts' }, loadPendientes)
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [])
+
+  async function loadPendientes() {
+    const { count } = await supabase.from('rider_accounts')
+      .select('id', { count: 'exact', head: true })
+      .eq('estado', 'pendiente')
+    setPendientes(count || 0)
+  }
+
   return (
     <div style={styles.sidebar}>
       <div style={styles.logo}>
@@ -23,21 +42,32 @@ export default function Sidebar({ active, onChange, onLogout }) {
       </div>
 
       <nav style={styles.nav}>
-        {menuItems.map(item => (
-          <button
-            key={item.id}
-            onClick={() => onChange(item.id)}
-            style={{
-              ...styles.navItem,
-              background: active === item.id ? 'rgba(255,107,44,0.15)' : 'transparent',
-              color: active === item.id ? '#FF6B2C' : 'rgba(255,255,255,0.5)',
-              fontWeight: active === item.id ? 700 : 500,
-            }}
-          >
-            <item.Icon size={18} strokeWidth={active === item.id ? 2.2 : 1.8} />
-            {item.label}
-          </button>
-        ))}
+        {menuItems.map(item => {
+          const showBadge = item.id === 'repartidores' && pendientes > 0
+          return (
+            <button
+              key={item.id}
+              onClick={() => onChange(item.id)}
+              style={{
+                ...styles.navItem,
+                background: active === item.id ? 'rgba(255,107,44,0.15)' : 'transparent',
+                color: active === item.id ? '#FF6B2C' : 'rgba(255,255,255,0.5)',
+                fontWeight: active === item.id ? 700 : 500,
+              }}
+            >
+              <item.Icon size={18} strokeWidth={active === item.id ? 2.2 : 1.8} />
+              <span style={{ flex: 1 }}>{item.label}</span>
+              {showBadge && (
+                <span style={{
+                  minWidth: 18, height: 18, padding: '0 6px', borderRadius: 9,
+                  background: '#F59E0B', color: '#fff',
+                  fontSize: 10, fontWeight: 800,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>{pendientes}</span>
+              )}
+            </button>
+          )
+        })}
       </nav>
 
       <button onClick={onLogout} style={styles.logout}>

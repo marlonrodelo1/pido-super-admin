@@ -1,22 +1,30 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { ds } from '../lib/darkStyles'
-import { Plus, Trash2, CheckCircle2, AlertCircle, Copy, Truck, ExternalLink } from 'lucide-react'
+import { Plus, CheckCircle2, AlertCircle, Copy, Truck, X, Check, Ban } from 'lucide-react'
 import { toast, confirmar } from '../App'
 
 const WEBHOOK_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/shipday-webhook`
+
+const ESTADOS = {
+  pendiente: { label: 'Pendiente', bg: 'rgba(245,158,11,0.15)', color: '#FBBF24' },
+  activa: { label: 'Activo', bg: 'rgba(34,197,94,0.15)', color: '#4ADE80' },
+  rechazada: { label: 'Rechazado', bg: 'rgba(239,68,68,0.15)', color: '#F87171' },
+}
 
 export default function Repartidores() {
   const [riders, setRiders] = useState([])
   const [status, setStatus] = useState({})
   const [vinculos, setVinculos] = useState({})
+  const [origenes, setOrigenes] = useState({})
   const [buscar, setBuscar] = useState('')
+  const [filtroEstado, setFiltroEstado] = useState('pendiente')
   const [showNuevo, setShowNuevo] = useState(false)
   const [detalle, setDetalle] = useState(null)
 
   useEffect(() => {
     load()
-    const channel = supabase.channel('admin-riders')
+    const channel = supabase.channel('admin-riders-approval')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'rider_status' }, load)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'rider_accounts' }, load)
       .subscribe()
@@ -27,32 +35,68 @@ export default function Repartidores() {
     const [ridersRes, statusRes, vincRes] = await Promise.all([
       supabase.from('rider_accounts').select('*').order('created_at', { ascending: false }),
       supabase.from('rider_status').select('*'),
-      supabase.from('restaurante_riders').select('rider_account_id, establecimientos(nombre)'),
+      supabase.from('restaurante_riders').select('rider_account_id, establecimientos(id, nombre)'),
     ])
     setRiders(ridersRes.data || [])
+
     const statusMap = {}
     ;(statusRes.data || []).forEach(s => { statusMap[s.rider_account_id] = s })
     setStatus(statusMap)
+
     const vincMap = {}
     ;(vincRes.data || []).forEach(v => {
       if (!vincMap[v.rider_account_id]) vincMap[v.rider_account_id] = []
       if (v.establecimientos?.nombre) vincMap[v.rider_account_id].push(v.establecimientos.nombre)
     })
     setVinculos(vincMap)
+
+    // Cargar nombres de establecimientos origen
+    const origenIds = [...new Set((ridersRes.data || []).map(r => r.establecimiento_origen_id).filter(Boolean))]
+    if (origenIds.length > 0) {
+      const { data: ests } = await supabase.from('establecimientos').select('id, nombre').in('id', origenIds)
+      const map = {}
+      ;(ests || []).forEach(e => { map[e.id] = e.nombre })
+      setOrigenes(map)
+    }
   }
 
-  async function toggleActiva(r) {
-    await supabase.from('rider_accounts').update({ activa: !r.activa }).eq('id', r.id)
-    toast(r.activa ? 'Rider desactivado' : 'Rider activado')
+  async function aprobar(r) {
+    const { error } = await supabase.from('rider_accounts')
+      .update({ estado: 'activa', aprobado_en: new Date().toISOString(), motivo_rechazo: null })
+      .eq('id', r.id)
+    if (error) return toast('Error: ' + error.message, 'error')
+    toast(`${r.nombre} aprobado`)
+    load()
+  }
+
+  async function rechazar(r) {
+    const motivo = prompt('Motivo del rechazo (opcional):', '')
+    if (motivo === null) return
+    const { error } = await supabase.from('rider_accounts')
+      .update({ estado: 'rechazada', motivo_rechazo: motivo || null })
+      .eq('id', r.id)
+    if (error) return toast('Error: ' + error.message, 'error')
+    toast(`${r.nombre} rechazado`)
+    load()
+  }
+
+  async function reactivar(r) {
+    const ok = await confirmar(`¿Reactivar "${r.nombre}"?`)
+    if (!ok) return
+    const { error } = await supabase.from('rider_accounts')
+      .update({ estado: 'activa', aprobado_en: new Date().toISOString(), motivo_rechazo: null })
+      .eq('id', r.id)
+    if (error) return toast('Error: ' + error.message, 'error')
+    toast('Reactivado')
     load()
   }
 
   async function eliminar(r) {
-    const ok = await confirmar(`¿Eliminar "${r.nombre}"? Se desvinculará de todos los restaurantes.`)
+    const ok = await confirmar(`¿Eliminar permanentemente "${r.nombre}"?`)
     if (!ok) return
     const { error } = await supabase.from('rider_accounts').delete().eq('id', r.id)
     if (error) return toast('Error: ' + error.message, 'error')
-    toast('Rider eliminado')
+    toast('Eliminado')
     if (detalle?.id === r.id) setDetalle(null)
     load()
   }
@@ -65,14 +109,30 @@ export default function Repartidores() {
     load()
   }
 
-  const filtered = riders.filter(r =>
-    !buscar || r.nombre.toLowerCase().includes(buscar.toLowerCase()) ||
-    (r.telefono && r.telefono.includes(buscar))
-  )
+  const contadores = {
+    pendiente: riders.filter(r => r.estado === 'pendiente').length,
+    activa: riders.filter(r => r.estado === 'activa').length,
+    rechazada: riders.filter(r => r.estado === 'rechazada').length,
+  }
+
+  const filtered = riders.filter(r => {
+    if (filtroEstado !== 'todos' && r.estado !== filtroEstado) return false
+    if (buscar && !r.nombre.toLowerCase().includes(buscar.toLowerCase())
+      && !(r.telefono || '').includes(buscar)
+      && !(r.email || '').toLowerCase().includes(buscar.toLowerCase())) return false
+    return true
+  })
 
   if (detalle) {
-    return <RiderDetalle rider={detalle} onBack={() => setDetalle(null)} onSaved={load} />
+    return <RiderDetalle rider={detalle} onBack={() => setDetalle(null)} onSaved={load} origenNombre={origenes[detalle.establecimiento_origen_id]} />
   }
+
+  const tabs = [
+    { id: 'pendiente', l: `Pendientes (${contadores.pendiente})` },
+    { id: 'activa', l: `Activos (${contadores.activa})` },
+    { id: 'rechazada', l: `Rechazados (${contadores.rechazada})` },
+    { id: 'todos', l: 'Todos' },
+  ]
 
   return (
     <div>
@@ -86,52 +146,80 @@ export default function Repartidores() {
         </div>
       </div>
 
+      <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+        {tabs.map(t => (
+          <button key={t.id} onClick={() => setFiltroEstado(t.id)} style={{
+            ...ds.filterBtn, padding: '7px 14px', fontSize: 12,
+            background: filtroEstado === t.id ? '#FF6B2C' : 'rgba(255,255,255,0.08)',
+            color: filtroEstado === t.id ? '#fff' : 'rgba(255,255,255,0.5)',
+            display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            {t.l}
+            {t.id === 'pendiente' && contadores.pendiente > 0 && filtroEstado !== 'pendiente' && (
+              <span style={{ width: 8, height: 8, borderRadius: 4, background: '#F59E0B' }} />
+            )}
+          </button>
+        ))}
+      </div>
+
       <div style={{ marginBottom: 16 }}>
-        <input value={buscar} onChange={e => setBuscar(e.target.value)} placeholder="Buscar por nombre o teléfono..." style={{ ...ds.input, width: '100%', maxWidth: 400 }} />
+        <input value={buscar} onChange={e => setBuscar(e.target.value)} placeholder="Buscar por nombre, teléfono o email..." style={{ ...ds.input, width: '100%', maxWidth: 400 }} />
       </div>
 
       <div style={ds.table}>
         <div style={ds.tableHeader}>
           <span style={{ flex: 1 }}>Nombre</span>
-          <span style={{ width: 140 }}>Teléfono</span>
-          <span style={{ width: 120 }}>Estado</span>
-          <span style={{ width: 180 }}>Restaurantes</span>
-          <span style={{ width: 80 }}>Activa</span>
-          <span style={{ width: 160, textAlign: 'right' }}></span>
+          <span style={{ width: 130 }}>Contacto</span>
+          <span style={{ width: 110 }}>Estado</span>
+          <span style={{ width: 110 }}>Shipday</span>
+          <span style={{ width: 150 }}>Registrado desde</span>
+          <span style={{ width: 200, textAlign: 'right' }}></span>
         </div>
         {filtered.map(r => {
           const st = status[r.id]
           const online = st?.is_online
           const error = st?.last_error
-          const vinc = vinculos[r.id] || []
+          const estadoInfo = ESTADOS[r.estado] || ESTADOS.pendiente
+          const origen = r.establecimiento_origen_id ? origenes[r.establecimiento_origen_id] : null
           return (
             <div key={r.id} style={ds.tableRow}>
-              <span style={{ flex: 1, fontWeight: 700, fontSize: 13, cursor: 'pointer', color: '#F5F5F5' }} onClick={() => setDetalle(r)}>
-                {r.nombre}
+              <span style={{ flex: 1, cursor: 'pointer' }} onClick={() => setDetalle(r)}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: '#F5F5F5' }}>{r.nombre}</div>
+                {r.email && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{r.email}</div>}
               </span>
-              <span style={{ width: 140, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{r.telefono || '—'}</span>
-              <span style={{ width: 120 }}>
-                {error ? (
+              <span style={{ width: 130, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{r.telefono || '—'}</span>
+              <span style={{ width: 110 }}>
+                <span style={{ ...ds.badge, background: estadoInfo.bg, color: estadoInfo.color }}>{estadoInfo.label}</span>
+              </span>
+              <span style={{ width: 110 }}>
+                {r.estado !== 'activa' ? (
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>—</span>
+                ) : error ? (
                   <span style={{ ...ds.badge, background: 'rgba(239,68,68,0.15)', color: '#F87171' }} title={error}>Error</span>
                 ) : online ? (
-                  <span style={{ ...ds.badge, background: 'rgba(34,197,94,0.15)', color: '#4ADE80' }}>● En línea</span>
+                  <span style={{ ...ds.badge, background: 'rgba(34,197,94,0.15)', color: '#4ADE80' }}>● Online</span>
                 ) : (
                   <span style={{ ...ds.badge, background: 'rgba(148,163,184,0.15)', color: '#94A3B8' }}>○ Offline</span>
                 )}
               </span>
-              <span style={{ width: 180, fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
-                {vinc.length > 0 ? vinc.slice(0, 2).join(', ') + (vinc.length > 2 ? ` +${vinc.length - 2}` : '') : '—'}
-              </span>
-              <span style={{ width: 80 }}>
-                <button onClick={() => toggleActiva(r)} style={{
-                  ...ds.badge,
-                  background: r.activa ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
-                  color: r.activa ? '#4ADE80' : '#F87171',
-                  border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
-                }}>{r.activa ? 'Sí' : 'No'}</button>
-              </span>
-              <span style={{ width: 160, textAlign: 'right', display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                <button onClick={() => setDetalle(r)} style={ds.actionBtn}>Ver</button>
+              <span style={{ width: 150, fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{origen || '—'}</span>
+              <span style={{ width: 200, textAlign: 'right', display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                {r.estado === 'pendiente' && (
+                  <>
+                    <button onClick={() => aprobar(r)} style={{ ...ds.actionBtn, background: 'rgba(34,197,94,0.15)', color: '#4ADE80', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <Check size={11} /> Aprobar
+                    </button>
+                    <button onClick={() => rechazar(r)} style={{ ...ds.actionBtn, background: 'rgba(239,68,68,0.15)', color: '#F87171', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <Ban size={11} /> Rechazar
+                    </button>
+                  </>
+                )}
+                {r.estado === 'rechazada' && (
+                  <button onClick={() => reactivar(r)} style={{ ...ds.actionBtn, background: 'rgba(34,197,94,0.15)', color: '#4ADE80' }}>Reactivar</button>
+                )}
+                {r.estado === 'activa' && (
+                  <button onClick={() => setDetalle(r)} style={ds.actionBtn}>Ver</button>
+                )}
                 <button onClick={() => eliminar(r)} style={{ ...ds.actionBtn, color: '#EF4444' }}>Eliminar</button>
               </span>
             </div>
@@ -139,7 +227,7 @@ export default function Repartidores() {
         })}
         {filtered.length === 0 && (
           <div style={{ padding: 32, textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>
-            {riders.length === 0 ? 'Sin repartidores. Crea el primero con "Nuevo repartidor".' : 'Sin resultados.'}
+            {riders.length === 0 ? 'Sin repartidores. Los restaurantes los registran desde su panel, tú los apruebas aquí.' : 'Sin resultados para este filtro.'}
           </div>
         )}
       </div>
@@ -152,6 +240,7 @@ export default function Repartidores() {
 function RiderModal({ rider, onClose, onSaved }) {
   const [nombre, setNombre] = useState(rider?.nombre || '')
   const [telefono, setTelefono] = useState(rider?.telefono || '')
+  const [email, setEmail] = useState(rider?.email || '')
   const [apiKey, setApiKey] = useState(rider?.shipday_api_key || '')
   const [verifying, setVerifying] = useState(false)
   const [verifyResult, setVerifyResult] = useState(null)
@@ -160,12 +249,10 @@ function RiderModal({ rider, onClose, onSaved }) {
   async function verificar() {
     const key = apiKey.trim()
     if (!key) return toast('Pega la API key primero', 'error')
-    setVerifying(true)
-    setVerifyResult(null)
+    setVerifying(true); setVerifyResult(null)
     try {
       const resp = await fetch('https://api.shipday.com/carriers', {
-        method: 'GET',
-        headers: { 'Authorization': `Basic ${key}` },
+        method: 'GET', headers: { 'Authorization': `Basic ${key}` },
       })
       if (!resp.ok) {
         setVerifyResult({ ok: false, msg: `Key inválida (HTTP ${resp.status})` })
@@ -173,7 +260,7 @@ function RiderModal({ rider, onClose, onSaved }) {
       } else {
         const data = await resp.json()
         const list = Array.isArray(data) ? data : (data.carriers || data.data || [])
-        setVerifyResult({ ok: true, total: list.length, online: list.filter(c => c?.isOnShift).length })
+        setVerifyResult({ ok: true, total: list.length })
         toast(`Key válida — ${list.length} carrier${list.length === 1 ? '' : 's'}`)
       }
     } catch {
@@ -184,14 +271,19 @@ function RiderModal({ rider, onClose, onSaved }) {
   }
 
   async function guardar() {
-    if (!nombre.trim() || !apiKey.trim()) return toast('Nombre y API key son obligatorios', 'error')
+    if (!nombre.trim() || !apiKey.trim()) return toast('Nombre y API key obligatorios', 'error')
     setSaving(true)
-    const payload = { nombre: nombre.trim(), telefono: telefono.trim() || null, shipday_api_key: apiKey.trim() }
+    const payload = {
+      nombre: nombre.trim(),
+      telefono: telefono.trim() || null,
+      email: email.trim() || null,
+      shipday_api_key: apiKey.trim(),
+    }
     const { error } = rider
       ? await supabase.from('rider_accounts').update(payload).eq('id', rider.id)
-      : await supabase.from('rider_accounts').insert({ ...payload, activa: true })
+      : await supabase.from('rider_accounts').insert({ ...payload, activa: true, estado: 'activa', aprobado_en: new Date().toISOString() })
     if (error) { toast('Error: ' + error.message, 'error'); setSaving(false); return }
-    toast(rider ? 'Rider actualizado' : 'Rider creado')
+    toast(rider ? 'Rider actualizado' : 'Rider creado y aprobado')
     onSaved()
   }
 
@@ -200,29 +292,24 @@ function RiderModal({ rider, onClose, onSaved }) {
       <div style={ds.modalContent} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
           <Truck size={18} color="#FF6B2C" />
-          <h2 style={{ fontSize: 17, fontWeight: 700, color: '#F5F5F5', flex: 1 }}>
-            {rider ? 'Editar repartidor' : 'Nuevo repartidor'}
-          </h2>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: '#F5F5F5', flex: 1 }}>{rider ? 'Editar repartidor' : 'Nuevo repartidor'}</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 20 }}>×</button>
         </div>
 
         <div style={{ display: 'grid', gap: 12 }}>
-          <div>
-            <label style={ds.label}>Nombre</label>
+          <div><label style={ds.label}>Nombre</label>
             <input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Ej: Pedro Martín" style={ds.formInput} />
           </div>
-          <div>
-            <label style={ds.label}>Teléfono (opcional)</label>
-            <input value={telefono} onChange={e => setTelefono(e.target.value)} placeholder="600 123 456" style={ds.formInput} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div><label style={ds.label}>Teléfono</label>
+              <input value={telefono} onChange={e => setTelefono(e.target.value)} placeholder="600 123 456" style={ds.formInput} />
+            </div>
+            <div><label style={ds.label}>Email</label>
+              <input value={email} onChange={e => setEmail(e.target.value)} placeholder="rider@email.com" style={ds.formInput} />
+            </div>
           </div>
-          <div>
-            <label style={ds.label}>API Key Shipday personal</label>
-            <input
-              value={apiKey}
-              onChange={e => { setApiKey(e.target.value); setVerifyResult(null) }}
-              placeholder="Pegar desde Shipday → Settings → API"
-              style={{ ...ds.formInput, fontFamily: 'monospace', fontSize: 12 }}
-            />
+          <div><label style={ds.label}>API Key Shipday personal</label>
+            <input value={apiKey} onChange={e => { setApiKey(e.target.value); setVerifyResult(null) }} placeholder="Pegar desde Shipday → Settings → API" style={{ ...ds.formInput, fontFamily: 'monospace', fontSize: 12 }} />
           </div>
 
           {verifyResult && (
@@ -234,7 +321,7 @@ function RiderModal({ rider, onClose, onSaved }) {
               fontSize: 12, fontWeight: 600,
             }}>
               {verifyResult.ok
-                ? <><CheckCircle2 size={14} /> Key válida — {verifyResult.total} carrier{verifyResult.total === 1 ? '' : 's'} ({verifyResult.online} online)</>
+                ? <><CheckCircle2 size={14} /> Key válida — {verifyResult.total} carrier{verifyResult.total === 1 ? '' : 's'}</>
                 : <><AlertCircle size={14} /> {verifyResult.msg}</>
               }
             </div>
@@ -245,28 +332,8 @@ function RiderModal({ rider, onClose, onSaved }) {
               {verifying ? 'Verificando...' : 'Verificar'}
             </button>
             <button onClick={guardar} disabled={saving} style={{ ...ds.primaryBtn, flex: 1, opacity: saving ? 0.5 : 1 }}>
-              {saving ? 'Guardando...' : (rider ? 'Guardar' : 'Crear repartidor')}
+              {saving ? 'Guardando...' : (rider ? 'Guardar' : 'Crear y activar')}
             </button>
-          </div>
-
-          <div style={{
-            padding: 12, background: 'rgba(255,255,255,0.03)', borderRadius: 10,
-            border: '1px solid rgba(255,255,255,0.06)', fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 8,
-          }}>
-            <div style={{ fontWeight: 700, color: '#F5F5F5', marginBottom: 6 }}>Webhook que debe configurar el rider en Shipday</div>
-            <div style={{ marginBottom: 4 }}>Settings → Webhooks → Add → URL:</div>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              background: 'rgba(0,0,0,0.3)', padding: '6px 10px', borderRadius: 8,
-              fontFamily: 'monospace', fontSize: 10, color: '#F5F5F5', wordBreak: 'break-all',
-            }}>
-              <span style={{ flex: 1 }}>{WEBHOOK_URL}</span>
-              <button onClick={() => { navigator.clipboard.writeText(WEBHOOK_URL); toast('URL copiada') }} style={{
-                background: 'transparent', border: 'none', cursor: 'pointer', color: '#FF6B2C', padding: 4,
-              }}>
-                <Copy size={12} />
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -274,7 +341,7 @@ function RiderModal({ rider, onClose, onSaved }) {
   )
 }
 
-function RiderDetalle({ rider, onBack, onSaved }) {
+function RiderDetalle({ rider, onBack, onSaved, origenNombre }) {
   const [edit, setEdit] = useState(false)
   const [restaurantes, setRestaurantes] = useState([])
   const [st, setSt] = useState(null)
@@ -292,6 +359,8 @@ function RiderDetalle({ rider, onBack, onSaved }) {
     setSt(stRes.data)
   }
 
+  const estadoInfo = ESTADOS[rider.estado] || ESTADOS.pendiente
+
   return (
     <div>
       <button onClick={onBack} style={ds.backBtn}>← Volver</button>
@@ -305,23 +374,27 @@ function RiderDetalle({ rider, onBack, onSaved }) {
           </div>
           <div style={{ flex: 1 }}>
             <h2 style={{ fontSize: 20, fontWeight: 800, color: '#F5F5F5' }}>{rider.nombre}</h2>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{rider.telefono || 'Sin teléfono'}</div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {rider.telefono && <span>📞 {rider.telefono}</span>}
+              {rider.email && <span>✉ {rider.email}</span>}
+            </div>
           </div>
-          <div>
-            {st?.is_online ? (
-              <span style={{ ...ds.badge, background: 'rgba(34,197,94,0.15)', color: '#4ADE80', fontSize: 12, padding: '6px 12px' }}>● En línea</span>
-            ) : (
-              <span style={{ ...ds.badge, background: 'rgba(148,163,184,0.15)', color: '#94A3B8', fontSize: 12, padding: '6px 12px' }}>○ Offline</span>
-            )}
-          </div>
+          <span style={{ ...ds.badge, background: estadoInfo.bg, color: estadoInfo.color, fontSize: 12, padding: '6px 12px' }}>{estadoInfo.label}</span>
+          {rider.estado === 'activa' && (st?.is_online ? (
+            <span style={{ ...ds.badge, background: 'rgba(34,197,94,0.15)', color: '#4ADE80', fontSize: 12, padding: '6px 12px' }}>● En línea</span>
+          ) : (
+            <span style={{ ...ds.badge, background: 'rgba(148,163,184,0.15)', color: '#94A3B8', fontSize: 12, padding: '6px 12px' }}>○ Offline</span>
+          ))}
           <button onClick={() => setEdit(true)} style={ds.primaryBtn}>Editar</button>
         </div>
 
         <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
           <div style={{ marginBottom: 4 }}>
             <span style={ds.muted}>API Key:</span>{' '}
-            <span style={{ fontFamily: 'monospace' }}>{rider.shipday_api_key.slice(0, 12)}•••••{rider.shipday_api_key.slice(-4)}</span>
+            <span style={{ fontFamily: 'monospace' }}>{rider.shipday_api_key.slice(0, 8)}•••••{rider.shipday_api_key.slice(-4)}</span>
           </div>
+          {origenNombre && <div><span style={ds.muted}>Registrado desde:</span> {origenNombre}</div>}
+          {rider.motivo_rechazo && <div style={{ color: '#F87171' }}><span style={ds.muted}>Motivo rechazo:</span> {rider.motivo_rechazo}</div>}
           {st?.last_checked && (
             <div><span style={ds.muted}>Último chequeo:</span> {new Date(st.last_checked).toLocaleString('es-ES')}</div>
           )}
@@ -337,7 +410,7 @@ function RiderDetalle({ rider, onBack, onSaved }) {
         </h3>
         {restaurantes.length === 0 ? (
           <div style={{ padding: 16, textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>
-            Sin restaurantes vinculados. Ve a la ficha del restaurante → "Repartidores vinculados" para añadirlo.
+            Sin restaurantes vinculados.
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
