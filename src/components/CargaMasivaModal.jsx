@@ -12,16 +12,18 @@ export default function CargaMasivaModal({ establecimiento, categorias, onClose,
   const [categoryMap, setCategoryMap] = useState({}) // nombre → { exists, id }
   const [progress, setProgress] = useState({ current: 0, total: 0 })
   const [results, setResults] = useState({ created: 0, catCreated: [], errors: [] })
+  const [formato, setFormato] = useState(null)
   const fileRef = useRef()
 
   async function handleFile(file) {
     if (!file) return
-    const { data, errors } = await parseCSV(file)
+    const { data, errors, formato: fmt } = await parseCSV(file)
     if (errors.length > 0) {
       toast(errors[0], 'error')
       return
     }
 
+    setFormato(fmt)
     const { valid, errors: valErrors } = validateProducts(data)
     setValidRows(valid)
     setErrorRows(valErrors)
@@ -117,9 +119,16 @@ export default function CargaMasivaModal({ establecimiento, categorias, onClose,
           <h2 style={{ fontSize: 18, fontWeight: 800, color: '#F5F5F5', margin: 0 }}>Carga masiva de productos</h2>
           <button onClick={onClose} style={{ ...ds.actionBtn, color: 'rgba(255,255,255,0.4)' }}><X size={16} /></button>
         </div>
-        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 20, lineHeight: 1.6 }}>
+        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 16, lineHeight: 1.6 }}>
           Sube un archivo CSV con los productos para <strong style={{ color: '#FF6B2C' }}>{establecimiento.nombre}</strong>. Las categorias que no existan se crearan automaticamente.
         </p>
+        <div style={{
+          padding: '10px 14px', borderRadius: 10, marginBottom: 16,
+          background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.25)',
+          fontSize: 11, color: 'rgba(255,255,255,0.75)', lineHeight: 1.5,
+        }}>
+          <strong style={{ color: '#4ADE80' }}>Formatos soportados:</strong> plantilla Pidoo (nombre, descripcion, precio, categoria, imagen_url, disponible) o el CSV exportado directamente de <strong>Uber Eats</strong> (Carta &rarr; Exportar). Las imagenes no vienen en el CSV de UE; se pueden subir despues desde la ficha del producto.
+        </div>
 
         {/* Drop zone */}
         <div
@@ -155,7 +164,12 @@ export default function CargaMasivaModal({ establecimiento, categorias, onClose,
         </div>
 
         {/* Summary */}
-        <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+          {formato && (
+            <span style={{ ...ds.badge, background: 'rgba(255,107,44,0.15)', color: '#FF6B2C', textTransform: 'uppercase' }}>
+              Formato: {formato === 'ubereats' ? 'Uber Eats' : 'Pidoo'}
+            </span>
+          )}
           <span style={{ ...ds.badge, background: 'rgba(34,197,94,0.15)', color: '#22C55E' }}>
             <CheckCircle size={10} style={{ marginRight: 4, verticalAlign: 'middle' }} />{validRows.length} validos
           </span>
