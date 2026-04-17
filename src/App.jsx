@@ -13,7 +13,6 @@ import Configuracion from './pages/Configuracion'
 import Notificaciones from './pages/Notificaciones'
 import MapaAdmin from './pages/MapaAdmin'
 import Reembolsos from './pages/Reembolsos'
-import Socios from './pages/Socios'
 import './index.css'
 
 function AppContent() {
@@ -43,7 +42,6 @@ function AppContent() {
         {seccion === 'soporte' && <SoporteAdmin />}
         {seccion === 'finanzas' && <Finanzas />}
         {seccion === 'reembolsos' && <Reembolsos />}
-        {seccion === 'socios' && <Socios />}
         {seccion === 'config' && <Configuracion />}
       </main>
       <ToastNotification />

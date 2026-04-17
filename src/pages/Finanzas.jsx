@@ -15,7 +15,7 @@ export default function Finanzas() {
   const [tab, setTab] = useState('resumen')
   const [balancesRest, setBalancesRest] = useState([])
   const [movimientos, setMovimientos] = useState([])
-  const [resumen, setResumen] = useState({ comisionesTotal: 0, pagadoRest: 0, pagadoSocio: 0, pendiente: 0 })
+  const [resumen, setResumen] = useState({ comisionesTotal: 0, pagadoRest: 0, pendiente: 0 })
   const [facturas, setFacturas] = useState([])
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export default function Finanzas() {
   }, [])
 
   async function loadFacturas() {
-    const { data } = await supabase.from('facturas_semanales').select('*, socios(nombre, nombre_comercial), establecimientos(nombre)')
+    const { data } = await supabase.from('facturas_semanales').select('*, establecimientos(nombre)')
       .order('created_at', { ascending: false }).limit(50)
     setFacturas(data || [])
   }
@@ -41,7 +41,7 @@ export default function Finanzas() {
     const all = comisiones || []
     const comisionesTotal = all.reduce((s, c) => s + (c.comision_plataforma || 0), 0)
     const pagado = all.filter(c => c.estado_pago === 'pagado').reduce((s, c) => s + (c.comision_plataforma || 0), 0)
-    setResumen({ comisionesTotal, pagadoRest: 0, pagadoSocio: 0, pendiente: comisionesTotal - pagado })
+    setResumen({ comisionesTotal, pagadoRest: 0, pendiente: comisionesTotal - pagado })
   }
 
   async function loadBalancesRest() {
@@ -126,8 +126,7 @@ export default function Finanzas() {
         <div style={ds.table}>
           <div style={ds.tableHeader}>
             <span style={{ width: 120 }}>Factura</span>
-            <span style={{ flex: 1 }}>Socio</span>
-            <span style={{ width: 140 }}>Restaurante</span>
+            <span style={{ flex: 1 }}>Restaurante</span>
             <span style={{ width: 100 }}>Semana</span>
             <span style={{ width: 50 }}>Ped.</span>
             <span style={{ width: 80 }}>Comisiones</span>
@@ -139,8 +138,7 @@ export default function Finanzas() {
           {facturas.map(f => (
             <div key={f.id} style={ds.tableRow}>
               <span style={{ width: 120, fontSize: 11, fontWeight: 700, color: '#FF6B2C' }}>{f.numero_factura || '—'}</span>
-              <span style={{ flex: 1, fontWeight: 600, fontSize: 12 }}>{f.socios?.nombre_comercial || f.socios?.nombre || '—'}</span>
-              <span style={{ width: 140, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{f.establecimientos?.nombre || '—'}</span>
+              <span style={{ flex: 1, fontWeight: 600, fontSize: 12 }}>{f.establecimientos?.nombre || '—'}</span>
               <span style={{ width: 100, fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>{f.semana_inicio?.slice(5)}<br/>{f.semana_fin?.slice(5)}</span>
               <span style={{ width: 50, fontSize: 12 }}>{f.pedidos_entregados}/{f.total_pedidos}</span>
               <span style={{ width: 80, fontSize: 12 }}>{f.total_comisiones?.toFixed(2)}€</span>
@@ -168,7 +166,7 @@ export default function Finanzas() {
             <span style={{ width: 140 }}>Fecha</span>
           </div>
           {movimientos.map(m => {
-            const tipoColor = { entrada_tarjeta: '#16A34A', pago_restaurante: '#3B82F6', pago_socio: '#8B5CF6', cobro_comision: '#F59E0B' }
+            const tipoColor = { entrada_tarjeta: '#16A34A', pago_restaurante: '#3B82F6', cobro_comision: '#F59E0B' }
             return (
               <div key={m.id} style={ds.tableRow}>
                 <span style={{ width: 140 }}><span style={{ ...ds.badge, background: (tipoColor[m.tipo] || '#6B7280') + '15', color: tipoColor[m.tipo] || '#6B7280' }}>{m.tipo?.replace('_', ' ')}</span></span>

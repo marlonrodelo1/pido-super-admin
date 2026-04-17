@@ -4,7 +4,7 @@ import { supabase } from './supabase'
  * Sube una imagen a Supabase Storage y devuelve la URL pública.
  * @param {File} file - Archivo a subir
  * @param {string} bucket - Nombre del bucket (logos, banners, productos, store-assets)
- * @param {string} folder - Carpeta dentro del bucket (ej: "establecimientos", "socios")
+ * @param {string} folder - Carpeta dentro del bucket (ej: "establecimientos", "productos")
  */
 export async function uploadImage(file, bucket, folder = '') {
   if (!file.type.startsWith('image/')) {

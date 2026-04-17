@@ -5,6 +5,7 @@ import { ds } from '../lib/darkStyles'
 import { Plus, X, Upload, Save, Trash2 } from 'lucide-react'
 import { toast, confirmar } from '../App'
 import CargaMasivaModal from '../components/CargaMasivaModal'
+import ShipdayCard from '../components/ShipdayCard'
 
 const CATEGORIAS_PADRE = ['comida', 'farmacia', 'marketplace']
 
@@ -264,10 +265,6 @@ export default function Establecimientos() {
               <div style={{ gridColumn: '1/-1' }}><label style={ds.label}>Dirección</label><input value={form.direccion} onChange={e => setForm({ ...form, direccion: e.target.value })} style={ds.formInput} /></div>
               <div><label style={ds.label}>Radio (km)</label><input type="number" value={form.radio_cobertura_km} onChange={e => setForm({ ...form, radio_cobertura_km: +e.target.value })} style={ds.formInput} /></div>
               <div style={{ gridColumn: '1/-1' }}><label style={ds.label}>Descripción</label><textarea value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} rows={2} style={{ ...ds.formInput, resize: 'vertical' }} /></div>
-              <div style={{ gridColumn: '1/-1' }}>
-                <label style={ds.label}>API Key Shipday <span style={{ color: 'rgba(255,255,255,0.35)', fontWeight: 400, textTransform: 'none', fontSize: 10 }}>(para activar delivery)</span></label>
-                <input value={form.shipday_api_key} onChange={e => setForm({ ...form, shipday_api_key: e.target.value })} placeholder="Pegar API key de Shipday del restaurante" style={ds.formInput} />
-              </div>
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 13, color: '#F5F5F5' }}>
@@ -277,16 +274,18 @@ export default function Establecimientos() {
               <div><span style={ds.muted}>Radio:</span> {detalle.radio_cobertura_km} km</div>
               <div><span style={ds.muted}>Rating:</span> {detalle.rating?.toFixed(1)} ({detalle.total_resenas} reseñas)</div>
               <div><span style={ds.muted}>Creado:</span> {new Date(detalle.created_at).toLocaleDateString('es-ES')}</div>
-              <div style={{ gridColumn: '1/-1' }}>
-                <span style={ds.muted}>Shipday:</span>{' '}
-                {detalle.shipday_api_key
-                  ? <span style={{ color: '#22C55E', fontWeight: 600 }}>✓ Delivery activo</span>
-                  : <span style={{ color: '#EF4444' }}>Sin configurar — solo recogida</span>
-                }
-              </div>
             </div>
           )}
         </div>
+
+        {/* Integración Shipday */}
+        <ShipdayCard
+          establecimiento={detalle}
+          onKeyUpdated={(newKey) => {
+            setDetalle({ ...detalle, shipday_api_key: newKey })
+            load()
+          }}
+        />
 
         {/* Categorías generales */}
         <div style={{ marginTop: 20 }}>

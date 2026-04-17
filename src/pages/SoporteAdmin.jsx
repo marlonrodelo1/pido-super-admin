@@ -16,7 +16,7 @@ export default function SoporteAdmin() {
     const channel = supabase.channel('admin-soporte')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensajes' }, payload => {
         if (payload.new.tipo !== 'soporte') return
-        if (selectedRef.current && payload.new.socio_id === selectedRef.current.socio_id) {
+        if (selectedRef.current && payload.new.establecimiento_id === selectedRef.current.establecimiento_id) {
           setMensajes(prev => [...prev, payload.new])
         }
         loadConversaciones()
@@ -27,24 +27,31 @@ export default function SoporteAdmin() {
 
   async function loadConversaciones() {
     const { data } = await supabase.from('mensajes')
-      .select('socio_id, texto, created_at, leido')
+      .select('establecimiento_id, texto, created_at, leido')
       .eq('tipo', 'soporte')
       .order('created_at', { ascending: false })
 
     const agrupados = {}
     ;(data || []).forEach(m => {
-      if (!agrupados[m.socio_id]) agrupados[m.socio_id] = { socio_id: m.socio_id, ultimo: m.texto, fecha: m.created_at, sinLeer: 0 }
-      if (!m.leido) agrupados[m.socio_id].sinLeer++
+      if (!m.establecimiento_id) return
+      if (!agrupados[m.establecimiento_id]) {
+        agrupados[m.establecimiento_id] = {
+          establecimiento_id: m.establecimiento_id,
+          ultimo: m.texto,
+          fecha: m.created_at,
+          sinLeer: 0,
+        }
+      }
+      if (!m.leido) agrupados[m.establecimiento_id].sinLeer++
     })
     const lista = Object.values(agrupados).sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
 
-    // Cargar nombres de socios
-    const ids = lista.map(c => c.socio_id).filter(Boolean)
+    const ids = lista.map(c => c.establecimiento_id).filter(Boolean)
     if (ids.length > 0) {
-      const { data: socios } = await supabase.from('socios').select('id, nombre, nombre_comercial').in('id', ids)
+      const { data: ests } = await supabase.from('establecimientos').select('id, nombre').in('id', ids)
       const map = {}
-      ;(socios || []).forEach(s => { map[s.id] = s })
-      lista.forEach(c => { c.socio = map[c.socio_id] })
+      ;(ests || []).forEach(e => { map[e.id] = e })
+      lista.forEach(c => { c.establecimiento = map[c.establecimiento_id] })
     }
     setConversaciones(lista)
   }
@@ -54,10 +61,13 @@ export default function SoporteAdmin() {
     const { data } = await supabase.from('mensajes')
       .select('*')
       .eq('tipo', 'soporte')
-      .eq('socio_id', conv.socio_id)
+      .eq('establecimiento_id', conv.establecimiento_id)
       .order('created_at', { ascending: true })
     setMensajes(data || [])
-    await supabase.from('mensajes').update({ leido: true }).eq('tipo', 'soporte').eq('socio_id', conv.socio_id).eq('de', 'socio')
+    await supabase.from('mensajes').update({ leido: true })
+      .eq('tipo', 'soporte')
+      .eq('establecimiento_id', conv.establecimiento_id)
+      .neq('de', 'soporte')
     loadConversaciones()
   }
 
@@ -65,7 +75,10 @@ export default function SoporteAdmin() {
     e.preventDefault()
     if (!texto.trim() || !selected) return
     await supabase.from('mensajes').insert({
-      tipo: 'soporte', socio_id: selected.socio_id, de: 'soporte', texto: texto.trim(),
+      tipo: 'soporte',
+      establecimiento_id: selected.establecimiento_id,
+      de: 'soporte',
+      texto: texto.trim(),
     })
     setTexto('')
     selectConv(selected)
@@ -79,12 +92,12 @@ export default function SoporteAdmin() {
         {/* Lista conversaciones */}
         <div style={styles.lista}>
           {conversaciones.map(c => (
-            <button key={c.socio_id} onClick={() => selectConv(c)} style={{
+            <button key={c.establecimiento_id} onClick={() => selectConv(c)} style={{
               ...styles.convItem,
-              background: selected?.socio_id === c.socio_id ? 'rgba(255,107,44,0.12)' : 'transparent',
+              background: selected?.establecimiento_id === c.establecimiento_id ? 'rgba(255,107,44,0.12)' : 'transparent',
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 700, fontSize: 13, color: '#F5F5F5' }}>{c.socio?.nombre_comercial || 'Usuario'}</span>
+                <span style={{ fontWeight: 700, fontSize: 13, color: '#F5F5F5' }}>{c.establecimiento?.nombre || 'Restaurante'}</span>
                 {c.sinLeer > 0 && <span style={styles.unread}>{c.sinLeer}</span>}
               </div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.ultimo}</div>
@@ -99,8 +112,7 @@ export default function SoporteAdmin() {
           {selected ? (
             <>
               <div style={styles.chatHeader}>
-                <span style={{ fontWeight: 700, fontSize: 14, color: '#F5F5F5' }}>{selected.socio?.nombre || 'Usuario'}</span>
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{selected.socio?.nombre_comercial}</span>
+                <span style={{ fontWeight: 700, fontSize: 14, color: '#F5F5F5' }}>{selected.establecimiento?.nombre || 'Restaurante'}</span>
               </div>
               <div style={styles.chatMessages}>
                 {mensajes.map(m => (

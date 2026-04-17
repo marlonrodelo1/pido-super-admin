@@ -1,10 +1,9 @@
-import { LayoutGrid, Store, User, ClipboardList, MessageCircle, DollarSign, Settings, LogOut, Map, Bell, RotateCcw, Truck } from 'lucide-react'
+import { LayoutGrid, Store, User, ClipboardList, MessageCircle, DollarSign, Settings, LogOut, Map, Bell, RotateCcw } from 'lucide-react'
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', Icon: LayoutGrid },
   { id: 'establecimientos', label: 'Establecimientos', Icon: Store },
   { id: 'usuarios', label: 'Usuarios', Icon: User },
-  { id: 'socios', label: 'Socios', Icon: Truck },
   { id: 'pedidos', label: 'Pedidos', Icon: ClipboardList },
   { id: 'mapa', label: 'Mapa en vivo', Icon: Map },
   { id: 'notificaciones', label: 'Notificaciones', Icon: Bell },
