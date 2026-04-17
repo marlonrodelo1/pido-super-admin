@@ -5,6 +5,7 @@ import { ds } from '../lib/darkStyles'
 import { Plus, X, Upload, Save, Trash2 } from 'lucide-react'
 import { toast, confirmar } from '../App'
 import CargaMasivaModal from '../components/CargaMasivaModal'
+import ImportUrlModal from '../components/ImportUrlModal'
 import RidersCard from '../components/RidersCard'
 
 const CATEGORIAS_PADRE = ['comida', 'farmacia', 'marketplace']
@@ -32,6 +33,7 @@ export default function Establecimientos() {
   const [savingProd, setSavingProd] = useState(false)
   const [resenas, setResenas] = useState([])
   const [showCargaMasiva, setShowCargaMasiva] = useState(false)
+  const [showImportUrl, setShowImportUrl] = useState(false)
   const logoRef = useRef()
   const bannerRef = useRef()
   const prodImgRef = useRef()
@@ -327,6 +329,7 @@ export default function Establecimientos() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
             <h3 style={{ fontSize: 15, fontWeight: 700, color: '#F5F5F5' }}>Productos ({productos.length})</h3>
             <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={() => setShowImportUrl(true)} style={{ ...ds.secondaryBtn, fontSize: 11, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 4 }}>🔗 Importar URL</button>
               <button onClick={() => setShowCargaMasiva(true)} style={{ ...ds.secondaryBtn, fontSize: 11, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 4 }}><Upload size={12} /> Carga masiva</button>
               <button onClick={() => { setEditProd('new'); setProdForm({ nombre: '', descripcion: '', precio: '', categoria_id: '', imagen_url: '' }); setProdExtras([]) }} style={{ ...ds.primaryBtn, fontSize: 11, padding: '6px 12px' }}>+ Producto</button>
             </div>
@@ -396,6 +399,15 @@ export default function Establecimientos() {
             establecimiento={detalle}
             categorias={categorias}
             onClose={() => setShowCargaMasiva(false)}
+            onComplete={() => { loadProductos(detalle.id); loadCategorias(detalle.id) }}
+          />
+        )}
+
+        {/* Modal importar desde URL (last.shop) */}
+        {showImportUrl && (
+          <ImportUrlModal
+            establecimiento={detalle}
+            onClose={() => setShowImportUrl(false)}
             onComplete={() => { loadProductos(detalle.id); loadCategorias(detalle.id) }}
           />
         )}
