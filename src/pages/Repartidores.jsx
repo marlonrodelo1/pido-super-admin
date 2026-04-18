@@ -17,6 +17,7 @@ export default function Repartidores() {
   const [status, setStatus] = useState({})
   const [vinculos, setVinculos] = useState({})
   const [origenes, setOrigenes] = useState({})
+  const [pendientes, setPendientes] = useState({})
   const [buscar, setBuscar] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('pendiente')
   const [showNuevo, setShowNuevo] = useState(false)
@@ -32,11 +33,18 @@ export default function Repartidores() {
   }, [])
 
   async function load() {
-    const [ridersRes, statusRes, vincRes] = await Promise.all([
+    const [ridersRes, statusRes, vincRes, earningsRes] = await Promise.all([
       supabase.from('rider_accounts').select('*').order('created_at', { ascending: false }),
       supabase.from('rider_status').select('*'),
       supabase.from('restaurante_riders').select('rider_account_id, establecimientos(id, nombre)'),
+      supabase.from('rider_earnings').select('rider_account_id, neto_rider').eq('estado_pago', 'pendiente'),
     ])
+
+    const pendMap = {}
+    ;(earningsRes.data || []).forEach(e => {
+      pendMap[e.rider_account_id] = (pendMap[e.rider_account_id] || 0) + (e.neto_rider || 0)
+    })
+    setPendientes(pendMap)
     setRiders(ridersRes.data || [])
 
     const statusMap = {}
@@ -172,6 +180,7 @@ export default function Repartidores() {
           <span style={{ width: 130 }}>Contacto</span>
           <span style={{ width: 110 }}>Estado</span>
           <span style={{ width: 110 }}>Shipday</span>
+          <span style={{ width: 110 }}>Debe recibir</span>
           <span style={{ width: 150 }}>Registrado desde</span>
           <span style={{ width: 200, textAlign: 'right' }}></span>
         </div>
@@ -201,6 +210,9 @@ export default function Repartidores() {
                 ) : (
                   <span style={{ ...ds.badge, background: 'rgba(148,163,184,0.15)', color: '#94A3B8' }}>○ Offline</span>
                 )}
+              </span>
+              <span style={{ width: 110, fontSize: 12, fontWeight: 700, color: (pendientes[r.id] || 0) > 0 ? '#FF6B2C' : 'rgba(255,255,255,0.4)' }}>
+                {(pendientes[r.id] || 0).toFixed(2)}€
               </span>
               <span style={{ width: 150, fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{origen || '—'}</span>
               <span style={{ width: 200, textAlign: 'right', display: 'flex', gap: 6, justifyContent: 'flex-end' }}>

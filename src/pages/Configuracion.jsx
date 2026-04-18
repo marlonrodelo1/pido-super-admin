@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { ds } from '../lib/darkStyles'
-import { Trash2, Truck, DollarSign, MapPin } from 'lucide-react'
+import { Trash2, Truck, DollarSign, MapPin, Zap } from 'lucide-react'
 
 // Sanitizar HTML para prevenir XSS (mismo patron que PaginaLegal.jsx)
 function sanitizeHtml(html) {
@@ -62,7 +62,7 @@ export default function Configuracion() {
         updated_at: new Date().toISOString(),
       }))
       for (const u of updates) {
-        await supabase.from('configuracion_plataforma').update({ valor: u.valor, updated_at: u.updated_at }).eq('clave', u.clave)
+        await supabase.from('configuracion_plataforma').upsert({ clave: u.clave, valor: u.valor, updated_at: u.updated_at }, { onConflict: 'clave' })
       }
       setConfigMsg('Configuración guardada correctamente')
       setTimeout(() => setConfigMsg(null), 3000)
@@ -207,6 +207,88 @@ export default function Configuracion() {
             </div>
           </div>
 
+          {/* ==================== ALGORITMO DE ASIGNACIÓN Y COMISIONES ==================== */}
+          <div style={styles.section}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+              <Zap size={18} color="#FF6B2C" />
+              <h2 style={styles.sectionTitle}>Algoritmo de asignación y comisiones</h2>
+            </div>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 20, marginTop: -8 }}>
+              Define cómo se asignan los pedidos a los riders y cómo se reparte el dinero entre Pidoo, rider y restaurante.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, marginBottom: 16 }}>
+              <div>
+                <label style={ds.label}>Algoritmo de asignación por defecto</label>
+                <select
+                  value={config.default_algoritmo_asignacion ?? 'nearest'}
+                  onChange={e => setConfigVal('default_algoritmo_asignacion', e.target.value)}
+                  style={ds.formInput}
+                >
+                  <option value="nearest">Más cercano</option>
+                  <option value="fewest_orders">Menos pedidos activos</option>
+                  <option value="same_area">Misma zona</option>
+                  <option value="broadcast_all">Difundir a todos</option>
+                </select>
+                <div style={styles.hint}>Se aplica cuando un restaurante acepta un pedido delivery</div>
+              </div>
+              <div>
+                <label style={ds.label}>Envío al rider</label>
+                <select
+                  value={config.default_timing_envio_rider ?? 'on_accept'}
+                  onChange={e => setConfigVal('default_timing_envio_rider', e.target.value)}
+                  style={ds.formInput}
+                >
+                  <option value="on_accept">Al aceptar el pedido</option>
+                  <option value="on_ready">Cuando esté listo para recoger</option>
+                </select>
+                <div style={styles.hint}>Momento en que se crea la orden Shipday al rider</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+              <ToggleRow
+                label="Permitir que los restaurantes configuren su propio algoritmo"
+                value={config.override_algoritmo_permitido === 'true'}
+                onChange={v => setConfigVal('override_algoritmo_permitido', v ? 'true' : 'false')}
+              />
+              <ToggleRow
+                label="Permitir que los restaurantes configuren su propia tarifa de envío"
+                value={config.override_tarifa_permitido === 'true'}
+                onChange={v => setConfigVal('override_tarifa_permitido', v ? 'true' : 'false')}
+              />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 16 }}>
+              <div>
+                <label style={ds.label}>Comisión Pidoo (% del subtotal)</label>
+                <input
+                  type="number" min={0} max={50} step="0.5"
+                  value={config.comision_pidoo_pct ?? '10'}
+                  onChange={e => setConfigVal('comision_pidoo_pct', e.target.value)}
+                  style={ds.formInput}
+                />
+                <div style={styles.hint}>Se descuenta al restaurante</div>
+              </div>
+              <div>
+                <label style={ds.label}>Comisión rider (% del subtotal)</label>
+                <input
+                  type="number" min={0} max={50} step="0.5"
+                  value={config.comision_rider_pct ?? '10'}
+                  onChange={e => setConfigVal('comision_rider_pct', e.target.value)}
+                  style={ds.formInput}
+                />
+                <div style={styles.hint}>Además del 100% del envío y 100% de la propina</div>
+              </div>
+            </div>
+
+            {/* Ejemplo visual del split */}
+            <SplitPreview
+              pidooPct={configNum('comision_pidoo_pct', 10)}
+              riderPct={configNum('comision_rider_pct', 10)}
+            />
+          </div>
+
           {/* ==================== RADIO DEFAULT ==================== */}
           <div style={styles.section}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
@@ -294,6 +376,63 @@ export default function Configuracion() {
             {paginasLegales.length === 0 && <div style={{ textAlign: 'center', padding: 24, color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>No hay páginas legales configuradas</div>}
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+function ToggleRow({ label, value, onChange }) {
+  return (
+    <div
+      onClick={() => onChange(!value)}
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '12px 14px', borderRadius: 10,
+        background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
+        cursor: 'pointer', userSelect: 'none',
+      }}
+    >
+      <span style={{ fontSize: 13, color: '#F5F5F5', fontWeight: 600 }}>{label}</span>
+      <span style={{
+        width: 38, height: 22, borderRadius: 22, padding: 2,
+        background: value ? '#FF6B2C' : 'rgba(255,255,255,0.15)',
+        transition: 'background 0.2s', display: 'flex', alignItems: 'center',
+      }}>
+        <span style={{
+          width: 18, height: 18, borderRadius: 18, background: '#fff',
+          transform: value ? 'translateX(16px)' : 'translateX(0)',
+          transition: 'transform 0.2s',
+        }} />
+      </span>
+    </div>
+  )
+}
+
+function SplitPreview({ pidooPct, riderPct }) {
+  const subtotal = 20
+  const envio = 3
+  const propina = 0
+  const pidoo = (subtotal * (pidooPct || 0)) / 100
+  const rider = (subtotal * (riderPct || 0)) / 100 + envio + propina
+  const restaurante = subtotal - pidoo - (subtotal * (riderPct || 0)) / 100
+  return (
+    <div style={{ background: 'rgba(255,107,44,0.08)', borderRadius: 12, padding: 16, border: '1px solid rgba(255,107,44,0.15)' }}>
+      <div style={{ fontSize: 12, fontWeight: 700, color: '#FF6B2C', marginBottom: 10 }}>
+        Ejemplo: pedido con subtotal 20€ + envío 3€
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 8, padding: '10px 16px', minWidth: 120 }}>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Pidoo</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: '#F5F5F5' }}>€{pidoo.toFixed(2)}</div>
+        </div>
+        <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 8, padding: '10px 16px', minWidth: 140 }}>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Rider (+ envío + propina)</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: '#F5F5F5' }}>€{rider.toFixed(2)}</div>
+        </div>
+        <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 8, padding: '10px 16px', minWidth: 120 }}>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Restaurante</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: '#F5F5F5' }}>€{restaurante.toFixed(2)}</div>
+        </div>
       </div>
     </div>
   )
