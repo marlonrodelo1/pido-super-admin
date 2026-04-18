@@ -54,7 +54,7 @@ export default function Notificaciones() {
       // Usar la edge function para cada usuario único
       const uniqueTargets = new Map()
       for (const sub of subsToSend) {
-        const key = sub.user_id || sub.establecimiento_id || sub.socio_id || sub.id
+        const key = sub.user_id || sub.establecimiento_id || sub.id
         if (!uniqueTargets.has(key)) {
           uniqueTargets.set(key, sub)
         }
@@ -74,8 +74,8 @@ export default function Notificaciones() {
               'apikey': SUPABASE_ANON_KEY,
             },
             body: JSON.stringify({
-              target_type: sub.user_type === 'cliente' ? 'cliente' : sub.user_type === 'restaurante' ? 'restaurante' : 'socio',
-              target_id: sub.user_id || sub.establecimiento_id || sub.socio_id,
+              target_type: sub.user_type === 'cliente' ? 'cliente' : 'restaurante',
+              target_id: sub.user_id || sub.establecimiento_id,
               title: titulo.trim(),
               body: mensaje.trim(),
             }),
