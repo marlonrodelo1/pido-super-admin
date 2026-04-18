@@ -170,7 +170,7 @@ export default function CargaMasivaModal({ establecimiento, categorias, onClose,
               Formato: {formato === 'ubereats' ? 'Uber Eats' : 'Pidoo'}
             </span>
           )}
-          <span style={{ ...ds.badge, background: 'rgba(34,197,94,0.15)', color: '#22C55E' }}>
+          <span style={{ ...ds.badge, background: 'rgba(255,255,255,0.06)', color: '#F5F5F5' }}>
             <CheckCircle size={10} style={{ marginRight: 4, verticalAlign: 'middle' }} />{validRows.length} validos
           </span>
           {errorRows.length > 0 && (
@@ -189,7 +189,7 @@ export default function CargaMasivaModal({ establecimiento, categorias, onClose,
                 <span key={name} style={{
                   ...ds.badge,
                   background: info.exists ? 'rgba(34,197,94,0.12)' : 'rgba(255,107,44,0.12)',
-                  color: info.exists ? '#22C55E' : '#FF6B2C',
+                  color: info.exists ? '#F5F5F5' : '#FF6B2C',
                 }}>
                   {info.exists ? '✓' : '+ nueva'} {name}
                 </span>
@@ -213,7 +213,7 @@ export default function CargaMasivaModal({ establecimiento, categorias, onClose,
               <span style={{ flex: 2, fontSize: 12 }}>{r.nombre}</span>
               <span style={{ width: 70, textAlign: 'right', fontSize: 12, color: '#FF6B2C', fontWeight: 700 }}>{r.precio.toFixed(2)} €</span>
               <span style={{ flex: 1, fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{r.categoria || '—'}</span>
-              <span style={{ width: 60, textAlign: 'center' }}><CheckCircle size={13} style={{ color: '#22C55E' }} /></span>
+              <span style={{ width: 60, textAlign: 'center' }}><CheckCircle size={13} style={{ color: '#F5F5F5' }} /></span>
             </div>
           ))}
           {errorRows.map(r => (
@@ -269,14 +269,14 @@ export default function CargaMasivaModal({ establecimiento, categorias, onClose,
     <div style={ds.modal}>
       <div style={{ ...ds.modalContent, maxWidth: 440 }}>
         <div style={{ textAlign: 'center', marginBottom: 20 }}>
-          <CheckCircle size={40} style={{ color: '#22C55E', marginBottom: 10 }} />
+          <CheckCircle size={40} style={{ color: '#F5F5F5', marginBottom: 10 }} />
           <h2 style={{ fontSize: 18, fontWeight: 800, color: '#F5F5F5', margin: 0 }}>Carga completada</h2>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {results.created > 0 && (
-            <div style={{ ...ds.card, padding: '12px 16px', borderLeft: '3px solid #22C55E' }}>
-              <span style={{ fontSize: 13, color: '#22C55E', fontWeight: 700 }}>{results.created}</span>
+            <div style={{ ...ds.card, padding: '12px 16px', borderLeft: '3px solid #F5F5F5' }}>
+              <span style={{ fontSize: 13, color: '#F5F5F5', fontWeight: 700 }}>{results.created}</span>
               <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginLeft: 6 }}>producto{results.created !== 1 ? 's' : ''} creado{results.created !== 1 ? 's' : ''}</span>
             </div>
           )}

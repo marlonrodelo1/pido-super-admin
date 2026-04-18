@@ -3,20 +3,20 @@ import { LayoutGrid, Store, User, ClipboardList, MessageCircle, DollarSign, Sett
 import { supabase } from '../lib/supabase'
 
 const menuItems = [
-  { id: 'dashboard', label: 'Dashboard', Icon: LayoutGrid },
-  { id: 'establecimientos', label: 'Establecimientos', Icon: Store },
-  { id: 'repartidores', label: 'Repartidores', Icon: Truck },
-  { id: 'usuarios', label: 'Usuarios', Icon: User },
-  { id: 'pedidos', label: 'Pedidos', Icon: ClipboardList },
-  { id: 'mapa', label: 'Mapa en vivo', Icon: Map },
-  { id: 'notificaciones', label: 'Notificaciones', Icon: Bell },
-  { id: 'soporte', label: 'Soporte', Icon: MessageCircle },
-  { id: 'finanzas', label: 'Finanzas', Icon: DollarSign },
-  { id: 'reembolsos', label: 'Reembolsos', Icon: RotateCcw },
-  { id: 'config', label: 'Configuracion', Icon: Settings },
+  { id: 'dashboard', label: 'Dashboard', Icon: LayoutGrid, group: 'Operación' },
+  { id: 'pedidos', label: 'Pedidos', Icon: ClipboardList, group: 'Operación' },
+  { id: 'mapa', label: 'Mapa en vivo', Icon: Map, group: 'Operación' },
+  { id: 'repartidores', label: 'Repartidores', Icon: Truck, group: 'Red' },
+  { id: 'establecimientos', label: 'Establecimientos', Icon: Store, group: 'Red' },
+  { id: 'usuarios', label: 'Usuarios', Icon: User, group: 'Red' },
+  { id: 'finanzas', label: 'Finanzas', Icon: DollarSign, group: 'Negocio' },
+  { id: 'reembolsos', label: 'Reembolsos', Icon: RotateCcw, group: 'Negocio' },
+  { id: 'notificaciones', label: 'Notificaciones', Icon: Bell, group: 'Plataforma' },
+  { id: 'soporte', label: 'Soporte', Icon: MessageCircle, group: 'Plataforma' },
+  { id: 'config', label: 'Configuración', Icon: Settings, group: 'Plataforma' },
 ]
 
-export default function Sidebar({ active, onChange, onLogout }) {
+export default function Sidebar({ active, onChange, onLogout, user }) {
   const [pendientes, setPendientes] = useState(0)
 
   useEffect(() => {
@@ -34,68 +34,209 @@ export default function Sidebar({ active, onChange, onLogout }) {
     setPendientes(count || 0)
   }
 
+  // Render grouped nav
+  const groups = []
+  menuItems.forEach(it => {
+    const g = groups.find(x => x.name === it.group)
+    if (g) g.items.push(it)
+    else groups.push({ name: it.group, items: [it] })
+  })
+
+  const userEmail = user?.email || ''
+  const userInitial = (userEmail[0] || 'M').toUpperCase()
+
   return (
-    <div style={styles.sidebar}>
-      <div style={styles.logo}>
-        <span style={{ fontWeight: 800, fontSize: 22, color: '#FF6B2C', letterSpacing: -1 }}>pidoo</span>
-        <span style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>Super Admin</span>
+    <aside style={styles.sidebar}>
+      {/* Brand */}
+      <div style={styles.brand}>
+        <div style={styles.logo}>P</div>
+        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
+          <span style={styles.brandTitle}>Pidoo</span>
+          <span style={styles.brandSub}>Super Admin</span>
+        </div>
+        <span style={styles.env}>LIVE</span>
       </div>
 
+      {/* Nav */}
       <nav style={styles.nav}>
-        {menuItems.map(item => {
-          const showBadge = item.id === 'repartidores' && pendientes > 0
-          return (
-            <button
-              key={item.id}
-              onClick={() => onChange(item.id)}
-              style={{
-                ...styles.navItem,
-                background: active === item.id ? 'rgba(255,107,44,0.15)' : 'transparent',
-                color: active === item.id ? '#FF6B2C' : 'rgba(255,255,255,0.5)',
-                fontWeight: active === item.id ? 700 : 500,
-              }}
-            >
-              <item.Icon size={18} strokeWidth={active === item.id ? 2.2 : 1.8} />
-              <span style={{ flex: 1 }}>{item.label}</span>
-              {showBadge && (
-                <span style={{
-                  minWidth: 18, height: 18, padding: '0 6px', borderRadius: 9,
-                  background: '#F59E0B', color: '#fff',
-                  fontSize: 10, fontWeight: 800,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>{pendientes}</span>
-              )}
-            </button>
-          )
-        })}
+        {groups.map(g => (
+          <div key={g.name}>
+            <div style={styles.groupLabel}>{g.name}</div>
+            {g.items.map(item => {
+              const isActive = active === item.id
+              const showBadge = item.id === 'repartidores' && pendientes > 0
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => onChange(item.id)}
+                  onMouseEnter={e => {
+                    if (!isActive) {
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+                      e.currentTarget.style.color = '#F5F5F5'
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (!isActive) {
+                      e.currentTarget.style.background = 'transparent'
+                      e.currentTarget.style.color = 'rgba(245,245,245,0.62)'
+                    }
+                  }}
+                  style={{
+                    ...styles.navItem,
+                    background: isActive ? 'rgba(255,255,255,0.04)' : 'transparent',
+                    color: isActive ? '#F5F5F5' : 'rgba(245,245,245,0.62)',
+                  }}
+                >
+                  {isActive && <span style={styles.activeBar} />}
+                  <item.Icon
+                    size={16}
+                    strokeWidth={1.8}
+                    style={{ color: isActive ? '#FF6B2C' : 'rgba(245,245,245,0.40)', flexShrink: 0 }}
+                  />
+                  <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>
+                  {showBadge && (
+                    <span style={styles.badgeLive}>
+                      <span style={styles.pulseDot} />
+                      {pendientes}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        ))}
       </nav>
 
-      <button onClick={onLogout} style={styles.logout}>
-        <LogOut size={16} strokeWidth={2} />
-        Cerrar sesion
-      </button>
-    </div>
+      {/* Foot */}
+      <div style={styles.foot}>
+        <div style={styles.avatar}>{userInitial}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={styles.footName}>{userEmail.split('@')[0] || 'admin'}</div>
+          <div style={styles.footRole}>Super admin</div>
+        </div>
+        <button
+          onClick={onLogout}
+          title="Cerrar sesión"
+          style={styles.logoutBtn}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#F5F5F5' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(245,245,245,0.62)' }}
+        >
+          <LogOut size={15} strokeWidth={1.8} />
+        </button>
+      </div>
+    </aside>
   )
 }
 
 const styles = {
   sidebar: {
-    width: 240, minHeight: '100vh', background: '#111111', borderRight: '1px solid rgba(255,255,255,0.08)',
-    display: 'flex', flexDirection: 'column', padding: '20px 12px', position: 'fixed', left: 0, top: 0,
+    width: 220,
+    minHeight: '100vh',
+    background: '#111111',
+    borderRight: '1px solid rgba(255,255,255,0.08)',
+    display: 'flex',
+    flexDirection: 'column',
+    position: 'fixed',
+    left: 0, top: 0,
+    overflow: 'hidden',
+  },
+  brand: {
+    display: 'flex', alignItems: 'center', gap: 10,
+    padding: '14px 18px',
+    height: 56,
+    borderBottom: '1px solid rgba(255,255,255,0.08)',
   },
   logo: {
-    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '0 12px 24px',
-    borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: 16,
+    width: 28, height: 28, borderRadius: 8,
+    background: 'linear-gradient(135deg,#FF6B2C,#FF3D00)',
+    display: 'grid', placeItems: 'center',
+    color: '#fff', fontWeight: 900, fontSize: 13, letterSpacing: '-0.5px',
+    boxShadow: '0 0 0 1px rgba(255,107,44,0.35), 0 8px 20px -6px rgba(255,107,44,0.45)',
+    flexShrink: 0,
   },
-  nav: { display: 'flex', flexDirection: 'column', gap: 2, flex: 1 },
+  brandTitle: { fontWeight: 800, fontSize: 14, letterSpacing: '-0.3px', color: '#F5F5F5' },
+  brandSub: {
+    fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.14em',
+    color: 'rgba(245,245,245,0.40)', fontWeight: 700,
+  },
+  env: {
+    marginLeft: 'auto',
+    fontSize: 9, letterSpacing: '0.12em', fontWeight: 700, textTransform: 'uppercase',
+    color: '#FF6B2C',
+    padding: '3px 6px',
+    border: '1px solid rgba(255,107,44,0.32)',
+    background: 'rgba(255,107,44,0.12)',
+    borderRadius: 4,
+  },
+  nav: {
+    padding: '12px 10px',
+    overflowY: 'auto',
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  groupLabel: {
+    margin: '14px 0 6px',
+    padding: '0 10px',
+    fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase',
+    color: 'rgba(245,245,245,0.22)', fontWeight: 700,
+  },
   navItem: {
-    display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10,
-    border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: 13,
-    transition: 'all 0.15s', textAlign: 'left', width: '100%',
+    display: 'flex', alignItems: 'center', gap: 10,
+    padding: '8px 10px', borderRadius: 7,
+    border: 'none', cursor: 'pointer',
+    fontFamily: "'Inter', sans-serif", fontSize: 13,
+    fontWeight: 500,
+    textAlign: 'left', width: '100%',
+    position: 'relative',
+    transition: 'background 0.12s, color 0.12s',
   },
-  logout: {
-    display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 10,
-    border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: 13,
-    color: '#EF4444', background: 'transparent', fontWeight: 600, marginTop: 'auto',
+  activeBar: {
+    content: '',
+    position: 'absolute',
+    left: -10, top: 6, bottom: 6,
+    width: 2,
+    background: '#FF6B2C',
+    borderRadius: '0 2px 2px 0',
+  },
+  badgeLive: {
+    marginLeft: 'auto',
+    fontSize: 10, fontWeight: 700,
+    padding: '1px 6px', borderRadius: 999,
+    background: 'rgba(255,107,44,0.12)',
+    color: '#FF6B2C',
+    border: '1px solid rgba(255,107,44,0.32)',
+    display: 'flex', alignItems: 'center', gap: 4,
+  },
+  pulseDot: {
+    width: 6, height: 6, borderRadius: '50%',
+    background: '#FF6B2C',
+    animation: 'pulse-p 1.8s infinite',
+  },
+  foot: {
+    padding: 12,
+    borderTop: '1px solid rgba(255,255,255,0.08)',
+    display: 'flex', alignItems: 'center', gap: 10,
+  },
+  avatar: {
+    width: 28, height: 28, borderRadius: '50%',
+    background: '#1E1E1E',
+    border: '1px solid rgba(255,255,255,0.14)',
+    display: 'grid', placeItems: 'center',
+    fontWeight: 700, fontSize: 11, color: '#F5F5F5',
+    flexShrink: 0,
+  },
+  footName: {
+    fontSize: 12, fontWeight: 600, color: '#F5F5F5',
+    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+  },
+  footRole: { fontSize: 10, color: 'rgba(245,245,245,0.40)' },
+  logoutBtn: {
+    width: 28, height: 28, borderRadius: 7,
+    display: 'grid', placeItems: 'center',
+    color: 'rgba(245,245,245,0.62)',
+    background: 'transparent', border: '1px solid transparent',
+    cursor: 'pointer', flexShrink: 0,
+    transition: 'background 0.12s, color 0.12s',
   },
 }

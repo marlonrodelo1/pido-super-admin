@@ -296,7 +296,7 @@ export default function Establecimientos() {
                   padding: '8px 14px', borderRadius: 10, border: sel ? '2px solid #FF6B2C' : '1px solid rgba(255,255,255,0.1)',
                   background: sel ? 'rgba(255,107,44,0.15)' : 'rgba(255,255,255,0.04)',
                   color: sel ? '#FF6B2C' : 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: 600,
-                  cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: 4,
+                  cursor: 'pointer', fontFamily: "'Inter', system-ui, -apple-system, sans-serif", display: 'flex', alignItems: 'center', gap: 4,
                 }}>
                   {c.emoji} {c.nombre}
                 </button>
@@ -346,7 +346,7 @@ export default function Establecimientos() {
               </div>
               <span style={{ fontWeight: 700, fontSize: 13, color: '#FF6B2C', minWidth: 60, textAlign: 'right' }}>{p.precio.toFixed(2)} €</span>
               <div style={{ display: 'flex', gap: 4 }}>
-                <button onClick={() => toggleDisponible(p.id, p.disponible)} style={{ ...ds.actionBtn, color: p.disponible ? '#22C55E' : '#EF4444', fontSize: 10 }}>{p.disponible ? 'On' : 'Off'}</button>
+                <button onClick={() => toggleDisponible(p.id, p.disponible)} style={{ ...ds.actionBtn, color: p.disponible ? '#F5F5F5' : '#EF4444', fontSize: 10 }}>{p.disponible ? 'On' : 'Off'}</button>
                 <button onClick={() => abrirEditarProd(p)} style={{ ...ds.actionBtn, fontSize: 10 }}>Editar</button>
                 <button onClick={() => eliminarProd(p.id)} style={{ ...ds.actionBtn, color: '#EF4444', fontSize: 10 }}>×</button>
               </div>
@@ -448,7 +448,7 @@ export default function Establecimientos() {
                       const sel = prodExtras.includes(g.id)
                       return (
                         <button key={g.id} onClick={() => setProdExtras(prev => sel ? prev.filter(id => id !== g.id) : [...prev, g.id])} style={{
-                          padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 600,
+                          padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: "'Inter', system-ui, -apple-system, sans-serif", fontSize: 11, fontWeight: 600,
                           border: sel ? '2px solid #FF6B2C' : '1px solid rgba(255,255,255,0.1)',
                           background: sel ? 'rgba(255,107,44,0.15)' : 'rgba(255,255,255,0.04)',
                           color: sel ? '#FF6B2C' : 'rgba(255,255,255,0.5)',
@@ -515,11 +515,11 @@ export default function Establecimientos() {
             </span>
             <span style={{ width: 60, fontSize: 12, color: '#F5F5F5' }}>{e.rating?.toFixed(1)}</span>
             <span style={{ width: 80 }}>
-              <span style={{ ...ds.badge, background: e.activo ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)', color: e.activo ? '#22C55E' : '#EF4444' }}>{e.activo ? 'Activo' : 'Inactivo'}</span>
+              <span style={{ ...ds.badge, background: e.activo ? 'rgba(255,255,255,0.06)' : 'rgba(239,68,68,0.15)', color: e.activo ? '#F5F5F5' : '#EF4444' }}>{e.activo ? 'Activo' : 'Inactivo'}</span>
             </span>
             <span style={{ width: 120, display: 'flex', gap: 6 }}>
               <button onClick={() => { setDetalle(e); loadCategorias(e.id); loadEstCats(e.id); loadProductos(e.id); loadResenas(e.id) }} style={ds.actionBtn}>Editar</button>
-              <button onClick={() => toggleActivo(e.id, e.activo)} style={{ ...ds.actionBtn, color: e.activo ? '#EF4444' : '#22C55E' }}>
+              <button onClick={() => toggleActivo(e.id, e.activo)} style={{ ...ds.actionBtn, color: e.activo ? '#EF4444' : '#F5F5F5' }}>
                 {e.activo ? 'Off' : 'On'}
               </button>
             </span>

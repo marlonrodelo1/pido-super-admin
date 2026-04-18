@@ -40,7 +40,7 @@ export default function Pedidos() {
     return true
   })
 
-  const estadoColor = { nuevo: '#3B82F6', aceptado: '#F59E0B', preparando: '#F59E0B', listo: '#8B5CF6', recogido: '#8B5CF6', en_camino: '#3B82F6', entregado: '#16A34A', cancelado: '#EF4444', fallido: '#EF4444' }
+  const estadoColor = { nuevo: '#FF6B2C', aceptado: '#FF6B2C', preparando: '#FF6B2C', listo: 'rgba(245,245,245,0.62)', recogido: 'rgba(245,245,245,0.62)', en_camino: '#FF6B2C', entregado: '#F5F5F5', cancelado: '#EF4444', fallido: '#EF4444' }
   const estados = ['todos', 'nuevo', 'aceptado', 'preparando', 'listo', 'en_camino', 'entregado', 'cancelado']
 
   if (detalle) {
@@ -81,7 +81,7 @@ export default function Pedidos() {
                   <span style={{ fontWeight: 700 }}>{item.cantidad}x</span> {item.nombre_producto}
                   {item.tamano && <span style={{ color: 'rgba(255,255,255,0.4)' }}> ({item.tamano})</span>}
                   {item.extras?.length > 0 && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>+ {item.extras.join(', ')}</div>}
-                  {item.notas && <div style={{ fontSize: 11, color: '#F59E0B', marginTop: 2 }}>{item.notas}</div>}
+                  {item.notas && <div style={{ fontSize: 11, color: '#FF6B2C', marginTop: 2 }}>{item.notas}</div>}
                 </div>
                 <span style={{ fontWeight: 700 }}>{(item.precio_unitario * item.cantidad).toFixed(2)}EUR</span>
               </div>
@@ -109,7 +109,7 @@ export default function Pedidos() {
       </div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
         {['todos', 'tarjeta', 'efectivo'].map(p => (
-          <button key={p} onClick={() => setFiltroPago(p)} style={{ ...ds.filterBtn, background: filtroPago === p ? '#3B82F6' : 'rgba(255,255,255,0.08)', color: filtroPago === p ? '#fff' : 'rgba(255,255,255,0.5)' }}>
+          <button key={p} onClick={() => setFiltroPago(p)} style={{ ...ds.filterBtn, background: filtroPago === p ? '#FF6B2C' : 'rgba(255,255,255,0.08)', color: filtroPago === p ? '#fff' : 'rgba(255,255,255,0.5)' }}>
             {p.charAt(0).toUpperCase() + p.slice(1)}
           </button>
         ))}

@@ -54,7 +54,7 @@ export default function Usuarios() {
     return (u.nombre || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q) || (u.telefono || '').includes(q)
   })
 
-  const estadoColor = { entregado: '#16A34A', cancelado: '#EF4444', fallido: '#EF4444', nuevo: '#3B82F6', aceptado: '#3B82F6', preparando: '#F59E0B', listo: '#A855F7', en_camino: '#FF6B2C', recogido: '#FF6B2C' }
+  const estadoColor = { entregado: '#F5F5F5', cancelado: '#EF4444', fallido: '#EF4444', nuevo: '#FF6B2C', aceptado: '#FF6B2C', preparando: '#FF6B2C', listo: 'rgba(245,245,245,0.62)', en_camino: '#FF6B2C', recogido: '#FF6B2C' }
 
   // Total gastado por el usuario
   const totalGastado = pedidosUsuario.filter(p => p.estado === 'entregado').reduce((s, p) => s + (p.total || 0), 0)
@@ -89,7 +89,7 @@ export default function Usuarios() {
             </div>
           </div>
 
-          {guardado && <div style={{ background: 'rgba(34,197,94,0.15)', color: '#22C55E', fontSize: 12, fontWeight: 600, padding: '8px 14px', borderRadius: 8, marginBottom: 16, textAlign: 'center' }}>Cambios guardados</div>}
+          {guardado && <div style={{ background: 'rgba(255,255,255,0.06)', color: '#F5F5F5', fontSize: 12, fontWeight: 600, padding: '8px 14px', borderRadius: 8, marginBottom: 16, textAlign: 'center' }}>Cambios guardados</div>}
 
           {editando ? (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -122,7 +122,7 @@ export default function Usuarios() {
                 </div>
                 <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 14 }}>
                   <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: 600, marginBottom: 4 }}>Entregados</div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: '#22C55E' }}>{pedidosEntregados}</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: '#F5F5F5' }}>{pedidosEntregados}</div>
                 </div>
               </div>
 

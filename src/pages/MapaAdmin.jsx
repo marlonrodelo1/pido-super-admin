@@ -95,7 +95,7 @@ export default function MapaAdmin() {
               onCloseClick={() => setSelected(null)}
               options={{ pixelOffset: new window.google.maps.Size(0, -20) }}
             >
-              <div style={{ fontFamily: "'DM Sans', sans-serif", padding: 4, minWidth: 160 }}>
+              <div style={{ fontFamily: "'Inter', system-ui, -apple-system, sans-serif", padding: 4, minWidth: 160 }}>
                 <div style={{ fontWeight: 800, fontSize: 13, color: '#1A1A1A', marginBottom: 2 }}>{selected.nombre}</div>
                 <div style={{ fontSize: 11, color: '#666' }}>★ {selected.rating?.toFixed(1)} · {selected.total_resenas} reseñas</div>
                 <div style={{ fontSize: 10, color: '#999', marginTop: 2, textTransform: 'capitalize' }}>{selected.tipo}</div>

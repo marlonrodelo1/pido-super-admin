@@ -85,8 +85,8 @@ export default function Finanzas() {
 
       {tab === 'resumen' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-          <StatCard label="Comisiones totales plataforma" value={`${resumen.comisionesTotal.toFixed(2)}EUR`} color="#16A34A" />
-          <StatCard label="Pendiente de cobro" value={`${resumen.pendiente.toFixed(2)}EUR`} color="#F59E0B" />
+          <StatCard label="Comisiones totales plataforma" value={`${resumen.comisionesTotal.toFixed(2)}EUR`} color="#F5F5F5" />
+          <StatCard label="Pendiente de cobro" value={`${resumen.pendiente.toFixed(2)}EUR`} color="#FF6B2C" />
         </div>
       )}
 
@@ -107,11 +107,11 @@ export default function Finanzas() {
               <span style={{ flex: 1, fontWeight: 700, fontSize: 13 }}>{b.establecimientos?.nombre || '-'}</span>
               <span style={{ width: 80, fontSize: 12 }}>{b.pedidos_tarjeta}</span>
               <span style={{ width: 80, fontSize: 12 }}>{b.pedidos_efectivo}</span>
-              <span style={{ width: 90, fontSize: 12, color: '#16A34A' }}>{b.a_favor_restaurante?.toFixed(2)}EUR</span>
+              <span style={{ width: 90, fontSize: 12, color: '#F5F5F5' }}>{b.a_favor_restaurante?.toFixed(2)}EUR</span>
               <span style={{ width: 90, fontSize: 12, color: '#EF4444' }}>{b.debe_restaurante?.toFixed(2)}EUR</span>
-              <span style={{ width: 90, fontSize: 12, fontWeight: 700, color: b.balance_neto >= 0 ? '#16A34A' : '#EF4444' }}>{b.balance_neto?.toFixed(2)}EUR</span>
+              <span style={{ width: 90, fontSize: 12, fontWeight: 700, color: b.balance_neto >= 0 ? '#F5F5F5' : '#EF4444' }}>{b.balance_neto?.toFixed(2)}EUR</span>
               <span style={{ width: 80 }}>
-                <span style={{ ...ds.badge, background: b.estado === 'pagado' ? 'rgba(22,163,74,0.15)' : 'rgba(245,158,11,0.15)', color: b.estado === 'pagado' ? '#4ADE80' : '#FBBF24' }}>{b.estado}</span>
+                <span style={{ ...ds.badge, background: b.estado === 'pagado' ? 'rgba(255,255,255,0.06)' : 'rgba(245,158,11,0.15)', color: b.estado === 'pagado' ? '#4ADE80' : '#FBBF24' }}>{b.estado}</span>
               </span>
               <span style={{ width: 70 }}>
                 {b.estado === 'pendiente' && <button onClick={() => marcarPagado('balances_restaurante', b.id)} style={styles.payBtn}>Pagar</button>}
@@ -143,9 +143,9 @@ export default function Finanzas() {
               <span style={{ width: 50, fontSize: 12 }}>{f.pedidos_entregados}/{f.total_pedidos}</span>
               <span style={{ width: 80, fontSize: 12 }}>{f.total_comisiones?.toFixed(2)}€</span>
               <span style={{ width: 70, fontSize: 12 }}>{f.total_envios?.toFixed(2)}€</span>
-              <span style={{ width: 80, fontSize: 12, fontWeight: 700, color: '#16A34A' }}>{f.total_ganado?.toFixed(2)}€</span>
+              <span style={{ width: 80, fontSize: 12, fontWeight: 700, color: '#F5F5F5' }}>{f.total_ganado?.toFixed(2)}€</span>
               <span style={{ width: 70 }}>
-                <span style={{ ...ds.badge, background: f.estado === 'pagado' ? 'rgba(22,163,74,0.15)' : 'rgba(245,158,11,0.15)', color: f.estado === 'pagado' ? '#4ADE80' : '#FBBF24' }}>{f.estado}</span>
+                <span style={{ ...ds.badge, background: f.estado === 'pagado' ? 'rgba(255,255,255,0.06)' : 'rgba(245,158,11,0.15)', color: f.estado === 'pagado' ? '#4ADE80' : '#FBBF24' }}>{f.estado}</span>
               </span>
               <span style={{ width: 60 }}>
                 {f.estado === 'pendiente' && <button onClick={() => marcarFacturaPagada(f.id)} style={styles.payBtn}>Pagar</button>}
@@ -166,7 +166,7 @@ export default function Finanzas() {
             <span style={{ width: 140 }}>Fecha</span>
           </div>
           {movimientos.map(m => {
-            const tipoColor = { entrada_tarjeta: '#16A34A', pago_restaurante: '#3B82F6', cobro_comision: '#F59E0B' }
+            const tipoColor = { entrada_tarjeta: '#F5F5F5', pago_restaurante: '#FF6B2C', cobro_comision: '#FF6B2C' }
             return (
               <div key={m.id} style={ds.tableRow}>
                 <span style={{ width: 140 }}><span style={{ ...ds.badge, background: (tipoColor[m.tipo] || '#6B7280') + '15', color: tipoColor[m.tipo] || '#6B7280' }}>{m.tipo?.replace('_', ' ')}</span></span>
@@ -185,5 +185,5 @@ export default function Finanzas() {
 }
 
 const styles = {
-  payBtn: { padding: '4px 10px', borderRadius: 6, border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", background: 'rgba(22,163,74,0.15)', color: '#4ADE80' },
+  payBtn: { padding: '4px 10px', borderRadius: 6, border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: "'Inter', system-ui, -apple-system, sans-serif", background: 'rgba(255,255,255,0.06)', color: '#4ADE80' },
 }

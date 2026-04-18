@@ -227,7 +227,7 @@ export default function Configuracion() {
               {configSaving ? 'Guardando...' : 'Guardar toda la configuración'}
             </button>
             {configMsg && (
-              <span style={{ marginLeft: 16, fontSize: 13, fontWeight: 600, color: configMsg.includes('Error') ? '#EF4444' : '#16A34A' }}>
+              <span style={{ marginLeft: 16, fontSize: 13, fontWeight: 600, color: configMsg.includes('Error') ? '#EF4444' : '#F5F5F5' }}>
                 {configMsg}
               </span>
             )}
@@ -263,7 +263,7 @@ export default function Configuracion() {
 
         {editLegal ? (
           <div>
-            <button onClick={() => setEditLegal(null)} style={{ background: 'none', border: 'none', color: '#FF6B2C', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", marginBottom: 16, padding: 0 }}>← Volver a la lista</button>
+            <button onClick={() => setEditLegal(null)} style={{ background: 'none', border: 'none', color: '#FF6B2C', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Inter', system-ui, -apple-system, sans-serif", marginBottom: 16, padding: 0 }}>← Volver a la lista</button>
             <div style={{ marginBottom: 12 }}>
               <label style={ds.label}>Título</label>
               <input value={legalForm.titulo} onChange={e => setLegalForm({ ...legalForm, titulo: e.target.value })} style={ds.formInput} />
@@ -288,7 +288,7 @@ export default function Configuracion() {
                   <div style={{ fontWeight: 700, fontSize: 14, color: '#F5F5F5' }}>{p.titulo}</div>
                   <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>pidoo.es/{p.slug} · Editado: {new Date(p.updated_at).toLocaleDateString('es-ES')}</div>
                 </div>
-                <button onClick={() => { setEditLegal(p); setLegalForm({ titulo: p.titulo, contenido: p.contenido }) }} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#FF6B2C', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Editar</button>
+                <button onClick={() => { setEditLegal(p); setLegalForm({ titulo: p.titulo, contenido: p.contenido }) }} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#FF6B2C', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>Editar</button>
               </div>
             ))}
             {paginasLegales.length === 0 && <div style={{ textAlign: 'center', padding: 24, color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>No hay páginas legales configuradas</div>}

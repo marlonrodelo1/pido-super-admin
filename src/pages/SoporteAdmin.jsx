@@ -151,11 +151,11 @@ export default function SoporteAdmin() {
 
 const styles = {
   lista: { width: 300, background: 'rgba(255,255,255,0.06)', borderRadius: 14, overflow: 'auto', border: '1px solid rgba(255,255,255,0.08)' },
-  convItem: { width: '100%', padding: '14px 16px', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.04)', display: 'block' },
+  convItem: { width: '100%', padding: '14px 16px', border: 'none', cursor: 'pointer', fontFamily: "'Inter', system-ui, -apple-system, sans-serif", textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.04)', display: 'block' },
   unread: { width: 18, height: 18, borderRadius: 9, background: '#FF6B2C', color: '#fff', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' },
   chat: { flex: 1, background: 'rgba(255,255,255,0.06)', borderRadius: 14, display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' },
   chatHeader: { padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 10 },
   chatMessages: { flex: 1, padding: 20, overflow: 'auto' },
   chatInput: { padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', gap: 8 },
-  input: { flex: 1, padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', fontSize: 13, fontFamily: "'DM Sans', sans-serif", outline: 'none', background: 'rgba(255,255,255,0.06)', color: '#F5F5F5' },
+  input: { flex: 1, padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', fontSize: 13, fontFamily: "'Inter', system-ui, -apple-system, sans-serif", outline: 'none', background: 'rgba(255,255,255,0.06)', color: '#F5F5F5' },
 }

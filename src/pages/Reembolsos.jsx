@@ -114,7 +114,7 @@ export default function Reembolsos() {
         </div>
         <div style={{ ...ds.card, display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(22,163,74,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <CheckCircle size={20} color="#16A34A" />
+            <CheckCircle size={20} color="#F5F5F5" />
           </div>
           <div>
             <div style={{ fontSize: 22, fontWeight: 800, color: '#F5F5F5' }}>{stats.procesados}</div>
@@ -136,8 +136,8 @@ export default function Reembolsos() {
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
         {[
           { id: 'pendientes', label: 'Pendientes', color: '#FBBF24' },
-          { id: 'procesados', label: 'Procesados', color: '#16A34A' },
-          { id: 'todos', label: 'Todos', color: '#3B82F6' },
+          { id: 'procesados', label: 'Procesados', color: '#F5F5F5' },
+          { id: 'todos', label: 'Todos', color: '#FF6B2C' },
         ].map(f => (
           <button key={f.id} onClick={() => setFiltro(f.id)} style={{
             ...ds.filterBtn,
@@ -212,7 +212,7 @@ export default function Reembolsos() {
                 {/* Estado reembolso */}
                 <div>
                   {p.stripe_refund_id ? (
-                    <span style={{ ...ds.badge, background: 'rgba(22,163,74,0.15)', color: '#16A34A' }}>
+                    <span style={{ ...ds.badge, background: 'rgba(255,255,255,0.06)', color: '#F5F5F5' }}>
                       Reembolsado
                     </span>
                   ) : (
@@ -269,7 +269,7 @@ export default function Reembolsos() {
         marginTop: 20, padding: '14px 18px', borderRadius: 12,
         background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.12)',
       }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: '#3B82F6', marginBottom: 6 }}>Informacion importante</div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: '#FF6B2C', marginBottom: 6 }}>Informacion importante</div>
         <ul style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 1.8, margin: 0, paddingLeft: 16 }}>
           <li>Los reembolsos se procesan a traves de Stripe y pueden tardar 5-10 dias habiles en reflejarse en la tarjeta del cliente.</li>
           <li>Al procesar un reembolso, se devuelve el importe completo del pedido y se notifica automaticamente al cliente.</li>

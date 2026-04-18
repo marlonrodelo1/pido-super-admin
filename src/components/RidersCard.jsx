@@ -108,7 +108,7 @@ export default function RidersCard({ establecimiento, onChanged }) {
                 ) : st?.last_error ? (
                   <span style={{ ...ds.badge, background: 'rgba(245,158,11,0.15)', color: '#FBBF24', marginRight: 8 }} title={st.last_error}>Error</span>
                 ) : online ? (
-                  <span style={{ ...ds.badge, background: 'rgba(34,197,94,0.15)', color: '#4ADE80', marginRight: 8 }}>● En línea</span>
+                  <span style={{ ...ds.badge, background: 'rgba(255,255,255,0.06)', color: '#4ADE80', marginRight: 8 }}>● En línea</span>
                 ) : (
                   <span style={{ ...ds.badge, background: 'rgba(148,163,184,0.15)', color: '#94A3B8', marginRight: 8 }}>○ Offline</span>
                 )}
@@ -238,7 +238,7 @@ function AddRiderModal({ establecimiento, vinculados, onClose, onSaved }) {
               fontSize: 13, fontWeight: 700, cursor: 'pointer',
               color: tab === t.id ? '#FF6B2C' : 'rgba(255,255,255,0.5)',
               borderBottom: tab === t.id ? '2px solid #FF6B2C' : '2px solid transparent',
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
             }}>{t.l}</button>
           ))}
         </div>
@@ -260,7 +260,7 @@ function AddRiderModal({ establecimiento, vinculados, onClose, onSaved }) {
                       borderRadius: 10, cursor: 'pointer',
                       border: sel ? '1.5px solid #FF6B2C' : '1px solid rgba(255,255,255,0.08)',
                       background: sel ? 'rgba(255,107,44,0.1)' : 'rgba(255,255,255,0.04)',
-                      fontFamily: "'DM Sans', sans-serif", textAlign: 'left',
+                      fontFamily: "'Inter', system-ui, -apple-system, sans-serif", textAlign: 'left',
                     }}>
                       <div style={{
                         width: 18, height: 18, borderRadius: 5, flexShrink: 0,

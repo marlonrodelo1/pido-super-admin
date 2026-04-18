@@ -1,4 +1,31 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;0,9..40,800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --bg: #0D0D0D;
+  --sidebar: #111111;
+  --elev: #161616;
+  --elev2: #1C1C1C;
+  --surface: rgba(255,255,255,0.04);
+  --surface-hover: rgba(255,255,255,0.06);
+  --border: rgba(255,255,255,0.08);
+  --border-strong: rgba(255,255,255,0.14);
+  --text: #F5F5F5;
+  --text-dim: rgba(245,245,245,0.62);
+  --text-mute: rgba(245,245,245,0.40);
+  --text-faint: rgba(245,245,245,0.22);
+  --primary: #FF6B2C;
+  --primary-soft: rgba(255,107,44,0.12);
+  --primary-border: rgba(255,107,44,0.32);
+  --info: rgba(245,245,245,0.62);
+  --info-soft: rgba(255,255,255,0.06);
+  --success: rgba(245,245,245,0.78);
+  --success-soft: rgba(255,255,255,0.06);
+  --warn: rgba(245,245,245,0.62);
+  --warn-soft: rgba(255,255,255,0.06);
+  --danger: #EF4444;
+  --danger-soft: rgba(239,68,68,0.12);
+  --grid: rgba(255,255,255,0.05);
+}
 
 * {
   box-sizing: border-box;
@@ -13,10 +40,12 @@ html {
 }
 
 body {
-  background: #0D0D0D;
+  background: var(--bg);
   margin: 0;
-  font-family: 'DM Sans', sans-serif;
-  color: #F5F5F5;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-feature-settings: 'cv11','ss01','ss03';
+  -webkit-font-smoothing: antialiased;
+  color: var(--text);
   height: 100%;
   overflow-x: hidden;
   -webkit-text-size-adjust: 100%;
@@ -27,15 +56,40 @@ body {
   min-height: 100dvh;
 }
 
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+::selection { background: var(--primary-soft); color: var(--text); }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.08);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.16); background-clip: padding-box; }
 
 input, select, textarea, button {
   font-size: 16px !important;
+  font-family: inherit;
 }
+
+button { color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
 
 select option {
   background: #1A1A1A;
   color: #F5F5F5;
   padding: 8px;
+}
+
+button:focus-visible, input:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+.mono { font-family: 'JetBrains Mono', monospace; }
+
+@keyframes pulse-p {
+  0%   { box-shadow: 0 0 0 0 rgba(255,107,44,.55); }
+  70%  { box-shadow: 0 0 0 8px rgba(255,107,44,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,107,44,0); }
 }

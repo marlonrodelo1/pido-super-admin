@@ -115,7 +115,7 @@ export default function Notificaciones() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
         <div style={ds.card}>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>Clientes</div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: '#3B82F6' }}>{stats.clientes}</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: '#FF6B2C' }}>{stats.clientes}</div>
         </div>
         <div style={ds.card}>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>Restaurantes</div>
@@ -181,7 +181,7 @@ export default function Notificaciones() {
           <div style={{
             padding: '12px 16px', borderRadius: 10, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8,
             background: resultado.ok ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)',
-            color: resultado.ok ? '#22C55E' : '#EF4444', fontSize: 13, fontWeight: 600,
+            color: resultado.ok ? '#F5F5F5' : '#EF4444', fontSize: 13, fontWeight: 600,
           }}>
             <CheckCircle size={16} />
             {resultado.ok ? `Enviada a ${resultado.enviados}/${resultado.total} dispositivos` : `Error: ${resultado.error}`}
@@ -193,7 +193,7 @@ export default function Notificaciones() {
           width: '100%', padding: '14px', borderRadius: 12, border: 'none',
           background: enviando || !titulo.trim() || !mensaje.trim() ? 'rgba(255,255,255,0.1)' : '#FF6B2C',
           color: '#fff', fontSize: 15, fontWeight: 800, cursor: enviando ? 'default' : 'pointer',
-          fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          fontFamily: "'Inter', system-ui, -apple-system, sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
         }}>
           <Send size={16} />
           {enviando ? 'Enviando...' : 'Enviar notificación'}

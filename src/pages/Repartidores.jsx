@@ -8,7 +8,7 @@ const WEBHOOK_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/shipday-w
 
 const ESTADOS = {
   pendiente: { label: 'Pendiente', bg: 'rgba(245,158,11,0.15)', color: '#FBBF24' },
-  activa: { label: 'Activo', bg: 'rgba(34,197,94,0.15)', color: '#4ADE80' },
+  activa: { label: 'Activo', bg: 'rgba(255,255,255,0.06)', color: '#4ADE80' },
   rechazada: { label: 'Rechazado', bg: 'rgba(239,68,68,0.15)', color: '#F87171' },
 }
 
@@ -156,7 +156,7 @@ export default function Repartidores() {
           }}>
             {t.l}
             {t.id === 'pendiente' && contadores.pendiente > 0 && filtroEstado !== 'pendiente' && (
-              <span style={{ width: 8, height: 8, borderRadius: 4, background: '#F59E0B' }} />
+              <span style={{ width: 8, height: 8, borderRadius: 4, background: '#FF6B2C' }} />
             )}
           </button>
         ))}
@@ -197,7 +197,7 @@ export default function Repartidores() {
                 ) : error ? (
                   <span style={{ ...ds.badge, background: 'rgba(239,68,68,0.15)', color: '#F87171' }} title={error}>Error</span>
                 ) : online ? (
-                  <span style={{ ...ds.badge, background: 'rgba(34,197,94,0.15)', color: '#4ADE80' }}>● Online</span>
+                  <span style={{ ...ds.badge, background: 'rgba(255,255,255,0.06)', color: '#4ADE80' }}>● Online</span>
                 ) : (
                   <span style={{ ...ds.badge, background: 'rgba(148,163,184,0.15)', color: '#94A3B8' }}>○ Offline</span>
                 )}
@@ -206,7 +206,7 @@ export default function Repartidores() {
               <span style={{ width: 200, textAlign: 'right', display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                 {r.estado === 'pendiente' && (
                   <>
-                    <button onClick={() => aprobar(r)} style={{ ...ds.actionBtn, background: 'rgba(34,197,94,0.15)', color: '#4ADE80', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <button onClick={() => aprobar(r)} style={{ ...ds.actionBtn, background: 'rgba(255,255,255,0.06)', color: '#4ADE80', display: 'flex', alignItems: 'center', gap: 4 }}>
                       <Check size={11} /> Aprobar
                     </button>
                     <button onClick={() => rechazar(r)} style={{ ...ds.actionBtn, background: 'rgba(239,68,68,0.15)', color: '#F87171', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -215,7 +215,7 @@ export default function Repartidores() {
                   </>
                 )}
                 {r.estado === 'rechazada' && (
-                  <button onClick={() => reactivar(r)} style={{ ...ds.actionBtn, background: 'rgba(34,197,94,0.15)', color: '#4ADE80' }}>Reactivar</button>
+                  <button onClick={() => reactivar(r)} style={{ ...ds.actionBtn, background: 'rgba(255,255,255,0.06)', color: '#4ADE80' }}>Reactivar</button>
                 )}
                 {r.estado === 'activa' && (
                   <button onClick={() => setDetalle(r)} style={ds.actionBtn}>Ver</button>
@@ -381,7 +381,7 @@ function RiderDetalle({ rider, onBack, onSaved, origenNombre }) {
           </div>
           <span style={{ ...ds.badge, background: estadoInfo.bg, color: estadoInfo.color, fontSize: 12, padding: '6px 12px' }}>{estadoInfo.label}</span>
           {rider.estado === 'activa' && (st?.is_online ? (
-            <span style={{ ...ds.badge, background: 'rgba(34,197,94,0.15)', color: '#4ADE80', fontSize: 12, padding: '6px 12px' }}>● En línea</span>
+            <span style={{ ...ds.badge, background: 'rgba(255,255,255,0.06)', color: '#4ADE80', fontSize: 12, padding: '6px 12px' }}>● En línea</span>
           ) : (
             <span style={{ ...ds.badge, background: 'rgba(148,163,184,0.15)', color: '#94A3B8', fontSize: 12, padding: '6px 12px' }}>○ Offline</span>
           ))}

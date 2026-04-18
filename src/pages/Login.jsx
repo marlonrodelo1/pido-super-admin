@@ -22,8 +22,17 @@ export default function Login() {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <div style={{ fontWeight: 800, fontSize: 28, color: '#FF6B2C', letterSpacing: -1, marginBottom: 4 }}>pidoo</div>
-        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 32, fontWeight: 500 }}>Super Admin Panel</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: 9,
+            background: 'linear-gradient(135deg,#FF6B2C,#FF3D00)',
+            display: 'grid', placeItems: 'center',
+            color: '#fff', fontWeight: 900, fontSize: 14,
+            boxShadow: '0 0 0 1px rgba(255,107,44,0.35), 0 8px 20px -6px rgba(255,107,44,0.45)',
+          }}>P</div>
+          <div style={{ fontWeight: 800, fontSize: 18, color: '#F5F5F5', letterSpacing: '-0.3px' }}>Pidoo</div>
+        </div>
+        <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'rgba(245,245,245,0.40)', marginBottom: 28, fontWeight: 700 }}>Super Admin</div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14, width: '100%' }}>
           <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} style={styles.input} required />
@@ -40,20 +49,21 @@ export default function Login() {
 const styles = {
   container: {
     minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-    background: '#0D0D0D', fontFamily: "'DM Sans', sans-serif",
+    background: '#0D0D0D', fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
   },
   card: {
-    background: 'rgba(255,255,255,0.06)', borderRadius: 16, padding: '48px 40px', width: 380,
+    background: '#161616', borderRadius: 14, padding: '40px 36px', width: 380,
     display: 'flex', flexDirection: 'column', alignItems: 'center',
-    border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)',
+    border: '1px solid rgba(255,255,255,0.14)', boxShadow: '0 40px 80px rgba(0,0,0,0.5)',
   },
   input: {
-    width: '100%', padding: '12px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)',
-    fontSize: 14, fontFamily: "'DM Sans', sans-serif", outline: 'none',
-    background: 'rgba(255,255,255,0.06)', color: '#F5F5F5',
+    width: '100%', padding: '0 12px', height: 38, borderRadius: 8, border: '1px solid rgba(255,255,255,0.08)',
+    fontSize: 13, fontFamily: "'Inter', system-ui, -apple-system, sans-serif", outline: 'none',
+    background: 'rgba(255,255,255,0.04)', color: '#F5F5F5',
   },
   btn: {
-    padding: '12px', borderRadius: 10, border: 'none', background: '#FF6B2C', color: '#fff',
-    fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", marginTop: 8,
+    padding: '0 14px', height: 38, borderRadius: 8, border: '1px solid #FF6B2C', background: '#FF6B2C', color: '#fff',
+    fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: "'Inter', system-ui, -apple-system, sans-serif", marginTop: 8,
+    boxShadow: '0 6px 18px -6px rgba(255,107,44,0.55)',
   },
 }

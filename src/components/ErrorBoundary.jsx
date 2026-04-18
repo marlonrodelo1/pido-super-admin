@@ -17,7 +17,7 @@ export class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ minHeight: '100vh', background: '#0D0D0D', color: '#F5F5F5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{ minHeight: '100vh', background: '#0D0D0D', color: '#F5F5F5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
           <div style={{ textAlign: 'center', padding: 32, maxWidth: 360 }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
             <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>Algo salio mal</h2>

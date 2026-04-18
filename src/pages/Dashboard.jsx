@@ -43,7 +43,7 @@ export default function Dashboard() {
     setRecientes(data || [])
   }
 
-  const estadoColor = { nuevo: '#3B82F6', aceptado: '#F59E0B', preparando: '#F59E0B', listo: '#8B5CF6', recogido: '#8B5CF6', en_camino: '#3B82F6', entregado: '#16A34A', cancelado: '#EF4444', fallido: '#EF4444' }
+  const estadoColor = { nuevo: '#FF6B2C', aceptado: '#FF6B2C', preparando: '#FF6B2C', listo: 'rgba(245,245,245,0.62)', recogido: 'rgba(245,245,245,0.62)', en_camino: '#FF6B2C', entregado: '#F5F5F5', cancelado: '#EF4444', fallido: '#EF4444' }
 
   return (
     <div>
@@ -61,9 +61,9 @@ export default function Dashboard() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 32 }}>
         <StatCard label="Total Pedidos" value={stats.pedidos} />
-        <StatCard label="Ventas" value={`${stats.ventas.toFixed(2)}€`} color="#16A34A" />
-        <StatCard label="Comisiones" value={`${stats.comisiones.toFixed(2)}€`} color="#8B5CF6" />
-        <StatCard label="Usuarios" value={stats.usuarios} color="#3B82F6" />
+        <StatCard label="Ventas" value={`${stats.ventas.toFixed(2)}€`} color="#F5F5F5" />
+        <StatCard label="Comisiones" value={`${stats.comisiones.toFixed(2)}€`} color="rgba(245,245,245,0.62)" />
+        <StatCard label="Usuarios" value={stats.usuarios} color="#FF6B2C" />
         <StatCard label="Establecimientos" value={stats.establecimientos} color="#EF4444" />
       </div>
 

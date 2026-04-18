@@ -196,7 +196,7 @@ export default function ImportUrlModal({ establecimiento, onClose, onComplete })
   if (step === 'done' && result) return (
     <div style={ds.modal}>
       <div style={{ ...ds.modalContent, maxWidth: 420, textAlign: 'center', padding: 28 }}>
-        <CheckCircle size={40} color="#22C55E" style={{ marginBottom: 12 }} />
+        <CheckCircle size={40} color="#F5F5F5" style={{ marginBottom: 12 }} />
         <h2 style={{ fontSize: 17, fontWeight: 800, color: '#F5F5F5', margin: '0 0 16px' }}>Importación completa</h2>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, textAlign: 'left' }}>
