@@ -14,6 +14,7 @@ import Notificaciones from './pages/Notificaciones'
 import MapaAdmin from './pages/MapaAdmin'
 import Reembolsos from './pages/Reembolsos'
 import Repartidores from './pages/Repartidores'
+import LandingRiders from './pages/LandingRiders'
 import './index.css'
 
 const FONT = "'Inter', system-ui, -apple-system, sans-serif"
@@ -55,6 +56,7 @@ function AppContent() {
         {seccion === 'finanzas' && <Finanzas />}
         {seccion === 'reembolsos' && <Reembolsos />}
         {seccion === 'repartidores' && <Repartidores />}
+        {seccion === 'landing-riders' && <LandingRiders />}
         {seccion === 'config' && <Configuracion />}
       </main>
       <ToastNotification />

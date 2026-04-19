@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { LayoutGrid, Store, User, ClipboardList, MessageCircle, DollarSign, Settings, LogOut, Map, Bell, RotateCcw, Truck } from 'lucide-react'
+import { LayoutGrid, Store, User, ClipboardList, MessageCircle, DollarSign, Settings, LogOut, Map, Bell, RotateCcw, Truck, FileText } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 const menuItems = [
@@ -13,6 +13,7 @@ const menuItems = [
   { id: 'reembolsos', label: 'Reembolsos', Icon: RotateCcw, group: 'Negocio' },
   { id: 'notificaciones', label: 'Notificaciones', Icon: Bell, group: 'Plataforma' },
   { id: 'soporte', label: 'Soporte', Icon: MessageCircle, group: 'Plataforma' },
+  { id: 'landing-riders', label: 'Landing Riders', Icon: FileText, group: 'Plataforma' },
   { id: 'config', label: 'Configuración', Icon: Settings, group: 'Plataforma' },
 ]
 
