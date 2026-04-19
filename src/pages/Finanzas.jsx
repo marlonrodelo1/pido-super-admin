@@ -25,6 +25,9 @@ export default function Finanzas() {
   const [pagoModal, setPagoModal] = useState(null)
   const [pagoRef, setPagoRef] = useState('')
   const [pagoSaving, setPagoSaving] = useState(false)
+  // Cuotas tiendas (plan 39€/mes)
+  const [cuotas, setCuotas] = useState([])
+  const [cuotasStats, setCuotasStats] = useState({ activas: 0, mrr: 0, churnMes: 0, pastDue: 0 })
 
   useEffect(() => {
     loadResumen()
@@ -33,7 +36,47 @@ export default function Finanzas() {
     loadFacturas()
     loadRiderFacturas()
     loadRiderStats()
+    loadCuotas()
   }, [])
+
+  async function loadCuotas() {
+    const { data } = await supabase.from('suscripciones_tienda')
+      .select('*, establecimientos(nombre, slug, plan_pro)')
+      .order('created_at', { ascending: false })
+    const arr = data || []
+    setCuotas(arr)
+    const activas = arr.filter(s => s.estado === 'active').length
+    const pastDue = arr.filter(s => s.estado === 'past_due' || s.estado === 'unpaid').length
+    const mrr = activas * 39
+    const now = new Date()
+    const startMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const churnMes = arr.filter(s => s.estado === 'canceled' && s.updated_at && new Date(s.updated_at) >= startMonth).length
+    setCuotasStats({ activas, mrr, churnMes, pastDue })
+  }
+
+  function exportCuotasCSV() {
+    const headers = ['Restaurante', 'Slug', 'Estado', 'plan_pro', 'Fecha alta', 'Próximo pago', 'Monto', 'Intentos fallidos', 'Stripe sub id']
+    const rows = cuotas.map(c => [
+      (c.establecimientos?.nombre || '').replace(/;/g, ','),
+      c.establecimientos?.slug || '',
+      c.estado,
+      c.establecimientos?.plan_pro ? 'sí' : 'no',
+      c.created_at ? new Date(c.created_at).toISOString().slice(0, 10) : '',
+      c.fecha_proximo_pago ? new Date(c.fecha_proximo_pago).toISOString().slice(0, 10) : '',
+      (c.monto_mensual || 39).toFixed(2),
+      c.intentos_fallidos || 0,
+      c.stripe_subscription_id || '',
+    ].join(';'))
+    const bom = '\uFEFF'
+    const csv = bom + [headers.join(';'), ...rows].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `cuotas_tiendas_${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   async function loadRiderFacturas() {
     const { data } = await supabase
@@ -129,6 +172,7 @@ export default function Finanzas() {
     { id: 'facturas', label: 'Facturas' },
     { id: 'movimientos', label: 'Movimientos' },
     { id: 'riders', label: 'Pagos a riders' },
+    { id: 'cuotas', label: 'Cuotas tiendas' },
   ]
 
   const riderFiltered = riderFacturas.filter(f => {
@@ -321,6 +365,71 @@ export default function Finanzas() {
             {riderFiltered.length === 0 && (
               <div style={{ padding: 32, textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>Sin facturas de riders</div>
             )}
+          </div>
+        </>
+      )}
+
+      {tab === 'cuotas' && (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 20 }}>
+            <StatCard label="Suscripciones activas" value={cuotasStats.activas} color="#4ADE80" />
+            <StatCard label="MRR (mensual)" value={`${cuotasStats.mrr.toFixed(2)}EUR`} color="#FF6B2C" />
+            <StatCard label="Pago fallido" value={cuotasStats.pastDue} color="#F87171" />
+            <StatCard label="Churn este mes" value={cuotasStats.churnMes} color="#F5F5F5" />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+            <button onClick={exportCuotasCSV} disabled={cuotas.length === 0} style={{ ...ds.secondaryBtn, fontSize: 12, opacity: cuotas.length === 0 ? 0.5 : 1 }}>
+              Exportar CSV
+            </button>
+          </div>
+
+          <div style={ds.table}>
+            <div style={ds.tableHeader}>
+              <span style={{ flex: 1 }}>Restaurante</span>
+              <span style={{ width: 110 }}>Estado</span>
+              <span style={{ width: 100 }}>plan_pro</span>
+              <span style={{ width: 110 }}>Fecha alta</span>
+              <span style={{ width: 110 }}>Próximo pago</span>
+              <span style={{ width: 70 }}>Monto</span>
+              <span style={{ width: 70 }}>Fallidos</span>
+            </div>
+            {cuotas.map(c => {
+              const info = {
+                active:   { bg: 'rgba(34,197,94,0.15)',  color: '#4ADE80' },
+                pending:  { bg: 'rgba(251,191,36,0.15)', color: '#FBBF24' },
+                past_due: { bg: 'rgba(239,68,68,0.15)',  color: '#F87171' },
+                unpaid:   { bg: 'rgba(239,68,68,0.15)',  color: '#F87171' },
+                canceled: { bg: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' },
+              }[c.estado] || { bg: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }
+              return (
+                <div key={c.id} style={ds.tableRow}>
+                  <span style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13 }}>{c.establecimientos?.nombre || '—'}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{c.establecimientos?.slug || ''}</div>
+                  </span>
+                  <span style={{ width: 110 }}>
+                    <span style={{ ...ds.badge, background: info.bg, color: info.color }}>{c.estado}</span>
+                  </span>
+                  <span style={{ width: 100 }}>
+                    <span style={{ ...ds.badge, background: c.establecimientos?.plan_pro ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.06)', color: c.establecimientos?.plan_pro ? '#4ADE80' : 'rgba(255,255,255,0.5)' }}>
+                      {c.establecimientos?.plan_pro ? 'SÍ' : 'NO'}
+                    </span>
+                  </span>
+                  <span style={{ width: 110, fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
+                    {c.created_at ? new Date(c.created_at).toLocaleDateString('es-ES') : '—'}
+                  </span>
+                  <span style={{ width: 110, fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
+                    {c.fecha_proximo_pago ? new Date(c.fecha_proximo_pago).toLocaleDateString('es-ES') : '—'}
+                  </span>
+                  <span style={{ width: 70, fontSize: 12, fontWeight: 700 }}>{(c.monto_mensual || 39).toFixed(2)}€</span>
+                  <span style={{ width: 70, fontSize: 12, color: (c.intentos_fallidos || 0) >= 1 ? '#F87171' : 'rgba(255,255,255,0.5)' }}>
+                    {c.intentos_fallidos || 0}/3
+                  </span>
+                </div>
+              )
+            })}
+            {cuotas.length === 0 && <div style={{ padding: 32, textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>Sin suscripciones aún</div>}
           </div>
         </>
       )}

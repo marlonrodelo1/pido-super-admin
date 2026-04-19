@@ -7,6 +7,7 @@ import { toast, confirmar } from '../App'
 import CargaMasivaModal from '../components/CargaMasivaModal'
 import ImportUrlModal from '../components/ImportUrlModal'
 import RidersCard from '../components/RidersCard'
+import PlanTiendaCard from '../components/PlanTiendaCard'
 
 const CATEGORIAS_PADRE = ['comida', 'farmacia', 'marketplace']
 
@@ -283,6 +284,12 @@ export default function Establecimientos() {
         <RidersCard
           establecimiento={detalle}
           onChanged={() => load()}
+        />
+
+        {/* Plan Tienda Pública */}
+        <PlanTiendaCard
+          establecimiento={detalle}
+          onChanged={async () => { await load(); const { data } = await supabase.from('establecimientos').select('*').eq('id', detalle.id).single(); if (data) setDetalle(data) }}
         />
 
         {/* Categorías generales */}
