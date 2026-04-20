@@ -54,7 +54,7 @@ export default function Usuarios() {
     return (u.nombre || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q) || (u.telefono || '').includes(q)
   })
 
-  const estadoColor = { entregado: '#F5F5F5', cancelado: '#EF4444', fallido: '#EF4444', nuevo: '#FF6B2C', aceptado: '#FF6B2C', preparando: '#FF6B2C', listo: 'rgba(245,245,245,0.62)', en_camino: '#FF6B2C', recogido: '#FF6B2C' }
+  const estadoColor = { entregado: 'var(--c-text)', cancelado: 'var(--c-danger)', fallido: 'var(--c-danger)', nuevo: '#FF6B2C', aceptado: '#FF6B2C', preparando: '#FF6B2C', listo: 'var(--c-text-soft)', en_camino: '#FF6B2C', recogido: '#FF6B2C' }
 
   // Total gastado por el usuario
   const totalGastado = pedidosUsuario.filter(p => p.estado === 'entregado').reduce((s, p) => s + (p.total || 0), 0)
@@ -68,12 +68,12 @@ export default function Usuarios() {
 
         <div style={ds.card}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-            <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'rgba(255,107,44,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 800, color: '#FF6B2C', overflow: 'hidden' }}>
+            <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'var(--c-primary-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 800, color: '#FF6B2C', overflow: 'hidden' }}>
               {detalle.avatar_url ? <img src={detalle.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (detalle.nombre?.[0] || 'U').toUpperCase()}
             </div>
             <div style={{ flex: 1 }}>
-              <h2 style={{ fontSize: 20, fontWeight: 800, color: '#F5F5F5' }}>{detalle.nombre} {detalle.apellido || ''}</h2>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{detalle.email}</div>
+              <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-text)' }}>{detalle.nombre} {detalle.apellido || ''}</h2>
+              <div style={{ fontSize: 12, color: 'var(--c-muted)' }}>{detalle.email}</div>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               {!editando ? (
@@ -89,7 +89,7 @@ export default function Usuarios() {
             </div>
           </div>
 
-          {guardado && <div style={{ background: 'rgba(255,255,255,0.06)', color: '#F5F5F5', fontSize: 12, fontWeight: 600, padding: '8px 14px', borderRadius: 8, marginBottom: 16, textAlign: 'center' }}>Cambios guardados</div>}
+          {guardado && <div style={{ background: 'var(--c-surface2)', color: 'var(--c-text)', fontSize: 12, fontWeight: 600, padding: '8px 14px', borderRadius: 8, marginBottom: 16, textAlign: 'center' }}>Cambios guardados</div>}
 
           {editando ? (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -112,26 +112,26 @@ export default function Usuarios() {
             <>
               {/* Stats */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
-                <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 14 }}>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: 600, marginBottom: 4 }}>Total gastado</div>
+                <div style={{ background: 'var(--c-surface2)', borderRadius: 10, padding: 14 }}>
+                  <div style={{ fontSize: 10, color: 'var(--c-muted)', fontWeight: 600, marginBottom: 4 }}>Total gastado</div>
                   <div style={{ fontSize: 20, fontWeight: 800, color: '#FF6B2C' }}>{totalGastado.toFixed(2)} €</div>
                 </div>
-                <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 14 }}>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: 600, marginBottom: 4 }}>Pedidos</div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: '#F5F5F5' }}>{totalPedidos}</div>
+                <div style={{ background: 'var(--c-surface2)', borderRadius: 10, padding: 14 }}>
+                  <div style={{ fontSize: 10, color: 'var(--c-muted)', fontWeight: 600, marginBottom: 4 }}>Pedidos</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-text)' }}>{totalPedidos}</div>
                 </div>
-                <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 14 }}>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: 600, marginBottom: 4 }}>Entregados</div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: '#F5F5F5' }}>{pedidosEntregados}</div>
+                <div style={{ background: 'var(--c-surface2)', borderRadius: 10, padding: 14 }}>
+                  <div style={{ fontSize: 10, color: 'var(--c-muted)', fontWeight: 600, marginBottom: 4 }}>Entregados</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-text)' }}>{pedidosEntregados}</div>
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 13, color: '#F5F5F5', marginBottom: 20 }}>
-                <div><span style={{ color: 'rgba(255,255,255,0.4)' }}>Teléfono:</span> {detalle.telefono || '—'}</div>
-                <div><span style={{ color: 'rgba(255,255,255,0.4)' }}>Dirección:</span> {detalle.direccion || '—'}</div>
-                <div><span style={{ color: 'rgba(255,255,255,0.4)' }}>Pago preferido:</span> {detalle.metodo_pago_preferido === 'efectivo' ? '💵 Efectivo' : '💳 Tarjeta'}</div>
-                <div><span style={{ color: 'rgba(255,255,255,0.4)' }}>Registrado:</span> {new Date(detalle.created_at).toLocaleDateString('es-ES')}</div>
-                <div><span style={{ color: 'rgba(255,255,255,0.4)' }}>Favoritos:</span> {detalle.favoritos?.length || 0}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 13, color: 'var(--c-text)', marginBottom: 20 }}>
+                <div><span style={{ color: 'var(--c-muted)' }}>Teléfono:</span> {detalle.telefono || '—'}</div>
+                <div><span style={{ color: 'var(--c-muted)' }}>Dirección:</span> {detalle.direccion || '—'}</div>
+                <div><span style={{ color: 'var(--c-muted)' }}>Pago preferido:</span> {detalle.metodo_pago_preferido === 'efectivo' ? '💵 Efectivo' : '💳 Tarjeta'}</div>
+                <div><span style={{ color: 'var(--c-muted)' }}>Registrado:</span> {new Date(detalle.created_at).toLocaleDateString('es-ES')}</div>
+                <div><span style={{ color: 'var(--c-muted)' }}>Favoritos:</span> {detalle.favoritos?.length || 0}</div>
               </div>
             </>
           )}
@@ -139,25 +139,25 @@ export default function Usuarios() {
 
         {/* Historial de pedidos */}
         <div style={{ marginTop: 20 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12, color: '#F5F5F5' }}>Historial de pedidos ({pedidosUsuario.length})</h3>
+          <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12, color: 'var(--c-text)' }}>Historial de pedidos ({pedidosUsuario.length})</h3>
           {pedidosUsuario.map(p => (
             <div key={p.id} style={{ ...ds.card, padding: '12px 16px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                  <span style={{ fontWeight: 700, fontSize: 13, color: '#F5F5F5' }}>{p.codigo}</span>
+                  <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--c-text)' }}>{p.codigo}</span>
                   <span style={{ ...ds.badge, background: (estadoColor[p.estado] || '#6B7280') + '20', color: estadoColor[p.estado] || '#6B7280', fontSize: 10 }}>{p.estado?.replace('_', ' ')}</span>
-                  <span style={{ fontSize: 10, color: p.metodo_pago === 'tarjeta' ? '#60A5FA' : '#4ADE80' }}>{p.metodo_pago === 'tarjeta' ? '💳' : '💵'}</span>
-                  <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', fontWeight: 600 }}>PIDO</span>
+                  <span style={{ fontSize: 10, color: p.metodo_pago === 'tarjeta' ? 'var(--c-info)' : 'var(--c-success)' }}>{p.metodo_pago === 'tarjeta' ? '💳' : '💵'}</span>
+                  <span style={{ fontSize: 9, color: 'var(--c-muted)', fontWeight: 600 }}>PIDO</span>
                 </div>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{p.establecimientos?.nombre || '—'} · {new Date(p.created_at).toLocaleDateString('es-ES')}</div>
+                <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>{p.establecimientos?.nombre || '—'} · {new Date(p.created_at).toLocaleDateString('es-ES')}</div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontWeight: 700, fontSize: 14, color: '#F5F5F5' }}>{p.total?.toFixed(2)} €</div>
-                {p.coste_envio > 0 && <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>envío {p.coste_envio?.toFixed(2)}€</div>}
+                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--c-text)' }}>{p.total?.toFixed(2)} €</div>
+                {p.coste_envio > 0 && <div style={{ fontSize: 10, color: 'var(--c-muted)' }}>envío {p.coste_envio?.toFixed(2)}€</div>}
               </div>
             </div>
           ))}
-          {pedidosUsuario.length === 0 && <div style={{ ...ds.card, textAlign: 'center', padding: 32, color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>Sin pedidos</div>}
+          {pedidosUsuario.length === 0 && <div style={{ ...ds.card, textAlign: 'center', padding: 32, color: 'var(--c-muted)', fontSize: 13 }}>Sin pedidos</div>}
         </div>
       </div>
     )
@@ -167,7 +167,7 @@ export default function Usuarios() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <h1 style={ds.h1}>Usuarios</h1>
-        <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>{filtrados.length} total</span>
+        <span style={{ fontSize: 13, color: 'var(--c-muted)', fontWeight: 600 }}>{filtrados.length} total</span>
       </div>
 
       <input
@@ -188,20 +188,20 @@ export default function Usuarios() {
         {filtrados.map(u => (
           <div key={u.id} style={ds.tableRow}>
             <span style={{ width: 44 }}>
-              <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,107,44,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#FF6B2C', overflow: 'hidden' }}>
+              <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--c-primary-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#FF6B2C', overflow: 'hidden' }}>
                 {u.avatar_url ? <img src={u.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (u.nombre?.[0] || 'U').toUpperCase()}
               </div>
             </span>
-            <span style={{ flex: 1, fontWeight: 700, fontSize: 13, color: '#F5F5F5', cursor: 'pointer' }} onClick={() => verDetalle(u)}>{u.nombre} {u.apellido || ''}</span>
-            <span style={{ width: 200, fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{u.email}</span>
-            <span style={{ width: 110, fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{u.telefono || '—'}</span>
-            <span style={{ width: 90, fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{new Date(u.created_at).toLocaleDateString('es-ES')}</span>
+            <span style={{ flex: 1, fontWeight: 700, fontSize: 13, color: 'var(--c-text)', cursor: 'pointer' }} onClick={() => verDetalle(u)}>{u.nombre} {u.apellido || ''}</span>
+            <span style={{ width: 200, fontSize: 12, color: 'var(--c-muted)' }}>{u.email}</span>
+            <span style={{ width: 110, fontSize: 12, color: 'var(--c-muted)' }}>{u.telefono || '—'}</span>
+            <span style={{ width: 90, fontSize: 11, color: 'var(--c-muted)' }}>{new Date(u.created_at).toLocaleDateString('es-ES')}</span>
             <span style={{ width: 60 }}>
               <button onClick={() => verDetalle(u)} style={ds.actionBtn}>Ver</button>
             </span>
           </div>
         ))}
-        {filtrados.length === 0 && <div style={{ padding: 32, textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>Sin usuarios</div>}
+        {filtrados.length === 0 && <div style={{ padding: 32, textAlign: 'center', color: 'var(--c-muted)', fontSize: 13 }}>Sin usuarios</div>}
       </div>
     </div>
   )

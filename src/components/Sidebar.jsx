@@ -72,27 +72,27 @@ export default function Sidebar({ active, onChange, onLogout, user }) {
                   onClick={() => onChange(item.id)}
                   onMouseEnter={e => {
                     if (!isActive) {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
-                      e.currentTarget.style.color = '#F5F5F5'
+                      e.currentTarget.style.background = 'var(--c-surface2)'
+                      e.currentTarget.style.color = 'var(--c-text)'
                     }
                   }}
                   onMouseLeave={e => {
                     if (!isActive) {
                       e.currentTarget.style.background = 'transparent'
-                      e.currentTarget.style.color = 'rgba(245,245,245,0.62)'
+                      e.currentTarget.style.color = 'var(--c-muted)'
                     }
                   }}
                   style={{
                     ...styles.navItem,
-                    background: isActive ? 'rgba(255,255,255,0.04)' : 'transparent',
-                    color: isActive ? '#F5F5F5' : 'rgba(245,245,245,0.62)',
+                    background: isActive ? 'var(--c-primary-soft)' : 'transparent',
+                    color: isActive ? 'var(--c-primary)' : 'var(--c-muted)',
                   }}
                 >
                   {isActive && <span style={styles.activeBar} />}
                   <item.Icon
                     size={16}
                     strokeWidth={1.8}
-                    style={{ color: isActive ? '#FF6B2C' : 'rgba(245,245,245,0.40)', flexShrink: 0 }}
+                    style={{ color: isActive ? 'var(--c-primary)' : 'var(--c-muted)', flexShrink: 0 }}
                   />
                   <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>
                   {showBadge && (
@@ -119,8 +119,8 @@ export default function Sidebar({ active, onChange, onLogout, user }) {
           onClick={onLogout}
           title="Cerrar sesión"
           style={styles.logoutBtn}
-          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#F5F5F5' }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(245,245,245,0.62)' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'var(--c-surface2)'; e.currentTarget.style.color = 'var(--c-text)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--c-muted)' }}
         >
           <LogOut size={15} strokeWidth={1.8} />
         </button>
@@ -133,8 +133,8 @@ const styles = {
   sidebar: {
     width: 220,
     minHeight: '100vh',
-    background: '#111111',
-    borderRight: '1px solid rgba(255,255,255,0.08)',
+    background: 'var(--c-surface)',
+    borderRight: '1px solid var(--c-border)',
     display: 'flex',
     flexDirection: 'column',
     position: 'fixed',
@@ -145,7 +145,7 @@ const styles = {
     display: 'flex', alignItems: 'center', gap: 10,
     padding: '14px 18px',
     height: 56,
-    borderBottom: '1px solid rgba(255,255,255,0.08)',
+    borderBottom: '1px solid var(--c-border)',
   },
   logo: {
     width: 28, height: 28, borderRadius: 8,
@@ -155,18 +155,18 @@ const styles = {
     boxShadow: '0 0 0 1px rgba(255,107,44,0.35), 0 8px 20px -6px rgba(255,107,44,0.45)',
     flexShrink: 0,
   },
-  brandTitle: { fontWeight: 800, fontSize: 14, letterSpacing: '-0.3px', color: '#F5F5F5' },
+  brandTitle: { fontWeight: 800, fontSize: 14, letterSpacing: '-0.3px', color: 'var(--c-text)' },
   brandSub: {
     fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.14em',
-    color: 'rgba(245,245,245,0.40)', fontWeight: 700,
+    color: 'var(--c-muted)', fontWeight: 700,
   },
   env: {
     marginLeft: 'auto',
     fontSize: 9, letterSpacing: '0.12em', fontWeight: 700, textTransform: 'uppercase',
-    color: '#FF6B2C',
+    color: 'var(--c-primary)',
     padding: '3px 6px',
-    border: '1px solid rgba(255,107,44,0.32)',
-    background: 'rgba(255,107,44,0.12)',
+    border: '1px solid var(--c-primary-border)',
+    background: 'var(--c-primary-soft)',
     borderRadius: 4,
   },
   nav: {
@@ -180,7 +180,7 @@ const styles = {
     margin: '14px 0 6px',
     padding: '0 10px',
     fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase',
-    color: 'rgba(245,245,245,0.22)', fontWeight: 700,
+    color: 'var(--c-muted)', fontWeight: 700,
   },
   navItem: {
     display: 'flex', alignItems: 'center', gap: 10,
@@ -197,45 +197,45 @@ const styles = {
     position: 'absolute',
     left: -10, top: 6, bottom: 6,
     width: 2,
-    background: '#FF6B2C',
+    background: 'var(--c-primary)',
     borderRadius: '0 2px 2px 0',
   },
   badgeLive: {
     marginLeft: 'auto',
     fontSize: 10, fontWeight: 700,
     padding: '1px 6px', borderRadius: 999,
-    background: 'rgba(255,107,44,0.12)',
-    color: '#FF6B2C',
-    border: '1px solid rgba(255,107,44,0.32)',
+    background: 'var(--c-primary-soft)',
+    color: 'var(--c-primary)',
+    border: '1px solid var(--c-primary-border)',
     display: 'flex', alignItems: 'center', gap: 4,
   },
   pulseDot: {
     width: 6, height: 6, borderRadius: '50%',
-    background: '#FF6B2C',
+    background: 'var(--c-primary)',
     animation: 'pulse-p 1.8s infinite',
   },
   foot: {
     padding: 12,
-    borderTop: '1px solid rgba(255,255,255,0.08)',
+    borderTop: '1px solid var(--c-border)',
     display: 'flex', alignItems: 'center', gap: 10,
   },
   avatar: {
     width: 28, height: 28, borderRadius: '50%',
-    background: '#1E1E1E',
-    border: '1px solid rgba(255,255,255,0.14)',
+    background: 'var(--c-surface2)',
+    border: '1px solid var(--c-border)',
     display: 'grid', placeItems: 'center',
-    fontWeight: 700, fontSize: 11, color: '#F5F5F5',
+    fontWeight: 700, fontSize: 11, color: 'var(--c-text)',
     flexShrink: 0,
   },
   footName: {
-    fontSize: 12, fontWeight: 600, color: '#F5F5F5',
+    fontSize: 12, fontWeight: 600, color: 'var(--c-text)',
     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
   },
-  footRole: { fontSize: 10, color: 'rgba(245,245,245,0.40)' },
+  footRole: { fontSize: 10, color: 'var(--c-muted)' },
   logoutBtn: {
     width: 28, height: 28, borderRadius: 7,
     display: 'grid', placeItems: 'center',
-    color: 'rgba(245,245,245,0.62)',
+    color: 'var(--c-muted)',
     background: 'transparent', border: '1px solid transparent',
     cursor: 'pointer', flexShrink: 0,
     transition: 'background 0.12s, color 0.12s',

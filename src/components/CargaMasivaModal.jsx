@@ -116,18 +116,18 @@ export default function CargaMasivaModal({ establecimiento, categorias, onClose,
     <div style={ds.modal} onClick={onClose}>
       <div style={{ ...ds.modalContent, maxWidth: 480 }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 800, color: '#F5F5F5', margin: 0 }}>Carga masiva de productos</h2>
-          <button onClick={onClose} style={{ ...ds.actionBtn, color: 'rgba(255,255,255,0.4)' }}><X size={16} /></button>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-text)', margin: 0 }}>Carga masiva de productos</h2>
+          <button onClick={onClose} style={{ ...ds.actionBtn, color: 'var(--c-muted)' }}><X size={16} /></button>
         </div>
-        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 16, lineHeight: 1.6 }}>
+        <p style={{ fontSize: 12, color: 'var(--c-muted)', marginBottom: 16, lineHeight: 1.6 }}>
           Sube un archivo CSV con los productos para <strong style={{ color: '#FF6B2C' }}>{establecimiento.nombre}</strong>. Las categorias que no existan se crearan automaticamente.
         </p>
         <div style={{
           padding: '10px 14px', borderRadius: 10, marginBottom: 16,
           background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.25)',
-          fontSize: 11, color: 'rgba(255,255,255,0.75)', lineHeight: 1.5,
+          fontSize: 11, color: 'var(--c-text-soft)', lineHeight: 1.5,
         }}>
-          <strong style={{ color: '#4ADE80' }}>Formatos soportados:</strong> plantilla Pidoo (nombre, descripcion, precio, categoria, imagen_url, disponible) o el CSV exportado directamente de <strong>Uber Eats</strong> (Carta &rarr; Exportar). Las imagenes no vienen en el CSV de UE; se pueden subir despues desde la ficha del producto.
+          <strong style={{ color: 'var(--c-success)' }}>Formatos soportados:</strong> plantilla Pidoo (nombre, descripcion, precio, categoria, imagen_url, disponible) o el CSV exportado directamente de <strong>Uber Eats</strong> (Carta &rarr; Exportar). Las imagenes no vienen en el CSV de UE; se pueden subir despues desde la ficha del producto.
         </div>
 
         {/* Drop zone */}
@@ -142,8 +142,8 @@ export default function CargaMasivaModal({ establecimiento, categorias, onClose,
           }}
         >
           <FileSpreadsheet size={36} style={{ color: '#FF6B2C', marginBottom: 10 }} />
-          <div style={{ fontWeight: 700, fontSize: 14, color: '#F5F5F5', marginBottom: 6 }}>Arrastra tu CSV aqui</div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>o haz click para seleccionar (max 1MB)</div>
+          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--c-text)', marginBottom: 6 }}>Arrastra tu CSV aqui</div>
+          <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>o haz click para seleccionar (max 1MB)</div>
           <input ref={fileRef} type="file" accept=".csv" hidden onChange={e => handleFile(e.target.files[0])} />
         </div>
 
@@ -159,22 +159,22 @@ export default function CargaMasivaModal({ establecimiento, categorias, onClose,
     <div style={ds.modal} onClick={() => setStep('idle')}>
       <div style={{ ...ds.modalContent, maxWidth: 700 }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 800, color: '#F5F5F5', margin: 0 }}>Vista previa</h2>
-          <button onClick={() => setStep('idle')} style={{ ...ds.actionBtn, color: 'rgba(255,255,255,0.4)' }}><X size={16} /></button>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-text)', margin: 0 }}>Vista previa</h2>
+          <button onClick={() => setStep('idle')} style={{ ...ds.actionBtn, color: 'var(--c-muted)' }}><X size={16} /></button>
         </div>
 
         {/* Summary */}
         <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
           {formato && (
-            <span style={{ ...ds.badge, background: 'rgba(255,107,44,0.15)', color: '#FF6B2C', textTransform: 'uppercase' }}>
+            <span style={{ ...ds.badge, background: 'var(--c-primary-soft)', color: '#FF6B2C', textTransform: 'uppercase' }}>
               Formato: {formato === 'ubereats' ? 'Uber Eats' : 'Pidoo'}
             </span>
           )}
-          <span style={{ ...ds.badge, background: 'rgba(255,255,255,0.06)', color: '#F5F5F5' }}>
+          <span style={{ ...ds.badge, background: 'var(--c-surface2)', color: 'var(--c-text)' }}>
             <CheckCircle size={10} style={{ marginRight: 4, verticalAlign: 'middle' }} />{validRows.length} validos
           </span>
           {errorRows.length > 0 && (
-            <span style={{ ...ds.badge, background: 'rgba(239,68,68,0.15)', color: '#EF4444' }}>
+            <span style={{ ...ds.badge, background: 'var(--c-danger-soft)', color: 'var(--c-danger)' }}>
               <AlertCircle size={10} style={{ marginRight: 4, verticalAlign: 'middle' }} />{errorRows.length} con errores
             </span>
           )}
@@ -183,13 +183,13 @@ export default function CargaMasivaModal({ establecimiento, categorias, onClose,
         {/* Category resolution */}
         {Object.keys(categoryMap).length > 0 && (
           <div style={{ ...ds.card, padding: '12px 16px', marginBottom: 16 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: 8 }}>Categorias</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-muted)', marginBottom: 8 }}>Categorias</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {Object.entries(categoryMap).map(([name, info]) => (
                 <span key={name} style={{
                   ...ds.badge,
-                  background: info.exists ? 'rgba(34,197,94,0.12)' : 'rgba(255,107,44,0.12)',
-                  color: info.exists ? '#F5F5F5' : '#FF6B2C',
+                  background: info.exists ? 'var(--c-success-soft)' : 'var(--c-primary-soft)',
+                  color: info.exists ? 'var(--c-text)' : '#FF6B2C',
                 }}>
                   {info.exists ? '✓' : '+ nueva'} {name}
                 </span>
@@ -199,8 +199,8 @@ export default function CargaMasivaModal({ establecimiento, categorias, onClose,
         )}
 
         {/* Table */}
-        <div style={{ maxHeight: 360, overflowY: 'auto', borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)' }}>
-          <div style={{ ...ds.tableHeader, position: 'sticky', top: 0, background: '#1A1A1A', zIndex: 1 }}>
+        <div style={{ maxHeight: 360, overflowY: 'auto', borderRadius: 12, border: '1px solid var(--c-border)' }}>
+          <div style={{ ...ds.tableHeader, position: 'sticky', top: 0, background: 'var(--c-surface2)', zIndex: 1 }}>
             <span style={{ width: 36 }}>#</span>
             <span style={{ flex: 2 }}>Nombre</span>
             <span style={{ width: 70, textAlign: 'right' }}>Precio</span>
@@ -209,20 +209,20 @@ export default function CargaMasivaModal({ establecimiento, categorias, onClose,
           </div>
           {validRows.map(r => (
             <div key={r._rowNum} style={ds.tableRow}>
-              <span style={{ width: 36, fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>{r._rowNum}</span>
+              <span style={{ width: 36, fontSize: 10, color: 'var(--c-muted)' }}>{r._rowNum}</span>
               <span style={{ flex: 2, fontSize: 12 }}>{r.nombre}</span>
               <span style={{ width: 70, textAlign: 'right', fontSize: 12, color: '#FF6B2C', fontWeight: 700 }}>{r.precio.toFixed(2)} €</span>
-              <span style={{ flex: 1, fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{r.categoria || '—'}</span>
-              <span style={{ width: 60, textAlign: 'center' }}><CheckCircle size={13} style={{ color: '#F5F5F5' }} /></span>
+              <span style={{ flex: 1, fontSize: 11, color: 'var(--c-muted)' }}>{r.categoria || '—'}</span>
+              <span style={{ width: 60, textAlign: 'center' }}><CheckCircle size={13} style={{ color: 'var(--c-text)' }} /></span>
             </div>
           ))}
           {errorRows.map(r => (
             <div key={r.row} style={{ ...ds.tableRow, background: 'rgba(239,68,68,0.06)' }}>
-              <span style={{ width: 36, fontSize: 10, color: '#EF4444' }}>{r.row}</span>
-              <span style={{ flex: 2, fontSize: 12, color: '#EF4444' }}>{r.data.nombre || '(vacio)'}</span>
-              <span style={{ width: 70, textAlign: 'right', fontSize: 12, color: '#EF4444' }}>{r.data.precio || '—'}</span>
-              <span style={{ flex: 1, fontSize: 11, color: '#EF4444' }}>{r.messages.join(', ')}</span>
-              <span style={{ width: 60, textAlign: 'center' }}><AlertCircle size={13} style={{ color: '#EF4444' }} /></span>
+              <span style={{ width: 36, fontSize: 10, color: 'var(--c-danger)' }}>{r.row}</span>
+              <span style={{ flex: 2, fontSize: 12, color: 'var(--c-danger)' }}>{r.data.nombre || '(vacio)'}</span>
+              <span style={{ width: 70, textAlign: 'right', fontSize: 12, color: 'var(--c-danger)' }}>{r.data.precio || '—'}</span>
+              <span style={{ flex: 1, fontSize: 11, color: 'var(--c-danger)' }}>{r.messages.join(', ')}</span>
+              <span style={{ width: 60, textAlign: 'center' }}><AlertCircle size={13} style={{ color: 'var(--c-danger)' }} /></span>
             </div>
           ))}
         </div>
@@ -248,12 +248,12 @@ export default function CargaMasivaModal({ establecimiento, categorias, onClose,
     <div style={ds.modal}>
       <div style={{ ...ds.modalContent, maxWidth: 400, textAlign: 'center' }}>
         <FileSpreadsheet size={32} style={{ color: '#FF6B2C', marginBottom: 12 }} />
-        <div style={{ fontWeight: 800, fontSize: 16, color: '#F5F5F5', marginBottom: 8 }}>Subiendo productos...</div>
-        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 16 }}>
+        <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--c-text)', marginBottom: 8 }}>Subiendo productos...</div>
+        <div style={{ fontSize: 12, color: 'var(--c-muted)', marginBottom: 16 }}>
           Procesando {progress.current}/{progress.total}
         </div>
         {/* Progress bar */}
-        <div style={{ height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+        <div style={{ height: 6, borderRadius: 3, background: 'var(--c-surface2)', overflow: 'hidden' }}>
           <div style={{
             height: '100%', borderRadius: 3, background: '#FF6B2C',
             width: progress.total > 0 ? `${(progress.current / progress.total) * 100}%` : '0%',
@@ -269,35 +269,35 @@ export default function CargaMasivaModal({ establecimiento, categorias, onClose,
     <div style={ds.modal}>
       <div style={{ ...ds.modalContent, maxWidth: 440 }}>
         <div style={{ textAlign: 'center', marginBottom: 20 }}>
-          <CheckCircle size={40} style={{ color: '#F5F5F5', marginBottom: 10 }} />
-          <h2 style={{ fontSize: 18, fontWeight: 800, color: '#F5F5F5', margin: 0 }}>Carga completada</h2>
+          <CheckCircle size={40} style={{ color: 'var(--c-text)', marginBottom: 10 }} />
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-text)', margin: 0 }}>Carga completada</h2>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {results.created > 0 && (
             <div style={{ ...ds.card, padding: '12px 16px', borderLeft: '3px solid #F5F5F5' }}>
-              <span style={{ fontSize: 13, color: '#F5F5F5', fontWeight: 700 }}>{results.created}</span>
-              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginLeft: 6 }}>producto{results.created !== 1 ? 's' : ''} creado{results.created !== 1 ? 's' : ''}</span>
+              <span style={{ fontSize: 13, color: 'var(--c-text)', fontWeight: 700 }}>{results.created}</span>
+              <span style={{ fontSize: 12, color: 'var(--c-text-soft)', marginLeft: 6 }}>producto{results.created !== 1 ? 's' : ''} creado{results.created !== 1 ? 's' : ''}</span>
             </div>
           )}
           {results.catCreated.length > 0 && (
             <div style={{ ...ds.card, padding: '12px 16px', borderLeft: '3px solid #FF6B2C' }}>
               <span style={{ fontSize: 13, color: '#FF6B2C', fontWeight: 700 }}>{results.catCreated.length}</span>
-              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginLeft: 6 }}>categoria{results.catCreated.length !== 1 ? 's' : ''} nueva{results.catCreated.length !== 1 ? 's' : ''}: </span>
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{results.catCreated.join(', ')}</span>
+              <span style={{ fontSize: 12, color: 'var(--c-text-soft)', marginLeft: 6 }}>categoria{results.catCreated.length !== 1 ? 's' : ''} nueva{results.catCreated.length !== 1 ? 's' : ''}: </span>
+              <span style={{ fontSize: 11, color: 'var(--c-muted)' }}>{results.catCreated.join(', ')}</span>
             </div>
           )}
           {errorRows.length > 0 && (
-            <div style={{ ...ds.card, padding: '12px 16px', borderLeft: '3px solid rgba(255,255,255,0.2)' }}>
-              <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', fontWeight: 700 }}>{errorRows.length}</span>
-              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginLeft: 6 }}>fila{errorRows.length !== 1 ? 's' : ''} omitida{errorRows.length !== 1 ? 's' : ''} por errores</span>
+            <div style={{ ...ds.card, padding: '12px 16px', borderLeft: '3px solid var(--c-muted)' }}>
+              <span style={{ fontSize: 13, color: 'var(--c-muted)', fontWeight: 700 }}>{errorRows.length}</span>
+              <span style={{ fontSize: 12, color: 'var(--c-muted)', marginLeft: 6 }}>fila{errorRows.length !== 1 ? 's' : ''} omitida{errorRows.length !== 1 ? 's' : ''} por errores</span>
             </div>
           )}
           {results.errors.length > 0 && (
             <div style={{ ...ds.card, padding: '12px 16px', borderLeft: '3px solid #EF4444' }}>
-              <div style={{ fontSize: 13, color: '#EF4444', fontWeight: 700, marginBottom: 4 }}>Errores de insercion</div>
+              <div style={{ fontSize: 13, color: 'var(--c-danger)', fontWeight: 700, marginBottom: 4 }}>Errores de insercion</div>
               {results.errors.map((err, i) => (
-                <div key={i} style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{err}</div>
+                <div key={i} style={{ fontSize: 11, color: 'var(--c-muted)' }}>{err}</div>
               ))}
             </div>
           )}

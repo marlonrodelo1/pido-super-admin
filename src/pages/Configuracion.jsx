@@ -137,7 +137,7 @@ export default function Configuracion() {
       </div>
 
       {configLoading ? (
-        <div style={{ textAlign: 'center', padding: 40, color: 'rgba(255,255,255,0.4)' }}>Cargando configuración...</div>
+        <div style={{ textAlign: 'center', padding: 40, color: 'var(--c-muted)' }}>Cargando configuración...</div>
       ) : (
         <>
           {/* ==================== TARIFAS DE ENVÍO ==================== */}
@@ -146,7 +146,7 @@ export default function Configuracion() {
               <Truck size={18} color="#FF6B2C" />
               <h2 style={styles.sectionTitle}>Tarifas de envío (canal Pido)</h2>
             </div>
-            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 20, marginTop: -8 }}>
+            <p style={{ fontSize: 12, color: 'var(--c-muted)', marginBottom: 20, marginTop: -8 }}>
               Estas tarifas se aplican cuando un cliente pide desde la app principal (pidoo.es). Los socios configuran sus propias tarifas desde su panel.
             </p>
 
@@ -182,9 +182,9 @@ export default function Configuracion() {
               <div style={{ fontSize: 12, fontWeight: 700, color: '#FF6B2C', marginBottom: 10 }}>Vista previa de tarifas</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
                 {[1, 2, 3, 5, 8, 10, 15].map(km => (
-                  <div key={km} style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 8, padding: '8px 14px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{km} km</div>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: '#F5F5F5' }}>€{ejemploEnvio(km)}</div>
+                  <div key={km} style={{ background: 'var(--c-surface2)', borderRadius: 8, padding: '8px 14px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>{km} km</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--c-text)' }}>€{ejemploEnvio(km)}</div>
                   </div>
                 ))}
               </div>
@@ -213,7 +213,7 @@ export default function Configuracion() {
               <Zap size={18} color="#FF6B2C" />
               <h2 style={styles.sectionTitle}>Algoritmo de asignación y comisiones</h2>
             </div>
-            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 20, marginTop: -8 }}>
+            <p style={{ fontSize: 12, color: 'var(--c-muted)', marginBottom: 20, marginTop: -8 }}>
               Define cómo se asignan los pedidos a los riders y cómo se reparte el dinero entre Pidoo, rider y restaurante.
             </p>
 
@@ -298,7 +298,7 @@ export default function Configuracion() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <input type="range" min={1} max={30} value={config.radio_cobertura_default ?? '10'}
                 onChange={e => setConfigVal('radio_cobertura_default', e.target.value)} style={{ flex: 1, maxWidth: 400 }} />
-              <span style={{ fontSize: 20, fontWeight: 800, color: '#F5F5F5', minWidth: 60 }}>{config.radio_cobertura_default ?? 10} km</span>
+              <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-text)', minWidth: 60 }}>{config.radio_cobertura_default ?? 10} km</span>
             </div>
             <div style={styles.hint}>Radio que se asigna a nuevos establecimientos por defecto</div>
           </div>
@@ -309,7 +309,7 @@ export default function Configuracion() {
               {configSaving ? 'Guardando...' : 'Guardar toda la configuración'}
             </button>
             {configMsg && (
-              <span style={{ marginLeft: 16, fontSize: 13, fontWeight: 600, color: configMsg.includes('Error') ? '#EF4444' : '#F5F5F5' }}>
+              <span style={{ marginLeft: 16, fontSize: 13, fontWeight: 600, color: configMsg.includes('Error') ? 'var(--c-danger)' : 'var(--c-text)' }}>
                 {configMsg}
               </span>
             )}
@@ -341,7 +341,7 @@ export default function Configuracion() {
       {/* ==================== PÁGINAS LEGALES ==================== */}
       <div style={styles.section}>
         <h2 style={styles.sectionTitle}>Páginas legales</h2>
-        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 16 }}>Edita los textos legales que se muestran en pidoo.es/terminos y pidoo.es/privacidad</p>
+        <p style={{ fontSize: 12, color: 'var(--c-muted)', marginBottom: 16 }}>Edita los textos legales que se muestran en pidoo.es/terminos y pidoo.es/privacidad</p>
 
         {editLegal ? (
           <div>
@@ -354,9 +354,9 @@ export default function Configuracion() {
               <label style={ds.label}>Contenido (HTML)</label>
               <textarea value={legalForm.contenido} onChange={e => setLegalForm({ ...legalForm, contenido: e.target.value })} rows={18} style={{ ...ds.formInput, resize: 'vertical', fontFamily: 'monospace', fontSize: 12, lineHeight: 1.6 }} />
             </div>
-            <div style={{ marginBottom: 12, background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 16, border: '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)', marginBottom: 8 }}>Vista previa</div>
-              <div style={{ fontSize: 13, lineHeight: 1.7, color: '#F5F5F5' }} dangerouslySetInnerHTML={{ __html: sanitizeHtml(legalForm.contenido) }} />
+            <div style={{ marginBottom: 12, background: 'var(--c-surface2)', borderRadius: 10, padding: 16, border: '1px solid var(--c-border)' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-muted)', marginBottom: 8 }}>Vista previa</div>
+              <div style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--c-text)' }} dangerouslySetInnerHTML={{ __html: sanitizeHtml(legalForm.contenido) }} />
             </div>
             <button onClick={guardarPaginaLegal} disabled={savingLegal} style={{ ...ds.primaryBtn, width: '100%' }}>
               {savingLegal ? 'Guardando...' : 'Guardar página'}
@@ -365,15 +365,15 @@ export default function Configuracion() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {paginasLegales.map(p => (
-              <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: 'rgba(255,255,255,0.04)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: 'var(--c-surface2)', borderRadius: 10, border: '1px solid var(--c-border)' }}>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: '#F5F5F5' }}>{p.titulo}</div>
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>pidoo.es/{p.slug} · Editado: {new Date(p.updated_at).toLocaleDateString('es-ES')}</div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--c-text)' }}>{p.titulo}</div>
+                  <div style={{ fontSize: 11, color: 'var(--c-muted)', marginTop: 2 }}>pidoo.es/{p.slug} · Editado: {new Date(p.updated_at).toLocaleDateString('es-ES')}</div>
                 </div>
                 <button onClick={() => { setEditLegal(p); setLegalForm({ titulo: p.titulo, contenido: p.contenido }) }} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#FF6B2C', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>Editar</button>
               </div>
             ))}
-            {paginasLegales.length === 0 && <div style={{ textAlign: 'center', padding: 24, color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>No hay páginas legales configuradas</div>}
+            {paginasLegales.length === 0 && <div style={{ textAlign: 'center', padding: 24, color: 'var(--c-muted)', fontSize: 13 }}>No hay páginas legales configuradas</div>}
           </div>
         )}
       </div>
@@ -388,14 +388,14 @@ function ToggleRow({ label, value, onChange }) {
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '12px 14px', borderRadius: 10,
-        background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
+        background: 'var(--c-surface2)', border: '1px solid var(--c-border)',
         cursor: 'pointer', userSelect: 'none',
       }}
     >
-      <span style={{ fontSize: 13, color: '#F5F5F5', fontWeight: 600 }}>{label}</span>
+      <span style={{ fontSize: 13, color: 'var(--c-text)', fontWeight: 600 }}>{label}</span>
       <span style={{
         width: 38, height: 22, borderRadius: 22, padding: 2,
-        background: value ? '#FF6B2C' : 'rgba(255,255,255,0.15)',
+        background: value ? '#FF6B2C' : 'var(--c-border-strong)',
         transition: 'background 0.2s', display: 'flex', alignItems: 'center',
       }}>
         <span style={{
@@ -421,17 +421,17 @@ function SplitPreview({ pidooPct, riderPct }) {
         Ejemplo: pedido con subtotal 20€ + envío 3€
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 8, padding: '10px 16px', minWidth: 120 }}>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Pidoo</div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: '#F5F5F5' }}>€{pidoo.toFixed(2)}</div>
+        <div style={{ background: 'var(--c-surface2)', borderRadius: 8, padding: '10px 16px', minWidth: 120 }}>
+          <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>Pidoo</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--c-text)' }}>€{pidoo.toFixed(2)}</div>
         </div>
-        <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 8, padding: '10px 16px', minWidth: 140 }}>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Rider (+ envío + propina)</div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: '#F5F5F5' }}>€{rider.toFixed(2)}</div>
+        <div style={{ background: 'var(--c-surface2)', borderRadius: 8, padding: '10px 16px', minWidth: 140 }}>
+          <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>Rider (+ envío + propina)</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--c-text)' }}>€{rider.toFixed(2)}</div>
         </div>
-        <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 8, padding: '10px 16px', minWidth: 120 }}>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Restaurante</div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: '#F5F5F5' }}>€{restaurante.toFixed(2)}</div>
+        <div style={{ background: 'var(--c-surface2)', borderRadius: 8, padding: '10px 16px', minWidth: 120 }}>
+          <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>Restaurante</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--c-text)' }}>€{restaurante.toFixed(2)}</div>
         </div>
       </div>
     </div>
@@ -439,9 +439,9 @@ function SplitPreview({ pidooPct, riderPct }) {
 }
 
 const styles = {
-  section: { background: 'rgba(255,255,255,0.06)', borderRadius: 14, padding: 24, marginBottom: 16, border: '1px solid rgba(255,255,255,0.08)' },
-  sectionTitle: { fontSize: 15, fontWeight: 700, color: '#F5F5F5', margin: 0 },
-  tag: { display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.08)', fontSize: 12, fontWeight: 600, color: '#F5F5F5' },
-  tagRemove: { background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', fontSize: 12, fontWeight: 700, padding: 0, display: 'flex', alignItems: 'center' },
-  hint: { fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 4 },
+  section: { background: 'var(--c-surface2)', borderRadius: 14, padding: 24, marginBottom: 16, border: '1px solid var(--c-border)' },
+  sectionTitle: { fontSize: 15, fontWeight: 700, color: 'var(--c-text)', margin: 0 },
+  tag: { display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, background: 'var(--c-surface2)', fontSize: 12, fontWeight: 600, color: 'var(--c-text)' },
+  tagRemove: { background: 'none', border: 'none', cursor: 'pointer', color: 'var(--c-muted)', fontSize: 12, fontWeight: 700, padding: 0, display: 'flex', alignItems: 'center' },
+  hint: { fontSize: 11, color: 'var(--c-muted)', marginTop: 4 },
 }

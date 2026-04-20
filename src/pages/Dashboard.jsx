@@ -43,7 +43,7 @@ export default function Dashboard() {
     setRecientes(data || [])
   }
 
-  const estadoColor = { nuevo: '#FF6B2C', aceptado: '#FF6B2C', preparando: '#FF6B2C', listo: 'rgba(245,245,245,0.62)', recogido: 'rgba(245,245,245,0.62)', en_camino: '#FF6B2C', entregado: '#F5F5F5', cancelado: '#EF4444', fallido: '#EF4444' }
+  const estadoColor = { nuevo: '#FF6B2C', aceptado: '#FF6B2C', preparando: '#FF6B2C', listo: 'var(--c-text-soft)', recogido: 'var(--c-text-soft)', en_camino: '#FF6B2C', entregado: 'var(--c-text)', cancelado: 'var(--c-danger)', fallido: 'var(--c-danger)' }
 
   return (
     <div>
@@ -52,8 +52,8 @@ export default function Dashboard() {
         <div style={{ display: 'flex', gap: 6 }}>
           {['hoy', 'semana', 'mes'].map(p => (
             <button key={p} onClick={() => setPeriodo(p)} style={{
-              ...ds.filterBtn, background: periodo === p ? '#FF6B2C' : 'rgba(255,255,255,0.08)',
-              color: periodo === p ? '#fff' : 'rgba(255,255,255,0.5)',
+              ...ds.filterBtn, background: periodo === p ? '#FF6B2C' : 'var(--c-surface2)',
+              color: periodo === p ? '#fff' : 'var(--c-muted)',
             }}>{p.charAt(0).toUpperCase() + p.slice(1)}</button>
           ))}
         </div>
@@ -61,8 +61,8 @@ export default function Dashboard() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 32 }}>
         <StatCard label="Total Pedidos" value={stats.pedidos} />
-        <StatCard label="Ventas" value={`${stats.ventas.toFixed(2)}€`} color="#F5F5F5" />
-        <StatCard label="Comisiones" value={`${stats.comisiones.toFixed(2)}€`} color="rgba(245,245,245,0.62)" />
+        <StatCard label="Ventas" value={`${stats.ventas.toFixed(2)}€`} color='var(--c-text)' />
+        <StatCard label="Comisiones" value={`${stats.comisiones.toFixed(2)}€`} color="var(--c-text-soft)" />
         <StatCard label="Usuarios" value={stats.usuarios} color="#FF6B2C" />
         <StatCard label="Establecimientos" value={stats.establecimientos} color="#EF4444" />
       </div>
@@ -85,12 +85,12 @@ export default function Dashboard() {
               <span style={{ ...ds.badge, background: (estadoColor[p.estado] || '#6B7280') + '25', color: estadoColor[p.estado] || '#6B7280' }}>{p.estado}</span>
             </span>
             <span style={{ width: 70 }}>
-              <span style={{ ...ds.badge, background: p.metodo_pago === 'tarjeta' ? 'rgba(59,130,246,0.15)' : 'rgba(245,158,11,0.15)', color: p.metodo_pago === 'tarjeta' ? '#60A5FA' : '#FBBF24' }}>
+              <span style={{ ...ds.badge, background: p.metodo_pago === 'tarjeta' ? 'rgba(59,130,246,0.15)' : 'var(--c-warning-soft)', color: p.metodo_pago === 'tarjeta' ? 'var(--c-info)' : 'var(--c-warning)' }}>
                 {p.metodo_pago === 'tarjeta' ? 'Tarjeta' : 'Efectivo'}
               </span>
             </span>
             <span style={{ width: 70 }}>
-              <span style={{ ...ds.badge, background: 'rgba(255,107,44,0.15)', color: '#FF6B2C' }}>PIDO</span>
+              <span style={{ ...ds.badge, background: 'var(--c-primary-soft)', color: '#FF6B2C' }}>PIDO</span>
             </span>
             <span style={{ flex: 1, fontSize: 11, ...ds.muted }}>{new Date(p.created_at).toLocaleString('es-ES')}</span>
           </div>

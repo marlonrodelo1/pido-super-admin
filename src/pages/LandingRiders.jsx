@@ -169,7 +169,7 @@ export default function LandingRiders() {
               padding: '8px 14px', borderRadius: 8, cursor: 'pointer',
               border: `1px solid ${activa ? 'rgba(74,222,128,0.35)' : 'rgba(245,158,11,0.35)'}`,
               background: activa ? 'rgba(74,222,128,0.1)' : 'rgba(245,158,11,0.1)',
-              color: activa ? '#4ADE80' : '#F59E0B',
+              color: activa ? 'var(--c-success)' : '#F59E0B',
               fontSize: 12, fontWeight: 700, fontFamily: 'inherit',
             }}
           >
@@ -378,7 +378,7 @@ const arrowBtn = {
 const delBtn = {
   width: 32, height: 32, borderRadius: 8,
   border: `1px solid ${colors.border}`,
-  background: 'rgba(239,68,68,0.08)', color: '#F8B4B4',
+  background: 'var(--c-danger-soft)', color: 'var(--c-danger)',
   cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
   flexShrink: 0,
 }

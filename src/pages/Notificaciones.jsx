@@ -106,26 +106,26 @@ export default function Notificaciones() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h1 style={ds.h1}>Notificaciones Push</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Bell size={16} color="rgba(255,255,255,0.4)" />
-          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>{stats.clientes + stats.restaurantes} suscripciones activas</span>
+          <Bell size={16} color="var(--c-muted)" />
+          <span style={{ fontSize: 13, color: 'var(--c-muted)' }}>{stats.clientes + stats.restaurantes} suscripciones activas</span>
         </div>
       </div>
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
         <div style={ds.card}>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>Clientes</div>
+          <div style={{ fontSize: 11, color: 'var(--c-muted)', fontWeight: 600 }}>Clientes</div>
           <div style={{ fontSize: 24, fontWeight: 800, color: '#FF6B2C' }}>{stats.clientes}</div>
         </div>
         <div style={ds.card}>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>Restaurantes</div>
+          <div style={{ fontSize: 11, color: 'var(--c-muted)', fontWeight: 600 }}>Restaurantes</div>
           <div style={{ fontSize: 24, fontWeight: 800, color: '#FF6B2C' }}>{stats.restaurantes}</div>
         </div>
       </div>
 
       {/* Enviar notificación */}
       <div style={{ ...ds.card, padding: 24, marginBottom: 24 }}>
-        <h2 style={{ fontSize: 16, fontWeight: 700, color: '#F5F5F5', marginBottom: 16 }}>Enviar notificación</h2>
+        <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--c-text)', marginBottom: 16 }}>Enviar notificación</h2>
 
         {/* Destino */}
         <div style={{ marginBottom: 16 }}>
@@ -136,12 +136,12 @@ export default function Notificaciones() {
               return (
                 <button key={d.id} onClick={() => setDestino(d.id)} style={{
                   padding: '12px 10px', borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center',
-                  border: sel ? '2px solid #FF6B2C' : '1px solid rgba(255,255,255,0.1)',
-                  background: sel ? 'rgba(255,107,44,0.12)' : 'rgba(255,255,255,0.04)',
+                  border: sel ? '2px solid #FF6B2C' : '1px solid var(--c-border-strong)',
+                  background: sel ? 'var(--c-primary-soft)' : 'var(--c-surface2)',
                 }}>
-                  <d.icon size={18} color={sel ? '#FF6B2C' : 'rgba(255,255,255,0.4)'} style={{ margin: '0 auto 6px', display: 'block' }} />
-                  <div style={{ fontSize: 12, fontWeight: 700, color: sel ? '#FF6B2C' : '#F5F5F5' }}>{d.label}</div>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>{d.desc}</div>
+                  <d.icon size={18} color={sel ? '#FF6B2C' : 'var(--c-muted)'} style={{ margin: '0 auto 6px', display: 'block' }} />
+                  <div style={{ fontSize: 12, fontWeight: 700, color: sel ? '#FF6B2C' : 'var(--c-text)' }}>{d.label}</div>
+                  <div style={{ fontSize: 10, color: 'var(--c-muted)', marginTop: 2 }}>{d.desc}</div>
                 </button>
               )
             })}
@@ -162,15 +162,15 @@ export default function Notificaciones() {
 
         {/* Preview */}
         {(titulo || mensaje) && (
-          <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: 14, marginBottom: 16, border: '1px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', marginBottom: 8, fontWeight: 600 }}>PREVIEW</div>
+          <div style={{ background: 'var(--c-surface2)', borderRadius: 12, padding: 14, marginBottom: 16, border: '1px solid var(--c-border)' }}>
+            <div style={{ fontSize: 10, color: 'var(--c-muted)', marginBottom: 8, fontWeight: 600 }}>PREVIEW</div>
             <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
               <div style={{ width: 36, height: 36, borderRadius: 10, background: '#FF6B2C', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Bell size={16} color="#fff" />
               </div>
               <div>
-                <div style={{ fontWeight: 700, fontSize: 13, color: '#F5F5F5' }}>{titulo || 'Título'}</div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>{mensaje || 'Mensaje...'}</div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--c-text)' }}>{titulo || 'Título'}</div>
+                <div style={{ fontSize: 12, color: 'var(--c-muted)', marginTop: 2 }}>{mensaje || 'Mensaje...'}</div>
               </div>
             </div>
           </div>
@@ -180,8 +180,8 @@ export default function Notificaciones() {
         {resultado && (
           <div style={{
             padding: '12px 16px', borderRadius: 10, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8,
-            background: resultado.ok ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)',
-            color: resultado.ok ? '#F5F5F5' : '#EF4444', fontSize: 13, fontWeight: 600,
+            background: resultado.ok ? 'var(--c-success-soft)' : 'var(--c-danger-soft)',
+            color: resultado.ok ? 'var(--c-text)' : 'var(--c-danger)', fontSize: 13, fontWeight: 600,
           }}>
             <CheckCircle size={16} />
             {resultado.ok ? `Enviada a ${resultado.enviados}/${resultado.total} dispositivos` : `Error: ${resultado.error}`}
@@ -191,7 +191,7 @@ export default function Notificaciones() {
         {/* Botón enviar */}
         <button onClick={enviarNotificacion} disabled={enviando || !titulo.trim() || !mensaje.trim()} style={{
           width: '100%', padding: '14px', borderRadius: 12, border: 'none',
-          background: enviando || !titulo.trim() || !mensaje.trim() ? 'rgba(255,255,255,0.1)' : '#FF6B2C',
+          background: enviando || !titulo.trim() || !mensaje.trim() ? 'var(--c-surface2)' : '#FF6B2C',
           color: '#fff', fontSize: 15, fontWeight: 800, cursor: enviando ? 'default' : 'pointer',
           fontFamily: "'Inter', system-ui, -apple-system, sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
         }}>
@@ -201,19 +201,19 @@ export default function Notificaciones() {
       </div>
 
       {/* Historial */}
-      <h2 style={{ fontSize: 16, fontWeight: 700, color: '#F5F5F5', marginBottom: 12 }}>Historial reciente</h2>
+      <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--c-text)', marginBottom: 12 }}>Historial reciente</h2>
       <div style={ds.table}>
         {historial.length === 0 && (
-          <div style={{ padding: 32, textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>Sin notificaciones enviadas</div>
+          <div style={{ padding: 32, textAlign: 'center', color: 'var(--c-muted)', fontSize: 13 }}>Sin notificaciones enviadas</div>
         )}
         {historial.map(n => (
           <div key={n.id} style={{ ...ds.tableRow, display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Bell size={14} color="rgba(255,255,255,0.3)" />
+            <Bell size={14} color="var(--c-muted)" />
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: 13, color: '#F5F5F5' }}>{n.titulo}</div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{n.descripcion}</div>
+              <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--c-text)' }}>{n.titulo}</div>
+              <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>{n.descripcion}</div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--c-muted)' }}>
               <Clock size={12} />
               {new Date(n.created_at).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
             </div>

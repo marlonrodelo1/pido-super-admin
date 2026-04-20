@@ -212,7 +212,7 @@ export default function Establecimientos() {
 
         <div style={{ ...ds.card, padding: 28 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-            <div style={{ width: 60, height: 60, borderRadius: 14, background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, overflow: 'hidden', cursor: 'pointer', position: 'relative' }}
+            <div style={{ width: 60, height: 60, borderRadius: 14, background: 'var(--c-surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, overflow: 'hidden', cursor: 'pointer', position: 'relative' }}
               onClick={() => logoRef.current?.click()}>
               {(form.logo_url || detalle.logo_url) ? <img src={form.logo_url || detalle.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🍽️'}
               <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0 }} onMouseEnter={e => e.currentTarget.style.opacity = 1} onMouseLeave={e => e.currentTarget.style.opacity = 0}>
@@ -224,7 +224,7 @@ export default function Establecimientos() {
               {editando ? (
                 <input value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} style={{ ...ds.formInput, fontSize: 18, fontWeight: 800 }} />
               ) : (
-                <h2 style={{ fontSize: 20, fontWeight: 800, color: '#F5F5F5' }}>{detalle.nombre}</h2>
+                <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-text)' }}>{detalle.nombre}</h2>
               )}
               <div style={{ fontSize: 12, ...ds.muted }}>{detalle.tipo} · {detalle.categoria_padre}</div>
             </div>
@@ -244,7 +244,7 @@ export default function Establecimientos() {
 
           {/* Banner upload */}
           <div style={{ height: 120, borderRadius: 12, marginBottom: 16, overflow: 'hidden', cursor: 'pointer', position: 'relative',
-            background: (form.banner_url || detalle.banner_url) ? `url(${form.banner_url || detalle.banner_url}) center/cover` : 'rgba(255,255,255,0.06)',
+            background: (form.banner_url || detalle.banner_url) ? `url(${form.banner_url || detalle.banner_url}) center/cover` : 'var(--c-surface2)',
           }} onClick={() => bannerRef.current?.click()}>
             <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: 0, transition: '0.2s' }}
               onMouseEnter={e => e.currentTarget.style.opacity = 1} onMouseLeave={e => e.currentTarget.style.opacity = 0}>
@@ -269,7 +269,7 @@ export default function Establecimientos() {
               <div style={{ gridColumn: '1/-1' }}><label style={ds.label}>Descripción</label><textarea value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} rows={2} style={{ ...ds.formInput, resize: 'vertical' }} /></div>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 13, color: '#F5F5F5' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 13, color: 'var(--c-text)' }}>
               <div><span style={ds.muted}>Email:</span> {detalle.email || '-'}</div>
               <div><span style={ds.muted}>Telefono:</span> {detalle.telefono || '-'}</div>
               <div><span style={ds.muted}>Direccion:</span> {detalle.direccion || '-'}</div>
@@ -294,15 +294,15 @@ export default function Establecimientos() {
 
         {/* Categorías generales */}
         <div style={{ marginTop: 20 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: '#F5F5F5', marginBottom: 10 }}>Categorías generales</h3>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', marginBottom: 10 }}>Categorías generales</h3>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {catsGenerales.map(c => {
               const sel = estCats.includes(c.id)
               return (
                 <button key={c.id} onClick={() => toggleCatGeneral(c.id)} style={{
-                  padding: '8px 14px', borderRadius: 10, border: sel ? '2px solid #FF6B2C' : '1px solid rgba(255,255,255,0.1)',
-                  background: sel ? 'rgba(255,107,44,0.15)' : 'rgba(255,255,255,0.04)',
-                  color: sel ? '#FF6B2C' : 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: 600,
+                  padding: '8px 14px', borderRadius: 10, border: sel ? '2px solid #FF6B2C' : '1px solid var(--c-border-strong)',
+                  background: sel ? 'var(--c-primary-soft)' : 'var(--c-surface2)',
+                  color: sel ? '#FF6B2C' : 'var(--c-muted)', fontSize: 12, fontWeight: 600,
                   cursor: 'pointer', fontFamily: "'Inter', system-ui, -apple-system, sans-serif", display: 'flex', alignItems: 'center', gap: 4,
                 }}>
                   {c.emoji} {c.nombre}
@@ -314,13 +314,13 @@ export default function Establecimientos() {
 
         {/* Categorías de la carta */}
         <div style={{ marginTop: 20 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: '#F5F5F5', marginBottom: 10 }}>Categorías de la carta</h3>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', marginBottom: 10 }}>Categorías de la carta</h3>
           {categorias.map(c => (
             <div key={c.id} style={{ ...ds.card, padding: '10px 16px', marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 600, fontSize: 13, color: '#F5F5F5' }}>{c.nombre}</span>
+              <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--c-text)' }}>{c.nombre}</span>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <span style={{ fontSize: 11, ...ds.muted }}>Orden: {c.orden}</span>
-                <button onClick={() => eliminarCategoria(c.id)} style={{ ...ds.actionBtn, color: '#EF4444' }}><Trash2 size={12} /></button>
+                <button onClick={() => eliminarCategoria(c.id)} style={{ ...ds.actionBtn, color: 'var(--c-danger)' }}><Trash2 size={12} /></button>
               </div>
             </div>
           ))}
@@ -334,7 +334,7 @@ export default function Establecimientos() {
         {/* Productos */}
         <div style={{ marginTop: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: '#F5F5F5' }}>Productos ({productos.length})</h3>
+            <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)' }}>Productos ({productos.length})</h3>
             <div style={{ display: 'flex', gap: 6 }}>
               <button onClick={() => setShowImportUrl(true)} style={{ ...ds.secondaryBtn, fontSize: 11, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 4 }}>🔗 Importar URL</button>
               <button onClick={() => setShowCargaMasiva(true)} style={{ ...ds.secondaryBtn, fontSize: 11, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 4 }}><Upload size={12} /> Carga masiva</button>
@@ -344,60 +344,60 @@ export default function Establecimientos() {
 
           {productos.map(p => (
             <div key={p.id} style={{ ...ds.card, padding: '10px 16px', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 12, opacity: p.disponible ? 1 : 0.4 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 8, background: 'rgba(255,255,255,0.06)', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>
+              <div style={{ width: 40, height: 40, borderRadius: 8, background: 'var(--c-surface2)', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--c-muted)' }}>
                 {p.imagen_url ? <img src={p.imagen_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '📷'}
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, color: '#F5F5F5' }}>{p.nombre}</div>
-                {p.descripcion && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{p.descripcion}</div>}
+                <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--c-text)' }}>{p.nombre}</div>
+                {p.descripcion && <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>{p.descripcion}</div>}
               </div>
               <span style={{ fontWeight: 700, fontSize: 13, color: '#FF6B2C', minWidth: 60, textAlign: 'right' }}>{p.precio.toFixed(2)} €</span>
               <div style={{ display: 'flex', gap: 4 }}>
-                <button onClick={() => toggleDisponible(p.id, p.disponible)} style={{ ...ds.actionBtn, color: p.disponible ? '#F5F5F5' : '#EF4444', fontSize: 10 }}>{p.disponible ? 'On' : 'Off'}</button>
+                <button onClick={() => toggleDisponible(p.id, p.disponible)} style={{ ...ds.actionBtn, color: p.disponible ? 'var(--c-text)' : 'var(--c-danger)', fontSize: 10 }}>{p.disponible ? 'On' : 'Off'}</button>
                 <button onClick={() => abrirEditarProd(p)} style={{ ...ds.actionBtn, fontSize: 10 }}>Editar</button>
-                <button onClick={() => eliminarProd(p.id)} style={{ ...ds.actionBtn, color: '#EF4444', fontSize: 10 }}>×</button>
+                <button onClick={() => eliminarProd(p.id)} style={{ ...ds.actionBtn, color: 'var(--c-danger)', fontSize: 10 }}>×</button>
               </div>
             </div>
           ))}
-          {productos.length === 0 && <div style={{ padding: 24, textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 12 }}>Sin productos</div>}
+          {productos.length === 0 && <div style={{ padding: 24, textAlign: 'center', color: 'var(--c-muted)', fontSize: 12 }}>Sin productos</div>}
         </div>
 
         {/* Extras */}
         <div style={{ marginTop: 20 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: '#F5F5F5', marginBottom: 10 }}>Grupos de extras ({gruposExtras.length})</h3>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', marginBottom: 10 }}>Grupos de extras ({gruposExtras.length})</h3>
           {gruposExtras.map(g => (
             <div key={g.id} style={{ ...ds.card, padding: '10px 16px', marginBottom: 6 }}>
-              <div style={{ fontWeight: 700, fontSize: 13, color: '#F5F5F5' }}>{g.nombre} <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>· {g.tipo === 'single' ? 'Elige 1' : `Máx. ${g.max_selecciones}`}</span></div>
+              <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--c-text)' }}>{g.nombre} <span style={{ fontSize: 10, color: 'var(--c-muted)' }}>· {g.tipo === 'single' ? 'Elige 1' : `Máx. ${g.max_selecciones}`}</span></div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
                 {(g.extras_opciones || []).map(o => (
-                  <span key={o.id} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>{o.nombre} +{o.precio.toFixed(2)}€</span>
+                  <span key={o.id} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, background: 'var(--c-surface2)', color: 'var(--c-text-soft)' }}>{o.nombre} +{o.precio.toFixed(2)}€</span>
                 ))}
               </div>
             </div>
           ))}
-          {gruposExtras.length === 0 && <div style={{ padding: 16, textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 12 }}>Sin extras</div>}
+          {gruposExtras.length === 0 && <div style={{ padding: 16, textAlign: 'center', color: 'var(--c-muted)', fontSize: 12 }}>Sin extras</div>}
         </div>
 
         {/* Reseñas */}
         <div style={{ marginTop: 20 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: '#F5F5F5', marginBottom: 10 }}>Reseñas ({resenas.length})</h3>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', marginBottom: 10 }}>Reseñas ({resenas.length})</h3>
           {resenas.map(r => (
             <div key={r.id} style={{ ...ds.card, padding: '12px 16px', marginBottom: 8, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontWeight: 700, fontSize: 13, color: '#F5F5F5' }}>{r.usuarios?.nombre || 'Usuario'}</span>
-                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>{r.usuarios?.email}</span>
+                  <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--c-text)' }}>{r.usuarios?.nombre || 'Usuario'}</span>
+                  <span style={{ fontSize: 11, color: 'var(--c-muted)' }}>{r.usuarios?.email}</span>
                   <div style={{ display: 'flex', gap: 1 }}>
-                    {[1,2,3,4,5].map(i => <span key={i} style={{ color: i <= r.rating ? '#FBBF24' : 'rgba(255,255,255,0.15)', fontSize: 12 }}>★</span>)}
+                    {[1,2,3,4,5].map(i => <span key={i} style={{ color: i <= r.rating ? 'var(--c-warning)' : 'var(--c-border-strong)', fontSize: 12 }}>★</span>)}
                   </div>
                 </div>
-                {r.texto && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>{r.texto}</div>}
-                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 4 }}>{new Date(r.created_at).toLocaleDateString('es-ES')}</div>
+                {r.texto && <div style={{ fontSize: 12, color: 'var(--c-text-soft)', lineHeight: 1.5 }}>{r.texto}</div>}
+                <div style={{ fontSize: 10, color: 'var(--c-muted)', marginTop: 4 }}>{new Date(r.created_at).toLocaleDateString('es-ES')}</div>
               </div>
-              <button onClick={() => eliminarResena(r.id, detalle.id)} style={{ ...ds.actionBtn, color: '#EF4444', fontSize: 10, flexShrink: 0 }}>Eliminar</button>
+              <button onClick={() => eliminarResena(r.id, detalle.id)} style={{ ...ds.actionBtn, color: 'var(--c-danger)', fontSize: 10, flexShrink: 0 }}>Eliminar</button>
             </div>
           ))}
-          {resenas.length === 0 && <div style={{ padding: 16, textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 12 }}>Sin reseñas</div>}
+          {resenas.length === 0 && <div style={{ padding: 16, textAlign: 'center', color: 'var(--c-muted)', fontSize: 12 }}>Sin reseñas</div>}
         </div>
 
         {/* Modal carga masiva */}
@@ -424,8 +424,8 @@ export default function Establecimientos() {
           <div style={ds.modal} onClick={() => setEditProd(null)}>
             <div style={ds.modalContent} onClick={e => e.stopPropagation()}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                <h2 style={{ fontSize: 18, fontWeight: 800, color: '#F5F5F5' }}>{editProd === 'new' ? 'Nuevo producto' : 'Editar producto'}</h2>
-                <button onClick={() => setEditProd(null)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} color="#F5F5F5" /></button>
+                <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-text)' }}>{editProd === 'new' ? 'Nuevo producto' : 'Editar producto'}</h2>
+                <button onClick={() => setEditProd(null)} style={{ background: 'var(--c-surface2)', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} color='var(--c-text)' /></button>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div style={{ gridColumn: '1/-1' }}><label style={ds.label}>Nombre *</label><input value={prodForm.nombre} onChange={e => setProdForm({ ...prodForm, nombre: e.target.value })} style={ds.formInput} /></div>
@@ -456,9 +456,9 @@ export default function Establecimientos() {
                       return (
                         <button key={g.id} onClick={() => setProdExtras(prev => sel ? prev.filter(id => id !== g.id) : [...prev, g.id])} style={{
                           padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: "'Inter', system-ui, -apple-system, sans-serif", fontSize: 11, fontWeight: 600,
-                          border: sel ? '2px solid #FF6B2C' : '1px solid rgba(255,255,255,0.1)',
-                          background: sel ? 'rgba(255,107,44,0.15)' : 'rgba(255,255,255,0.04)',
-                          color: sel ? '#FF6B2C' : 'rgba(255,255,255,0.5)',
+                          border: sel ? '2px solid #FF6B2C' : '1px solid var(--c-border-strong)',
+                          background: sel ? 'var(--c-primary-soft)' : 'var(--c-surface2)',
+                          color: sel ? '#FF6B2C' : 'var(--c-muted)',
                         }}>
                           {sel && '✓ '}{g.nombre}
                         </button>
@@ -495,7 +495,7 @@ export default function Establecimientos() {
         <input placeholder="Buscar..." value={buscar} onChange={e => setBuscar(e.target.value)} style={ds.input} />
         <div style={{ display: 'flex', gap: 4 }}>
           {['todos', ...CATEGORIAS_PADRE].map(t => (
-            <button key={t} onClick={() => setFiltroTipo(t)} style={{ ...ds.filterBtn, background: filtroTipo === t ? '#FF6B2C' : 'rgba(255,255,255,0.08)', color: filtroTipo === t ? '#fff' : 'rgba(255,255,255,0.5)' }}>
+            <button key={t} onClick={() => setFiltroTipo(t)} style={{ ...ds.filterBtn, background: filtroTipo === t ? '#FF6B2C' : 'var(--c-surface2)', color: filtroTipo === t ? '#fff' : 'var(--c-muted)' }}>
               {t === 'todos' ? 'Todos' : t === 'comida' ? '🍕 Comida' : t === 'farmacia' ? '💊 Farmacia' : '🛒 Market'}
             </button>
           ))}
@@ -510,23 +510,23 @@ export default function Establecimientos() {
         {filtrados.map(e => (
           <div key={e.id} style={ds.tableRow}>
             <span style={{ width: 44 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, overflow: 'hidden' }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--c-surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, overflow: 'hidden' }}>
                 {e.logo_url ? <img src={e.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🍽️'}
               </div>
             </span>
-            <span style={{ flex: 1, fontWeight: 700, fontSize: 13, cursor: 'pointer', color: '#F5F5F5' }} onClick={() => { setDetalle(e); loadCategorias(e.id); loadEstCats(e.id); loadProductos(e.id); loadResenas(e.id) }}>{e.nombre}</span>
+            <span style={{ flex: 1, fontWeight: 700, fontSize: 13, cursor: 'pointer', color: 'var(--c-text)' }} onClick={() => { setDetalle(e); loadCategorias(e.id); loadEstCats(e.id); loadProductos(e.id); loadResenas(e.id) }}>{e.nombre}</span>
             <span style={{ width: 100 }}>
-              <span style={{ ...ds.badge, background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)' }}>
+              <span style={{ ...ds.badge, background: 'var(--c-surface2)', color: 'var(--c-text-soft)' }}>
                 {e.categoria_padre === 'comida' ? '🍕' : e.categoria_padre === 'farmacia' ? '💊' : '🛒'} {e.categoria_padre}
               </span>
             </span>
-            <span style={{ width: 60, fontSize: 12, color: '#F5F5F5' }}>{e.rating?.toFixed(1)}</span>
+            <span style={{ width: 60, fontSize: 12, color: 'var(--c-text)' }}>{e.rating?.toFixed(1)}</span>
             <span style={{ width: 80 }}>
-              <span style={{ ...ds.badge, background: e.activo ? 'rgba(255,255,255,0.06)' : 'rgba(239,68,68,0.15)', color: e.activo ? '#F5F5F5' : '#EF4444' }}>{e.activo ? 'Activo' : 'Inactivo'}</span>
+              <span style={{ ...ds.badge, background: e.activo ? 'var(--c-surface2)' : 'var(--c-danger-soft)', color: e.activo ? 'var(--c-text)' : 'var(--c-danger)' }}>{e.activo ? 'Activo' : 'Inactivo'}</span>
             </span>
             <span style={{ width: 120, display: 'flex', gap: 6 }}>
               <button onClick={() => { setDetalle(e); loadCategorias(e.id); loadEstCats(e.id); loadProductos(e.id); loadResenas(e.id) }} style={ds.actionBtn}>Editar</button>
-              <button onClick={() => toggleActivo(e.id, e.activo)} style={{ ...ds.actionBtn, color: e.activo ? '#EF4444' : '#F5F5F5' }}>
+              <button onClick={() => toggleActivo(e.id, e.activo)} style={{ ...ds.actionBtn, color: e.activo ? 'var(--c-danger)' : 'var(--c-text)' }}>
                 {e.activo ? 'Off' : 'On'}
               </button>
             </span>
@@ -540,8 +540,8 @@ export default function Establecimientos() {
         <div style={ds.modal} onClick={() => setShowCrear(false)}>
           <div style={ds.modalContent} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 800, color: '#F5F5F5' }}>Crear establecimiento</h2>
-              <button onClick={() => setShowCrear(false)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} color="#F5F5F5" /></button>
+              <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-text)' }}>Crear establecimiento</h2>
+              <button onClick={() => setShowCrear(false)} style={{ background: 'var(--c-surface2)', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} color='var(--c-text)' /></button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div style={{ gridColumn: '1/-1' }}><label style={ds.label}>Nombre *</label><input value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} style={ds.formInput} /></div>
@@ -568,7 +568,7 @@ export default function Establecimientos() {
                 </label>
               </div>
               <div style={{ gridColumn: '1/-1' }}><label style={ds.label}>Descripción</label><textarea value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} rows={2} style={{ ...ds.formInput, resize: 'vertical' }} /></div>
-              <div style={{ gridColumn: '1/-1', fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 4 }}>
+              <div style={{ gridColumn: '1/-1', fontSize: 11, color: 'var(--c-muted)', marginTop: 4 }}>
                 Tras crear el restaurante, añade sus repartidores desde la ficha para activar Delivery.
               </div>
             </div>

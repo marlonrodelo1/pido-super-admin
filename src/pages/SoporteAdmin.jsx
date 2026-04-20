@@ -94,17 +94,17 @@ export default function SoporteAdmin() {
           {conversaciones.map(c => (
             <button key={c.establecimiento_id} onClick={() => selectConv(c)} style={{
               ...styles.convItem,
-              background: selected?.establecimiento_id === c.establecimiento_id ? 'rgba(255,107,44,0.12)' : 'transparent',
+              background: selected?.establecimiento_id === c.establecimiento_id ? 'var(--c-primary-soft)' : 'transparent',
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 700, fontSize: 13, color: '#F5F5F5' }}>{c.establecimiento?.nombre || 'Restaurante'}</span>
+                <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--c-text)' }}>{c.establecimiento?.nombre || 'Restaurante'}</span>
                 {c.sinLeer > 0 && <span style={styles.unread}>{c.sinLeer}</span>}
               </div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.ultimo}</div>
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 2 }}>{new Date(c.fecha).toLocaleString('es-ES')}</div>
+              <div style={{ fontSize: 11, color: 'var(--c-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.ultimo}</div>
+              <div style={{ fontSize: 10, color: 'var(--c-muted)', marginTop: 2 }}>{new Date(c.fecha).toLocaleString('es-ES')}</div>
             </button>
           ))}
-          {conversaciones.length === 0 && <div style={{ padding: 24, textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>Sin conversaciones</div>}
+          {conversaciones.length === 0 && <div style={{ padding: 24, textAlign: 'center', color: 'var(--c-muted)', fontSize: 13 }}>Sin conversaciones</div>}
         </div>
 
         {/* Chat */}
@@ -112,15 +112,15 @@ export default function SoporteAdmin() {
           {selected ? (
             <>
               <div style={styles.chatHeader}>
-                <span style={{ fontWeight: 700, fontSize: 14, color: '#F5F5F5' }}>{selected.establecimiento?.nombre || 'Restaurante'}</span>
+                <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--c-text)' }}>{selected.establecimiento?.nombre || 'Restaurante'}</span>
               </div>
               <div style={styles.chatMessages}>
                 {mensajes.map(m => (
                   <div key={m.id} style={{ display: 'flex', justifyContent: m.de === 'soporte' ? 'flex-end' : 'flex-start', marginBottom: 8 }}>
                     <div style={{
                       maxWidth: '70%', padding: '10px 14px', borderRadius: 14, fontSize: 13,
-                      background: m.de === 'soporte' ? '#FF6B2C' : 'rgba(255,255,255,0.08)',
-                      color: m.de === 'soporte' ? '#fff' : '#F5F5F5',
+                      background: m.de === 'soporte' ? '#FF6B2C' : 'var(--c-surface2)',
+                      color: m.de === 'soporte' ? '#fff' : 'var(--c-text)',
                       borderBottomRightRadius: m.de === 'soporte' ? 4 : 14,
                       borderBottomLeftRadius: m.de === 'soporte' ? 14 : 4,
                     }}>
@@ -139,7 +139,7 @@ export default function SoporteAdmin() {
               </form>
             </>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--c-muted)', fontSize: 14 }}>
               Selecciona una conversacion
             </div>
           )}
@@ -150,12 +150,12 @@ export default function SoporteAdmin() {
 }
 
 const styles = {
-  lista: { width: 300, background: 'rgba(255,255,255,0.06)', borderRadius: 14, overflow: 'auto', border: '1px solid rgba(255,255,255,0.08)' },
-  convItem: { width: '100%', padding: '14px 16px', border: 'none', cursor: 'pointer', fontFamily: "'Inter', system-ui, -apple-system, sans-serif", textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.04)', display: 'block' },
+  lista: { width: 300, background: 'var(--c-surface2)', borderRadius: 14, overflow: 'auto', border: '1px solid var(--c-border)' },
+  convItem: { width: '100%', padding: '14px 16px', border: 'none', cursor: 'pointer', fontFamily: "'Inter', system-ui, -apple-system, sans-serif", textAlign: 'left', borderBottom: '1px solid var(--c-border)', display: 'block' },
   unread: { width: 18, height: 18, borderRadius: 9, background: '#FF6B2C', color: '#fff', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  chat: { flex: 1, background: 'rgba(255,255,255,0.06)', borderRadius: 14, display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' },
-  chatHeader: { padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: 10 },
+  chat: { flex: 1, background: 'var(--c-surface2)', borderRadius: 14, display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid var(--c-border)' },
+  chatHeader: { padding: '14px 20px', borderBottom: '1px solid var(--c-border)', display: 'flex', alignItems: 'center', gap: 10 },
   chatMessages: { flex: 1, padding: 20, overflow: 'auto' },
-  chatInput: { padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', gap: 8 },
-  input: { flex: 1, padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.12)', fontSize: 13, fontFamily: "'Inter', system-ui, -apple-system, sans-serif", outline: 'none', background: 'rgba(255,255,255,0.06)', color: '#F5F5F5' },
+  chatInput: { padding: '12px 16px', borderTop: '1px solid var(--c-border)', display: 'flex', gap: 8 },
+  input: { flex: 1, padding: '10px 14px', borderRadius: 10, border: '1px solid var(--c-border-strong)', fontSize: 13, fontFamily: "'Inter', system-ui, -apple-system, sans-serif", outline: 'none', background: 'var(--c-surface2)', color: 'var(--c-text)' },
 }

@@ -40,7 +40,7 @@ export default function Pedidos() {
     return true
   })
 
-  const estadoColor = { nuevo: '#FF6B2C', aceptado: '#FF6B2C', preparando: '#FF6B2C', listo: 'rgba(245,245,245,0.62)', recogido: 'rgba(245,245,245,0.62)', en_camino: '#FF6B2C', entregado: '#F5F5F5', cancelado: '#EF4444', fallido: '#EF4444' }
+  const estadoColor = { nuevo: '#FF6B2C', aceptado: '#FF6B2C', preparando: '#FF6B2C', listo: 'var(--c-text-soft)', recogido: 'var(--c-text-soft)', en_camino: '#FF6B2C', entregado: 'var(--c-text)', cancelado: 'var(--c-danger)', fallido: 'var(--c-danger)' }
   const estados = ['todos', 'nuevo', 'aceptado', 'preparando', 'listo', 'en_camino', 'entregado', 'cancelado']
 
   if (detalle) {
@@ -50,19 +50,19 @@ export default function Pedidos() {
         <div style={ds.card}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
             <div>
-              <h2 style={{ fontSize: 22, fontWeight: 800, color: '#F5F5F5' }}>{detalle.codigo}</h2>
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)' }}>{detalle.codigo}</h2>
               <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
                 <span style={{ ...ds.badge, background: (estadoColor[detalle.estado] || '#6B7280') + '15', color: estadoColor[detalle.estado] }}>{detalle.estado}</span>
-                <span style={{ ...ds.badge, background: detalle.metodo_pago === 'tarjeta' ? 'rgba(29,78,216,0.15)' : 'rgba(245,158,11,0.15)', color: detalle.metodo_pago === 'tarjeta' ? '#60A5FA' : '#FBBF24' }}>{detalle.metodo_pago}</span>
-                <span style={{ ...ds.badge, background: 'rgba(255,107,44,0.15)', color: '#FF6B2C' }}>PIDO</span>
+                <span style={{ ...ds.badge, background: detalle.metodo_pago === 'tarjeta' ? 'var(--c-info-soft)' : 'var(--c-warning-soft)', color: detalle.metodo_pago === 'tarjeta' ? 'var(--c-info)' : 'var(--c-warning)' }}>{detalle.metodo_pago}</span>
+                <span style={{ ...ds.badge, background: 'var(--c-primary-soft)', color: '#FF6B2C' }}>PIDO</span>
               </div>
             </div>
             {detalle.estado !== 'cancelado' && detalle.estado !== 'entregado' && (
-              <button onClick={() => cancelarPedido(detalle.id)} style={{ ...ds.actionBtn, color: '#EF4444', padding: '6px 14px' }}>Cancelar pedido</button>
+              <button onClick={() => cancelarPedido(detalle.id)} style={{ ...ds.actionBtn, color: 'var(--c-danger)', padding: '6px 14px' }}>Cancelar pedido</button>
             )}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 13, marginBottom: 24, color: '#F5F5F5' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 13, marginBottom: 24, color: 'var(--c-text)' }}>
             <div><strong>Subtotal:</strong> {detalle.subtotal?.toFixed(2)}EUR</div>
             <div><strong>Envio:</strong> {detalle.coste_envio?.toFixed(2)}EUR</div>
             <div><strong>Propina:</strong> {detalle.propina?.toFixed(2)}EUR</div>
@@ -73,20 +73,20 @@ export default function Pedidos() {
             <div><strong>Creado:</strong> {new Date(detalle.created_at).toLocaleString('es-ES')}</div>
           </div>
 
-          <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12, color: '#F5F5F5' }}>Items del pedido</h3>
-          <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, overflow: 'hidden' }}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12, color: 'var(--c-text)' }}>Items del pedido</h3>
+          <div style={{ background: 'var(--c-surface2)', borderRadius: 10, overflow: 'hidden' }}>
             {detalleItems.map(item => (
-              <div key={item.id} style={{ padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#F5F5F5' }}>
+              <div key={item.id} style={{ padding: '10px 16px', borderBottom: '1px solid var(--c-border)', display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--c-text)' }}>
                 <div>
                   <span style={{ fontWeight: 700 }}>{item.cantidad}x</span> {item.nombre_producto}
-                  {item.tamano && <span style={{ color: 'rgba(255,255,255,0.4)' }}> ({item.tamano})</span>}
-                  {item.extras?.length > 0 && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>+ {item.extras.join(', ')}</div>}
+                  {item.tamano && <span style={{ color: 'var(--c-muted)' }}> ({item.tamano})</span>}
+                  {item.extras?.length > 0 && <div style={{ fontSize: 11, color: 'var(--c-muted)', marginTop: 2 }}>+ {item.extras.join(', ')}</div>}
                   {item.notas && <div style={{ fontSize: 11, color: '#FF6B2C', marginTop: 2 }}>{item.notas}</div>}
                 </div>
                 <span style={{ fontWeight: 700 }}>{(item.precio_unitario * item.cantidad).toFixed(2)}EUR</span>
               </div>
             ))}
-            {detalleItems.length === 0 && <div style={{ padding: 16, textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>Sin items</div>}
+            {detalleItems.length === 0 && <div style={{ padding: 16, textAlign: 'center', color: 'var(--c-muted)', fontSize: 12 }}>Sin items</div>}
           </div>
         </div>
       </div>
@@ -97,19 +97,19 @@ export default function Pedidos() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <h1 style={ds.h1}>Pedidos</h1>
-        <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>{filtrados.length} pedidos</span>
+        <span style={{ fontSize: 13, color: 'var(--c-muted)', fontWeight: 600 }}>{filtrados.length} pedidos</span>
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         {estados.map(e => (
-          <button key={e} onClick={() => setFiltro(e)} style={{ ...ds.filterBtn, background: filtro === e ? '#FF6B2C' : 'rgba(255,255,255,0.08)', color: filtro === e ? '#fff' : 'rgba(255,255,255,0.5)' }}>
+          <button key={e} onClick={() => setFiltro(e)} style={{ ...ds.filterBtn, background: filtro === e ? '#FF6B2C' : 'var(--c-surface2)', color: filtro === e ? '#fff' : 'var(--c-muted)' }}>
             {e === 'todos' ? 'Todos' : e.charAt(0).toUpperCase() + e.slice(1).replace('_', ' ')}
           </button>
         ))}
       </div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
         {['todos', 'tarjeta', 'efectivo'].map(p => (
-          <button key={p} onClick={() => setFiltroPago(p)} style={{ ...ds.filterBtn, background: filtroPago === p ? '#FF6B2C' : 'rgba(255,255,255,0.08)', color: filtroPago === p ? '#fff' : 'rgba(255,255,255,0.5)' }}>
+          <button key={p} onClick={() => setFiltroPago(p)} style={{ ...ds.filterBtn, background: filtroPago === p ? '#FF6B2C' : 'var(--c-surface2)', color: filtroPago === p ? '#fff' : 'var(--c-muted)' }}>
             {p.charAt(0).toUpperCase() + p.slice(1)}
           </button>
         ))}
@@ -130,13 +130,13 @@ export default function Pedidos() {
             <span style={{ width: 80, fontWeight: 700, fontSize: 12 }}>{p.codigo}</span>
             <span style={{ width: 80, fontSize: 12 }}>{p.total?.toFixed(2)}EUR</span>
             <span style={{ width: 90 }}><span style={{ ...ds.badge, background: (estadoColor[p.estado] || '#6B7280') + '15', color: estadoColor[p.estado] }}>{p.estado}</span></span>
-            <span style={{ width: 70 }}><span style={{ ...ds.badge, background: p.metodo_pago === 'tarjeta' ? 'rgba(29,78,216,0.15)' : 'rgba(245,158,11,0.15)', color: p.metodo_pago === 'tarjeta' ? '#60A5FA' : '#FBBF24' }}>{p.metodo_pago}</span></span>
-            <span style={{ width: 70 }}><span style={{ ...ds.badge, background: 'rgba(255,107,44,0.15)', color: '#FF6B2C' }}>PIDO</span></span>
-            <span style={{ flex: 1, fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{new Date(p.created_at).toLocaleString('es-ES')}</span>
+            <span style={{ width: 70 }}><span style={{ ...ds.badge, background: p.metodo_pago === 'tarjeta' ? 'var(--c-info-soft)' : 'var(--c-warning-soft)', color: p.metodo_pago === 'tarjeta' ? 'var(--c-info)' : 'var(--c-warning)' }}>{p.metodo_pago}</span></span>
+            <span style={{ width: 70 }}><span style={{ ...ds.badge, background: 'var(--c-primary-soft)', color: '#FF6B2C' }}>PIDO</span></span>
+            <span style={{ flex: 1, fontSize: 11, color: 'var(--c-muted)' }}>{new Date(p.created_at).toLocaleString('es-ES')}</span>
             <span style={{ width: 50 }}><button onClick={() => verDetalle(p)} style={ds.actionBtn}>Ver</button></span>
           </div>
         ))}
-        {filtrados.length === 0 && <div style={{ padding: 32, textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>Sin pedidos</div>}
+        {filtrados.length === 0 && <div style={{ padding: 32, textAlign: 'center', color: 'var(--c-muted)', fontSize: 13 }}>Sin pedidos</div>}
       </div>
     </div>
   )

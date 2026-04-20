@@ -5,12 +5,12 @@ import { toast, confirmar } from '../App'
 import { CreditCard, CheckCircle2, AlertCircle } from 'lucide-react'
 
 const ESTADO_INFO = {
-  active:   { label: 'Activo',         bg: 'rgba(34,197,94,0.15)',  color: '#4ADE80' },
-  pending:  { label: 'Procesando',     bg: 'rgba(251,191,36,0.15)', color: '#FBBF24' },
-  past_due: { label: 'Pago pendiente', bg: 'rgba(239,68,68,0.15)',  color: '#F87171' },
-  unpaid:   { label: 'Impagado',       bg: 'rgba(239,68,68,0.15)',  color: '#F87171' },
-  canceled: { label: 'Cancelado',      bg: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)' },
-  inactive: { label: 'Inactivo',       bg: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)' },
+  active:   { label: 'Activo',         bg: 'var(--c-success-soft)',  color: 'var(--c-success)' },
+  pending:  { label: 'Procesando',     bg: 'var(--c-warning-soft)', color: 'var(--c-warning)' },
+  past_due: { label: 'Pago pendiente', bg: 'var(--c-danger-soft)',  color: 'var(--c-danger)' },
+  unpaid:   { label: 'Impagado',       bg: 'var(--c-danger-soft)',  color: 'var(--c-danger)' },
+  canceled: { label: 'Cancelado',      bg: 'var(--c-surface2)', color: 'var(--c-text-soft)' },
+  inactive: { label: 'Inactivo',       bg: 'var(--c-surface2)', color: 'var(--c-text-soft)' },
 }
 
 export default function PlanTiendaCard({ establecimiento, onChanged }) {
@@ -68,20 +68,20 @@ export default function PlanTiendaCard({ establecimiento, onChanged }) {
     <div style={{ ...ds.card, marginTop: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
         <CreditCard size={18} color="#FF6B2C" />
-        <h3 style={{ fontSize: 15, fontWeight: 700, color: '#F5F5F5' }}>Plan Tienda Pública</h3>
+        <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)' }}>Plan Tienda Pública</h3>
         <span style={{ padding: '3px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: info.bg, color: info.color, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
           {info.label}
         </span>
       </div>
 
       {loading ? (
-        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Cargando...</div>
+        <div style={{ fontSize: 12, color: 'var(--c-muted)' }}>Cargando...</div>
       ) : (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, fontSize: 12, color: '#F5F5F5' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, fontSize: 12, color: 'var(--c-text)' }}>
             <div>
               <div style={{ ...ds.muted, fontSize: 10 }}>plan_pro (BD)</div>
-              <div style={{ fontWeight: 700, color: establecimiento.plan_pro ? '#4ADE80' : 'rgba(255,255,255,0.4)' }}>
+              <div style={{ fontWeight: 700, color: establecimiento.plan_pro ? 'var(--c-success)' : 'var(--c-muted)' }}>
                 {String(!!establecimiento.plan_pro)}
               </div>
             </div>
@@ -97,7 +97,7 @@ export default function PlanTiendaCard({ establecimiento, onChanged }) {
             </div>
             <div>
               <div style={{ ...ds.muted, fontSize: 10 }}>Intentos fallidos</div>
-              <div style={{ fontWeight: 700, color: (sub?.intentos_fallidos || 0) >= 1 ? '#F87171' : '#F5F5F5' }}>
+              <div style={{ fontWeight: 700, color: (sub?.intentos_fallidos || 0) >= 1 ? 'var(--c-danger)' : 'var(--c-text)' }}>
                 {sub?.intentos_fallidos || 0}/3
               </div>
             </div>
@@ -107,7 +107,7 @@ export default function PlanTiendaCard({ establecimiento, onChanged }) {
             </div>
             <div>
               <div style={{ ...ds.muted, fontSize: 10 }}>Stripe subscription</div>
-              <div style={{ fontFamily: 'monospace', fontSize: 10, color: 'rgba(255,255,255,0.5)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{ fontFamily: 'monospace', fontSize: 10, color: 'var(--c-muted)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {sub?.stripe_subscription_id || '—'}
               </div>
             </div>
@@ -118,7 +118,7 @@ export default function PlanTiendaCard({ establecimiento, onChanged }) {
               {toggling ? '...' : establecimiento.plan_pro ? 'Desactivar plan_pro (forzado)' : 'Activar plan_pro (forzado)'}
             </button>
             {sub?.stripe_subscription_id && estado !== 'canceled' && (
-              <button onClick={cancelarForzado} style={{ ...ds.secondaryBtn, color: '#EF4444' }}>
+              <button onClick={cancelarForzado} style={{ ...ds.secondaryBtn, color: 'var(--c-danger)' }}>
                 Cancelar suscripción (forzado)
               </button>
             )}

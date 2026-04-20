@@ -7,9 +7,9 @@ import { toast, confirmar } from '../App'
 const WEBHOOK_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/shipday-webhook`
 
 const ESTADOS = {
-  pendiente: { label: 'Pendiente', bg: 'rgba(245,158,11,0.15)', color: '#FBBF24' },
-  activa: { label: 'Activo', bg: 'rgba(255,255,255,0.06)', color: '#4ADE80' },
-  rechazada: { label: 'Rechazado', bg: 'rgba(239,68,68,0.15)', color: '#F87171' },
+  pendiente: { label: 'Pendiente', bg: 'var(--c-warning-soft)', color: 'var(--c-warning)' },
+  activa: { label: 'Activo', bg: 'var(--c-surface2)', color: 'var(--c-success)' },
+  rechazada: { label: 'Rechazado', bg: 'var(--c-danger-soft)', color: 'var(--c-danger)' },
 }
 
 export default function Repartidores() {
@@ -158,8 +158,8 @@ export default function Repartidores() {
         {tabs.map(t => (
           <button key={t.id} onClick={() => setFiltroEstado(t.id)} style={{
             ...ds.filterBtn, padding: '7px 14px', fontSize: 12,
-            background: filtroEstado === t.id ? '#FF6B2C' : 'rgba(255,255,255,0.08)',
-            color: filtroEstado === t.id ? '#fff' : 'rgba(255,255,255,0.5)',
+            background: filtroEstado === t.id ? '#FF6B2C' : 'var(--c-surface2)',
+            color: filtroEstado === t.id ? '#fff' : 'var(--c-muted)',
             display: 'flex', alignItems: 'center', gap: 6,
           }}>
             {t.l}
@@ -193,52 +193,52 @@ export default function Repartidores() {
           return (
             <div key={r.id} style={ds.tableRow}>
               <span style={{ flex: 1, cursor: 'pointer' }} onClick={() => setDetalle(r)}>
-                <div style={{ fontWeight: 700, fontSize: 13, color: '#F5F5F5' }}>{r.nombre}</div>
-                {r.email && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{r.email}</div>}
+                <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--c-text)' }}>{r.nombre}</div>
+                {r.email && <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>{r.email}</div>}
               </span>
-              <span style={{ width: 130, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>{r.telefono || '—'}</span>
+              <span style={{ width: 130, fontSize: 12, color: 'var(--c-muted)' }}>{r.telefono || '—'}</span>
               <span style={{ width: 110 }}>
                 <span style={{ ...ds.badge, background: estadoInfo.bg, color: estadoInfo.color }}>{estadoInfo.label}</span>
               </span>
               <span style={{ width: 110 }}>
                 {r.estado !== 'activa' ? (
-                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>—</span>
+                  <span style={{ fontSize: 11, color: 'var(--c-muted)' }}>—</span>
                 ) : error ? (
-                  <span style={{ ...ds.badge, background: 'rgba(239,68,68,0.15)', color: '#F87171' }} title={error}>Error</span>
+                  <span style={{ ...ds.badge, background: 'var(--c-danger-soft)', color: 'var(--c-danger)' }} title={error}>Error</span>
                 ) : online ? (
-                  <span style={{ ...ds.badge, background: 'rgba(255,255,255,0.06)', color: '#4ADE80' }}>● Online</span>
+                  <span style={{ ...ds.badge, background: 'var(--c-surface2)', color: 'var(--c-success)' }}>● Online</span>
                 ) : (
-                  <span style={{ ...ds.badge, background: 'rgba(148,163,184,0.15)', color: '#94A3B8' }}>○ Offline</span>
+                  <span style={{ ...ds.badge, background: 'var(--c-surface2)', color: 'var(--c-muted)' }}>○ Offline</span>
                 )}
               </span>
-              <span style={{ width: 110, fontSize: 12, fontWeight: 700, color: (pendientes[r.id] || 0) > 0 ? '#FF6B2C' : 'rgba(255,255,255,0.4)' }}>
+              <span style={{ width: 110, fontSize: 12, fontWeight: 700, color: (pendientes[r.id] || 0) > 0 ? '#FF6B2C' : 'var(--c-muted)' }}>
                 {(pendientes[r.id] || 0).toFixed(2)}€
               </span>
-              <span style={{ width: 150, fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{origen || '—'}</span>
+              <span style={{ width: 150, fontSize: 11, color: 'var(--c-muted)' }}>{origen || '—'}</span>
               <span style={{ width: 200, textAlign: 'right', display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                 {r.estado === 'pendiente' && (
                   <>
-                    <button onClick={() => aprobar(r)} style={{ ...ds.actionBtn, background: 'rgba(255,255,255,0.06)', color: '#4ADE80', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <button onClick={() => aprobar(r)} style={{ ...ds.actionBtn, background: 'var(--c-surface2)', color: 'var(--c-success)', display: 'flex', alignItems: 'center', gap: 4 }}>
                       <Check size={11} /> Aprobar
                     </button>
-                    <button onClick={() => rechazar(r)} style={{ ...ds.actionBtn, background: 'rgba(239,68,68,0.15)', color: '#F87171', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <button onClick={() => rechazar(r)} style={{ ...ds.actionBtn, background: 'var(--c-danger-soft)', color: 'var(--c-danger)', display: 'flex', alignItems: 'center', gap: 4 }}>
                       <Ban size={11} /> Rechazar
                     </button>
                   </>
                 )}
                 {r.estado === 'rechazada' && (
-                  <button onClick={() => reactivar(r)} style={{ ...ds.actionBtn, background: 'rgba(255,255,255,0.06)', color: '#4ADE80' }}>Reactivar</button>
+                  <button onClick={() => reactivar(r)} style={{ ...ds.actionBtn, background: 'var(--c-surface2)', color: 'var(--c-success)' }}>Reactivar</button>
                 )}
                 {r.estado === 'activa' && (
                   <button onClick={() => setDetalle(r)} style={ds.actionBtn}>Ver</button>
                 )}
-                <button onClick={() => eliminar(r)} style={{ ...ds.actionBtn, color: '#EF4444' }}>Eliminar</button>
+                <button onClick={() => eliminar(r)} style={{ ...ds.actionBtn, color: 'var(--c-danger)' }}>Eliminar</button>
               </span>
             </div>
           )
         })}
         {filtered.length === 0 && (
-          <div style={{ padding: 32, textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>
+          <div style={{ padding: 32, textAlign: 'center', color: 'var(--c-muted)', fontSize: 13 }}>
             {riders.length === 0 ? 'Sin repartidores. Los restaurantes los registran desde su panel, tú los apruebas aquí.' : 'Sin resultados para este filtro.'}
           </div>
         )}
@@ -304,8 +304,8 @@ function RiderModal({ rider, onClose, onSaved }) {
       <div style={ds.modalContent} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
           <Truck size={18} color="#FF6B2C" />
-          <h2 style={{ fontSize: 17, fontWeight: 700, color: '#F5F5F5', flex: 1 }}>{rider ? 'Editar repartidor' : 'Nuevo repartidor'}</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 20 }}>×</button>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--c-text)', flex: 1 }}>{rider ? 'Editar repartidor' : 'Nuevo repartidor'}</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--c-muted)', cursor: 'pointer', fontSize: 20 }}>×</button>
         </div>
 
         <div style={{ display: 'grid', gap: 12 }}>
@@ -328,8 +328,8 @@ function RiderModal({ rider, onClose, onSaved }) {
             <div style={{
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '8px 12px', borderRadius: 8,
-              background: verifyResult.ok ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
-              color: verifyResult.ok ? '#4ADE80' : '#F87171',
+              background: verifyResult.ok ? 'var(--c-success-soft)' : 'var(--c-danger-soft)',
+              color: verifyResult.ok ? 'var(--c-success)' : 'var(--c-danger)',
               fontSize: 12, fontWeight: 600,
             }}>
               {verifyResult.ok
@@ -379,49 +379,49 @@ function RiderDetalle({ rider, onBack, onSaved, origenNombre }) {
       <div style={{ ...ds.card, marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
           <div style={{
-            width: 48, height: 48, borderRadius: 12, background: 'rgba(255,107,44,0.15)',
+            width: 48, height: 48, borderRadius: 12, background: 'var(--c-primary-soft)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <Truck size={22} color="#FF6B2C" />
           </div>
           <div style={{ flex: 1 }}>
-            <h2 style={{ fontSize: 20, fontWeight: 800, color: '#F5F5F5' }}>{rider.nombre}</h2>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-text)' }}>{rider.nombre}</h2>
+            <div style={{ fontSize: 12, color: 'var(--c-muted)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {rider.telefono && <span>📞 {rider.telefono}</span>}
               {rider.email && <span>✉ {rider.email}</span>}
             </div>
           </div>
           <span style={{ ...ds.badge, background: estadoInfo.bg, color: estadoInfo.color, fontSize: 12, padding: '6px 12px' }}>{estadoInfo.label}</span>
           {rider.estado === 'activa' && (st?.is_online ? (
-            <span style={{ ...ds.badge, background: 'rgba(255,255,255,0.06)', color: '#4ADE80', fontSize: 12, padding: '6px 12px' }}>● En línea</span>
+            <span style={{ ...ds.badge, background: 'var(--c-surface2)', color: 'var(--c-success)', fontSize: 12, padding: '6px 12px' }}>● En línea</span>
           ) : (
-            <span style={{ ...ds.badge, background: 'rgba(148,163,184,0.15)', color: '#94A3B8', fontSize: 12, padding: '6px 12px' }}>○ Offline</span>
+            <span style={{ ...ds.badge, background: 'var(--c-surface2)', color: 'var(--c-muted)', fontSize: 12, padding: '6px 12px' }}>○ Offline</span>
           ))}
           <button onClick={() => setEdit(true)} style={ds.primaryBtn}>Editar</button>
         </div>
 
-        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
+        <div style={{ fontSize: 12, color: 'var(--c-text-soft)' }}>
           <div style={{ marginBottom: 4 }}>
             <span style={ds.muted}>API Key:</span>{' '}
             <span style={{ fontFamily: 'monospace' }}>{rider.shipday_api_key.slice(0, 8)}•••••{rider.shipday_api_key.slice(-4)}</span>
           </div>
           {origenNombre && <div><span style={ds.muted}>Registrado desde:</span> {origenNombre}</div>}
-          {rider.motivo_rechazo && <div style={{ color: '#F87171' }}><span style={ds.muted}>Motivo rechazo:</span> {rider.motivo_rechazo}</div>}
+          {rider.motivo_rechazo && <div style={{ color: 'var(--c-danger)' }}><span style={ds.muted}>Motivo rechazo:</span> {rider.motivo_rechazo}</div>}
           {st?.last_checked && (
             <div><span style={ds.muted}>Último chequeo:</span> {new Date(st.last_checked).toLocaleString('es-ES')}</div>
           )}
           {st?.last_error && (
-            <div style={{ color: '#F87171' }}><span style={ds.muted}>Error:</span> {st.last_error}</div>
+            <div style={{ color: 'var(--c-danger)' }}><span style={ds.muted}>Error:</span> {st.last_error}</div>
           )}
         </div>
       </div>
 
       <div style={ds.card}>
-        <h3 style={{ fontSize: 15, fontWeight: 700, color: '#F5F5F5', marginBottom: 12 }}>
+        <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', marginBottom: 12 }}>
           Restaurantes vinculados ({restaurantes.length})
         </h3>
         {restaurantes.length === 0 ? (
-          <div style={{ padding: 16, textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>
+          <div style={{ padding: 16, textAlign: 'center', color: 'var(--c-muted)', fontSize: 13 }}>
             Sin restaurantes vinculados.
           </div>
         ) : (
@@ -429,10 +429,10 @@ function RiderDetalle({ rider, onBack, onSaved, origenNombre }) {
             {restaurantes.map(r => (
               <div key={r.establecimiento_id} style={{
                 display: 'flex', alignItems: 'center', padding: '10px 14px',
-                background: 'rgba(255,255,255,0.04)', borderRadius: 10,
+                background: 'var(--c-surface2)', borderRadius: 10,
               }}>
-                <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#F5F5F5' }}>{r.establecimientos?.nombre}</span>
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>Prioridad {r.prioridad}</span>
+                <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--c-text)' }}>{r.establecimientos?.nombre}</span>
+                <span style={{ fontSize: 11, color: 'var(--c-muted)' }}>Prioridad {r.prioridad}</span>
               </div>
             ))}
           </div>

@@ -66,19 +66,19 @@ export default function ImportUrlModal({ establecimiento, onClose, onComplete })
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Link2 size={18} color="#FF6B2C" />
-            <h2 style={{ fontSize: 17, fontWeight: 800, color: '#F5F5F5', margin: 0 }}>Importar desde URL</h2>
+            <h2 style={{ fontSize: 17, fontWeight: 800, color: 'var(--c-text)', margin: 0 }}>Importar desde URL</h2>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 22 }}>×</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--c-muted)', cursor: 'pointer', fontSize: 22 }}>×</button>
         </div>
 
-        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 16, lineHeight: 1.6 }}>
+        <p style={{ fontSize: 12, color: 'var(--c-text-soft)', marginBottom: 16, lineHeight: 1.6 }}>
           Pega la URL pública de la tienda y el sistema extrae categorías, productos, precios, imágenes y extras automáticamente.
         </p>
 
         <div style={{
           padding: '10px 12px', borderRadius: 10, marginBottom: 16,
           background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.25)',
-          fontSize: 11, color: '#4ADE80', lineHeight: 1.5,
+          fontSize: 11, color: 'var(--c-success)', lineHeight: 1.5,
         }}>
           <strong>Last.shop</strong> funciona al 100%. Glovo y Uber Eats próximamente (usa el CSV mientras tanto).
         </div>
@@ -93,7 +93,7 @@ export default function ImportUrlModal({ establecimiento, onClose, onComplete })
         />
 
         {error && (
-          <div style={{ marginTop: 10, fontSize: 11, color: '#F87171', padding: '8px 10px', borderRadius: 8, background: 'rgba(239,68,68,0.1)' }}>
+          <div style={{ marginTop: 10, fontSize: 11, color: 'var(--c-danger)', padding: '8px 10px', borderRadius: 8, background: 'var(--c-danger-soft)' }}>
             {error}
           </div>
         )}
@@ -116,9 +116,9 @@ export default function ImportUrlModal({ establecimiento, onClose, onComplete })
     <div style={ds.modal}>
       <div style={{ ...ds.modalContent, maxWidth: 400, textAlign: 'center', padding: 28 }}>
         <Link2 size={32} color="#FF6B2C" style={{ marginBottom: 10 }} />
-        <div style={{ fontSize: 15, fontWeight: 700, color: '#F5F5F5', marginBottom: 6 }}>Analizando tienda…</div>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>Descargando catálogo y extras desde el servidor.</div>
-        <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', marginTop: 18 }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', marginBottom: 6 }}>Analizando tienda…</div>
+        <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>Descargando catálogo y extras desde el servidor.</div>
+        <div style={{ height: 4, borderRadius: 2, background: 'var(--c-surface2)', overflow: 'hidden', marginTop: 18 }}>
           <div style={{ height: '100%', width: '40%', background: '#FF6B2C', animation: 'slideIn 1.5s ease-in-out infinite' }} />
         </div>
       </div>
@@ -132,15 +132,15 @@ export default function ImportUrlModal({ establecimiento, onClose, onComplete })
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Store size={18} color="#FF6B2C" />
-            <h2 style={{ fontSize: 17, fontWeight: 800, color: '#F5F5F5', margin: 0 }}>Vista previa</h2>
+            <h2 style={{ fontSize: 17, fontWeight: 800, color: 'var(--c-text)', margin: 0 }}>Vista previa</h2>
           </div>
-          <button onClick={() => setStep('idle')} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 22 }}>×</button>
+          <button onClick={() => setStep('idle')} style={{ background: 'none', border: 'none', color: 'var(--c-muted)', cursor: 'pointer', fontSize: 22 }}>×</button>
         </div>
 
         {preview.shop_name && (
-          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', marginBottom: 14 }}>
-            Tienda detectada: <strong style={{ color: '#F5F5F5' }}>{preview.shop_name}</strong>
-            <span style={{ ...ds.badge, background: 'rgba(255,107,44,0.15)', color: '#FF6B2C', marginLeft: 10, textTransform: 'uppercase' }}>
+          <div style={{ fontSize: 13, color: 'var(--c-text-soft)', marginBottom: 14 }}>
+            Tienda detectada: <strong style={{ color: 'var(--c-text)' }}>{preview.shop_name}</strong>
+            <span style={{ ...ds.badge, background: 'var(--c-primary-soft)', color: '#FF6B2C', marginLeft: 10, textTransform: 'uppercase' }}>
               {preview.plataforma}
             </span>
           </div>
@@ -154,16 +154,16 @@ export default function ImportUrlModal({ establecimiento, onClose, onComplete })
           <Stat label="Opciones" value={preview.stats.opciones_extras} color="#FBBF24" />
         </div>
 
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', marginBottom: 6, textTransform: 'uppercase', fontWeight: 700 }}>
+        <div style={{ fontSize: 11, color: 'var(--c-muted)', marginBottom: 6, textTransform: 'uppercase', fontWeight: 700 }}>
           Primeros productos
         </div>
-        <div style={{ maxHeight: 240, overflowY: 'auto', borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)', marginBottom: 16 }}>
+        <div style={{ maxHeight: 240, overflowY: 'auto', borderRadius: 10, border: '1px solid var(--c-border)', marginBottom: 16 }}>
           {preview.sample_productos.map((p, i) => (
-            <div key={i} style={{ display: 'flex', padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)', alignItems: 'center', gap: 10 }}>
-              <span style={{ flex: 1, fontSize: 12, color: '#F5F5F5', fontWeight: 600 }}>{p.nombre}</span>
-              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', flex: 1 }}>{p.categoria}</span>
-              {p.tiene_imagen && <span style={{ fontSize: 10, color: '#60A5FA' }}>🖼</span>}
-              <span style={{ fontSize: 12, color: '#4ADE80', fontWeight: 700, minWidth: 55, textAlign: 'right' }}>{p.precio.toFixed(2)} €</span>
+            <div key={i} style={{ display: 'flex', padding: '8px 12px', borderBottom: '1px solid var(--c-border)', alignItems: 'center', gap: 10 }}>
+              <span style={{ flex: 1, fontSize: 12, color: 'var(--c-text)', fontWeight: 600 }}>{p.nombre}</span>
+              <span style={{ fontSize: 10, color: 'var(--c-muted)', flex: 1 }}>{p.categoria}</span>
+              {p.tiene_imagen && <span style={{ fontSize: 10, color: 'var(--c-info)' }}>🖼</span>}
+              <span style={{ fontSize: 12, color: 'var(--c-success)', fontWeight: 700, minWidth: 55, textAlign: 'right' }}>{p.precio.toFixed(2)} €</span>
             </div>
           ))}
         </div>
@@ -183,9 +183,9 @@ export default function ImportUrlModal({ establecimiento, onClose, onComplete })
     <div style={ds.modal}>
       <div style={{ ...ds.modalContent, maxWidth: 400, textAlign: 'center', padding: 28 }}>
         <Upload size={32} color="#FF6B2C" style={{ marginBottom: 10 }} />
-        <div style={{ fontSize: 15, fontWeight: 700, color: '#F5F5F5', marginBottom: 6 }}>Importando…</div>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>Creando categorías, productos y extras en la base de datos.</div>
-        <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', marginTop: 18 }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', marginBottom: 6 }}>Importando…</div>
+        <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>Creando categorías, productos y extras en la base de datos.</div>
+        <div style={{ height: 4, borderRadius: 2, background: 'var(--c-surface2)', overflow: 'hidden', marginTop: 18 }}>
           <div style={{ height: '100%', width: '40%', background: '#FF6B2C', animation: 'slideIn 1.5s ease-in-out infinite' }} />
         </div>
       </div>
@@ -196,8 +196,8 @@ export default function ImportUrlModal({ establecimiento, onClose, onComplete })
   if (step === 'done' && result) return (
     <div style={ds.modal}>
       <div style={{ ...ds.modalContent, maxWidth: 420, textAlign: 'center', padding: 28 }}>
-        <CheckCircle size={40} color="#F5F5F5" style={{ marginBottom: 12 }} />
-        <h2 style={{ fontSize: 17, fontWeight: 800, color: '#F5F5F5', margin: '0 0 16px' }}>Importación completa</h2>
+        <CheckCircle size={40} color='var(--c-text)' style={{ marginBottom: 12 }} />
+        <h2 style={{ fontSize: 17, fontWeight: 800, color: 'var(--c-text)', margin: '0 0 16px' }}>Importación completa</h2>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, textAlign: 'left' }}>
           <ResultLine label="Categorías creadas" value={result.categorias} />
@@ -217,8 +217,8 @@ export default function ImportUrlModal({ establecimiento, onClose, onComplete })
 
 function Stat({ label, value, color }) {
   return (
-    <div style={{ padding: 12, borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
-      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
+    <div style={{ padding: 12, borderRadius: 10, background: 'var(--c-surface2)', border: '1px solid var(--c-border)' }}>
+      <div style={{ fontSize: 9, color: 'var(--c-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
       <div style={{ fontSize: 20, fontWeight: 800, color, marginTop: 3 }}>{value}</div>
     </div>
   )
@@ -226,8 +226,8 @@ function Stat({ label, value, color }) {
 
 function ResultLine({ label, value }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: 8 }}>
-      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>{label}</span>
+    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--c-surface2)', borderRadius: 8 }}>
+      <span style={{ fontSize: 12, color: 'var(--c-text-soft)' }}>{label}</span>
       <span style={{ fontSize: 13, fontWeight: 700, color: '#FF6B2C' }}>{value}</span>
     </div>
   )

@@ -53,16 +53,16 @@ export default function RidersCard({ establecimiento, onChanged }) {
   const total = vinc.filter(v => v.rider_accounts?.activa && v.rider_accounts?.estado === 'activa').length
 
   const headerBadge = (() => {
-    if (total === 0) return { bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.35)', color: '#F87171', label: 'Sin repartidores vinculados' }
-    if (online === 0) return { bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.35)', color: '#F87171', label: `Ninguno en línea (0/${total})` }
-    return { bg: 'rgba(34,197,94,0.12)', border: 'rgba(34,197,94,0.35)', color: '#4ADE80', label: `${online}/${total} en línea` }
+    if (total === 0) return { bg: 'var(--c-danger-soft)', border: 'rgba(239,68,68,0.35)', color: 'var(--c-danger)', label: 'Sin repartidores vinculados' }
+    if (online === 0) return { bg: 'var(--c-danger-soft)', border: 'rgba(239,68,68,0.35)', color: 'var(--c-danger)', label: `Ninguno en línea (0/${total})` }
+    return { bg: 'var(--c-success-soft)', border: 'rgba(34,197,94,0.35)', color: 'var(--c-success)', label: `${online}/${total} en línea` }
   })()
 
   return (
     <div style={{ ...ds.card, padding: 20, marginTop: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
         <Truck size={18} color="#FF6B2C" />
-        <h3 style={{ fontSize: 15, fontWeight: 700, color: '#F5F5F5', flex: 1 }}>Repartidores vinculados</h3>
+        <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', flex: 1 }}>Repartidores vinculados</h3>
         <button onClick={() => setShowAdd(true)} style={{ ...ds.primaryBtn, display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, padding: '8px 14px' }}>
           <Plus size={12} /> Añadir
         </button>
@@ -77,7 +77,7 @@ export default function RidersCard({ establecimiento, onChanged }) {
       </div>
 
       {vinc.length === 0 ? (
-        <div style={{ padding: 20, textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>
+        <div style={{ padding: 20, textAlign: 'center', color: 'var(--c-muted)', fontSize: 12 }}>
           Aún no hay repartidores vinculados a este restaurante.
         </div>
       ) : (
@@ -90,30 +90,30 @@ export default function RidersCard({ establecimiento, onChanged }) {
             return (
               <div key={r.id} style={{
                 display: 'flex', alignItems: 'center', padding: '10px 14px',
-                background: 'rgba(255,255,255,0.04)', borderRadius: 10,
+                background: 'var(--c-surface2)', borderRadius: 10,
                 opacity: r.activa ? 1 : 0.5,
               }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#F5F5F5' }}>
-                    {r.nombre}{!r.activa && <span style={{ fontSize: 10, color: '#F87171', marginLeft: 6 }}>(inactivo)</span>}
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>
+                    {r.nombre}{!r.activa && <span style={{ fontSize: 10, color: 'var(--c-danger)', marginLeft: 6 }}>(inactivo)</span>}
                   </div>
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{r.telefono || 'Sin teléfono'}</div>
+                  <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>{r.telefono || 'Sin teléfono'}</div>
                 </div>
                 {r.estado === 'pendiente' ? (
-                  <span style={{ ...ds.badge, background: 'rgba(245,158,11,0.15)', color: '#FBBF24', marginRight: 8 }}>Pendiente</span>
+                  <span style={{ ...ds.badge, background: 'var(--c-warning-soft)', color: 'var(--c-warning)', marginRight: 8 }}>Pendiente</span>
                 ) : r.estado === 'rechazada' ? (
-                  <span style={{ ...ds.badge, background: 'rgba(239,68,68,0.15)', color: '#F87171', marginRight: 8 }}>Rechazado</span>
+                  <span style={{ ...ds.badge, background: 'var(--c-danger-soft)', color: 'var(--c-danger)', marginRight: 8 }}>Rechazado</span>
                 ) : !r.activa ? (
-                  <span style={{ ...ds.badge, background: 'rgba(239,68,68,0.15)', color: '#F87171', marginRight: 8 }}>Inactivo</span>
+                  <span style={{ ...ds.badge, background: 'var(--c-danger-soft)', color: 'var(--c-danger)', marginRight: 8 }}>Inactivo</span>
                 ) : st?.last_error ? (
-                  <span style={{ ...ds.badge, background: 'rgba(245,158,11,0.15)', color: '#FBBF24', marginRight: 8 }} title={st.last_error}>Error</span>
+                  <span style={{ ...ds.badge, background: 'var(--c-warning-soft)', color: 'var(--c-warning)', marginRight: 8 }} title={st.last_error}>Error</span>
                 ) : online ? (
-                  <span style={{ ...ds.badge, background: 'rgba(255,255,255,0.06)', color: '#4ADE80', marginRight: 8 }}>● En línea</span>
+                  <span style={{ ...ds.badge, background: 'var(--c-surface2)', color: 'var(--c-success)', marginRight: 8 }}>● En línea</span>
                 ) : (
-                  <span style={{ ...ds.badge, background: 'rgba(148,163,184,0.15)', color: '#94A3B8', marginRight: 8 }}>○ Offline</span>
+                  <span style={{ ...ds.badge, background: 'var(--c-surface2)', color: 'var(--c-muted)', marginRight: 8 }}>○ Offline</span>
                 )}
                 <button onClick={() => desvincular(r.id, r.nombre)} style={{
-                  ...ds.actionBtn, color: '#EF4444',
+                  ...ds.actionBtn, color: 'var(--c-danger)',
                   display: 'flex', alignItems: 'center', gap: 4,
                 }}>
                   <Trash2 size={11} /> Desvincular
@@ -227,16 +227,16 @@ function AddRiderModal({ establecimiento, vinculados, onClose, onSaved }) {
       <div style={ds.modalContent} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
           <Truck size={18} color="#FF6B2C" />
-          <h2 style={{ fontSize: 17, fontWeight: 700, color: '#F5F5F5', flex: 1 }}>Añadir repartidor</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 20 }}>×</button>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--c-text)', flex: 1 }}>Añadir repartidor</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--c-muted)', cursor: 'pointer', fontSize: 20 }}>×</button>
         </div>
 
-        <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1px solid var(--c-border)' }}>
           {[{ id: 'existente', l: 'Elegir existente' }, { id: 'nuevo', l: 'Crear nuevo' }].map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{
               padding: '10px 16px', border: 'none', background: 'transparent',
               fontSize: 13, fontWeight: 700, cursor: 'pointer',
-              color: tab === t.id ? '#FF6B2C' : 'rgba(255,255,255,0.5)',
+              color: tab === t.id ? '#FF6B2C' : 'var(--c-muted)',
               borderBottom: tab === t.id ? '2px solid #FF6B2C' : '2px solid transparent',
               fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
             }}>{t.l}</button>
@@ -247,7 +247,7 @@ function AddRiderModal({ establecimiento, vinculados, onClose, onSaved }) {
           <div>
             <input value={buscar} onChange={e => setBuscar(e.target.value)} placeholder="Buscar rider..." style={{ ...ds.formInput, marginBottom: 12 }} />
             {disponibles.length === 0 ? (
-              <div style={{ padding: 20, textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>
+              <div style={{ padding: 20, textAlign: 'center', color: 'var(--c-muted)', fontSize: 12 }}>
                 {riders.length === 0 ? 'No hay riders creados aún. Usa "Crear nuevo".' : 'Todos los riders activos ya están vinculados.'}
               </div>
             ) : (
@@ -258,21 +258,21 @@ function AddRiderModal({ establecimiento, vinculados, onClose, onSaved }) {
                     <button key={r.id} onClick={() => toggle(r.id)} style={{
                       display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
                       borderRadius: 10, cursor: 'pointer',
-                      border: sel ? '1.5px solid #FF6B2C' : '1px solid rgba(255,255,255,0.08)',
-                      background: sel ? 'rgba(255,107,44,0.1)' : 'rgba(255,255,255,0.04)',
+                      border: sel ? '1.5px solid #FF6B2C' : '1px solid var(--c-border)',
+                      background: sel ? 'var(--c-primary-soft)' : 'var(--c-surface2)',
                       fontFamily: "'Inter', system-ui, -apple-system, sans-serif", textAlign: 'left',
                     }}>
                       <div style={{
                         width: 18, height: 18, borderRadius: 5, flexShrink: 0,
-                        border: sel ? 'none' : '1.5px solid rgba(255,255,255,0.2)',
+                        border: sel ? 'none' : '1.5px solid var(--c-muted)',
                         background: sel ? '#FF6B2C' : 'transparent',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}>
                         {sel && <CheckCircle2 size={14} color="#fff" />}
                       </div>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: '#F5F5F5' }}>{r.nombre}</div>
-                        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{r.telefono || 'Sin teléfono'}</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>{r.nombre}</div>
+                        <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>{r.telefono || 'Sin teléfono'}</div>
                       </div>
                     </button>
                   )
@@ -306,8 +306,8 @@ function AddRiderModal({ establecimiento, vinculados, onClose, onSaved }) {
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '8px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-                background: verifyResult.ok ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
-                color: verifyResult.ok ? '#4ADE80' : '#F87171',
+                background: verifyResult.ok ? 'var(--c-success-soft)' : 'var(--c-danger-soft)',
+                color: verifyResult.ok ? 'var(--c-success)' : 'var(--c-danger)',
               }}>
                 {verifyResult.ok
                   ? <><CheckCircle2 size={14} /> Key válida — {verifyResult.total} carrier{verifyResult.total === 1 ? '' : 's'}</>

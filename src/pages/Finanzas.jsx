@@ -3,10 +3,10 @@ import { supabase } from '../lib/supabase'
 import { ds } from '../lib/darkStyles'
 import { toast } from '../App'
 
-function StatCard({ label, value, color = '#F5F5F5' }) {
+function StatCard({ label, value, color = 'var(--c-text)' }) {
   return (
     <div style={ds.card}>
-      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 600, marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 11, color: 'var(--c-muted)', fontWeight: 600, marginBottom: 6 }}>{label}</div>
       <div style={{ fontSize: 24, fontWeight: 800, color, letterSpacing: -1 }}>{value}</div>
     </div>
   )
@@ -198,8 +198,8 @@ export default function Finanzas() {
         {tabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
             ...ds.filterBtn,
-            background: tab === t.id ? '#FF6B2C' : 'rgba(255,255,255,0.08)',
-            color: tab === t.id ? '#fff' : 'rgba(255,255,255,0.5)',
+            background: tab === t.id ? '#FF6B2C' : 'var(--c-surface2)',
+            color: tab === t.id ? '#fff' : 'var(--c-muted)',
             padding: '7px 16px', fontSize: 12,
           }}>{t.label}</button>
         ))}
@@ -207,7 +207,7 @@ export default function Finanzas() {
 
       {tab === 'resumen' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-          <StatCard label="Comisiones totales plataforma" value={`${resumen.comisionesTotal.toFixed(2)}EUR`} color="#F5F5F5" />
+          <StatCard label="Comisiones totales plataforma" value={`${resumen.comisionesTotal.toFixed(2)}EUR`} color='var(--c-text)' />
           <StatCard label="Pendiente de cobro" value={`${resumen.pendiente.toFixed(2)}EUR`} color="#FF6B2C" />
         </div>
       )}
@@ -229,18 +229,18 @@ export default function Finanzas() {
               <span style={{ flex: 1, fontWeight: 700, fontSize: 13 }}>{b.establecimientos?.nombre || '-'}</span>
               <span style={{ width: 80, fontSize: 12 }}>{b.pedidos_tarjeta}</span>
               <span style={{ width: 80, fontSize: 12 }}>{b.pedidos_efectivo}</span>
-              <span style={{ width: 90, fontSize: 12, color: '#F5F5F5' }}>{b.a_favor_restaurante?.toFixed(2)}EUR</span>
-              <span style={{ width: 90, fontSize: 12, color: '#EF4444' }}>{b.debe_restaurante?.toFixed(2)}EUR</span>
-              <span style={{ width: 90, fontSize: 12, fontWeight: 700, color: b.balance_neto >= 0 ? '#F5F5F5' : '#EF4444' }}>{b.balance_neto?.toFixed(2)}EUR</span>
+              <span style={{ width: 90, fontSize: 12, color: 'var(--c-text)' }}>{b.a_favor_restaurante?.toFixed(2)}EUR</span>
+              <span style={{ width: 90, fontSize: 12, color: 'var(--c-danger)' }}>{b.debe_restaurante?.toFixed(2)}EUR</span>
+              <span style={{ width: 90, fontSize: 12, fontWeight: 700, color: b.balance_neto >= 0 ? 'var(--c-text)' : 'var(--c-danger)' }}>{b.balance_neto?.toFixed(2)}EUR</span>
               <span style={{ width: 80 }}>
-                <span style={{ ...ds.badge, background: b.estado === 'pagado' ? 'rgba(255,255,255,0.06)' : 'rgba(245,158,11,0.15)', color: b.estado === 'pagado' ? '#4ADE80' : '#FBBF24' }}>{b.estado}</span>
+                <span style={{ ...ds.badge, background: b.estado === 'pagado' ? 'var(--c-surface2)' : 'var(--c-warning-soft)', color: b.estado === 'pagado' ? 'var(--c-success)' : 'var(--c-warning)' }}>{b.estado}</span>
               </span>
               <span style={{ width: 70 }}>
                 {b.estado === 'pendiente' && <button onClick={() => marcarPagado('balances_restaurante', b.id)} style={styles.payBtn}>Pagar</button>}
               </span>
             </div>
           ))}
-          {balancesRest.length === 0 && <div style={{ padding: 32, textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>Sin balances</div>}
+          {balancesRest.length === 0 && <div style={{ padding: 32, textAlign: 'center', color: 'var(--c-muted)', fontSize: 13 }}>Sin balances</div>}
         </div>
       )}
 
@@ -261,20 +261,20 @@ export default function Finanzas() {
             <div key={f.id} style={ds.tableRow}>
               <span style={{ width: 120, fontSize: 11, fontWeight: 700, color: '#FF6B2C' }}>{f.numero_factura || '—'}</span>
               <span style={{ flex: 1, fontWeight: 600, fontSize: 12 }}>{f.establecimientos?.nombre || '—'}</span>
-              <span style={{ width: 100, fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>{f.semana_inicio?.slice(5)}<br/>{f.semana_fin?.slice(5)}</span>
+              <span style={{ width: 100, fontSize: 10, color: 'var(--c-muted)' }}>{f.semana_inicio?.slice(5)}<br/>{f.semana_fin?.slice(5)}</span>
               <span style={{ width: 50, fontSize: 12 }}>{f.pedidos_entregados}/{f.total_pedidos}</span>
               <span style={{ width: 80, fontSize: 12 }}>{f.total_comisiones?.toFixed(2)}€</span>
               <span style={{ width: 70, fontSize: 12 }}>{f.total_envios?.toFixed(2)}€</span>
-              <span style={{ width: 80, fontSize: 12, fontWeight: 700, color: '#F5F5F5' }}>{f.total_ganado?.toFixed(2)}€</span>
+              <span style={{ width: 80, fontSize: 12, fontWeight: 700, color: 'var(--c-text)' }}>{f.total_ganado?.toFixed(2)}€</span>
               <span style={{ width: 70 }}>
-                <span style={{ ...ds.badge, background: f.estado === 'pagado' ? 'rgba(255,255,255,0.06)' : 'rgba(245,158,11,0.15)', color: f.estado === 'pagado' ? '#4ADE80' : '#FBBF24' }}>{f.estado}</span>
+                <span style={{ ...ds.badge, background: f.estado === 'pagado' ? 'var(--c-surface2)' : 'var(--c-warning-soft)', color: f.estado === 'pagado' ? 'var(--c-success)' : 'var(--c-warning)' }}>{f.estado}</span>
               </span>
               <span style={{ width: 60 }}>
                 {f.estado === 'pendiente' && <button onClick={() => marcarFacturaPagada(f.id)} style={styles.payBtn}>Pagar</button>}
               </span>
             </div>
           ))}
-          {facturas.length === 0 && <div style={{ padding: 32, textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>Sin facturas generadas</div>}
+          {facturas.length === 0 && <div style={{ padding: 32, textAlign: 'center', color: 'var(--c-muted)', fontSize: 13 }}>Sin facturas generadas</div>}
         </div>
       )}
 
@@ -288,18 +288,18 @@ export default function Finanzas() {
             <span style={{ width: 140 }}>Fecha</span>
           </div>
           {movimientos.map(m => {
-            const tipoColor = { entrada_tarjeta: '#F5F5F5', pago_restaurante: '#FF6B2C', cobro_comision: '#FF6B2C' }
+            const tipoColor = { entrada_tarjeta: 'var(--c-text)', pago_restaurante: '#FF6B2C', cobro_comision: '#FF6B2C' }
             return (
               <div key={m.id} style={ds.tableRow}>
                 <span style={{ width: 140 }}><span style={{ ...ds.badge, background: (tipoColor[m.tipo] || '#6B7280') + '15', color: tipoColor[m.tipo] || '#6B7280' }}>{m.tipo?.replace('_', ' ')}</span></span>
                 <span style={{ width: 100, fontSize: 13, fontWeight: 700 }}>{m.monto?.toFixed(2)}EUR</span>
-                <span style={{ flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{m.descripcion || '-'}</span>
-                <span style={{ width: 100, fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{m.referencia || '-'}</span>
-                <span style={{ width: 140, fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{new Date(m.created_at).toLocaleString('es-ES')}</span>
+                <span style={{ flex: 1, fontSize: 12, color: 'var(--c-muted)' }}>{m.descripcion || '-'}</span>
+                <span style={{ width: 100, fontSize: 11, color: 'var(--c-muted)' }}>{m.referencia || '-'}</span>
+                <span style={{ width: 140, fontSize: 11, color: 'var(--c-muted)' }}>{new Date(m.created_at).toLocaleString('es-ES')}</span>
               </div>
             )
           })}
-          {movimientos.length === 0 && <div style={{ padding: 32, textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>Sin movimientos</div>}
+          {movimientos.length === 0 && <div style={{ padding: 32, textAlign: 'center', color: 'var(--c-muted)', fontSize: 13 }}>Sin movimientos</div>}
         </div>
       )}
 
@@ -308,7 +308,7 @@ export default function Finanzas() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 20 }}>
             <StatCard label="Total pendiente" value={`${riderStats.pendiente.toFixed(2)}EUR`} color="#FF6B2C" />
             <StatCard label="Pagado este mes" value={`${riderStats.pagadoMes.toFixed(2)}EUR`} color="#4ADE80" />
-            <StatCard label="Riders activos" value={riderStats.activos} color="#F5F5F5" />
+            <StatCard label="Riders activos" value={riderStats.activos} color='var(--c-text)' />
           </div>
 
           <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -341,29 +341,29 @@ export default function Finanzas() {
               <div key={f.id} style={ds.tableRow}>
                 <span style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, fontSize: 13 }}>{f.rider_accounts?.nombre || '—'}</div>
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{f.rider_accounts?.telefono || f.rider_accounts?.email || ''}</div>
+                  <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>{f.rider_accounts?.telefono || f.rider_accounts?.email || ''}</div>
                 </span>
-                <span style={{ width: 120, fontSize: 11, color: 'rgba(255,255,255,0.6)' }}>{fmtSemana(f.semana_inicio, f.semana_fin)}</span>
+                <span style={{ width: 120, fontSize: 11, color: 'var(--c-text-soft)' }}>{fmtSemana(f.semana_inicio, f.semana_fin)}</span>
                 <span style={{ width: 50, fontSize: 12 }}>{f.total_pedidos || 0}</span>
                 <span style={{ width: 70, fontSize: 12 }}>{(f.total_envios || 0).toFixed(2)}€</span>
                 <span style={{ width: 80, fontSize: 12 }}>{(f.total_comisiones || 0).toFixed(2)}€</span>
                 <span style={{ width: 70, fontSize: 12 }}>{(f.total_propinas || 0).toFixed(2)}€</span>
-                <span style={{ width: 80, fontSize: 13, fontWeight: 700, color: '#F5F5F5' }}>{(f.total_neto || 0).toFixed(2)}€</span>
+                <span style={{ width: 80, fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>{(f.total_neto || 0).toFixed(2)}€</span>
                 <span style={{ width: 70 }}>
-                  <span style={{ ...ds.badge, background: f.estado === 'pagado' ? 'rgba(255,255,255,0.06)' : 'rgba(245,158,11,0.15)', color: f.estado === 'pagado' ? '#4ADE80' : '#FBBF24' }}>{f.estado}</span>
+                  <span style={{ ...ds.badge, background: f.estado === 'pagado' ? 'var(--c-surface2)' : 'var(--c-warning-soft)', color: f.estado === 'pagado' ? 'var(--c-success)' : 'var(--c-warning)' }}>{f.estado}</span>
                 </span>
                 <span style={{ width: 110 }}>
                   {f.estado === 'pendiente' && (
                     <button onClick={() => abrirPago(f)} style={styles.payBtn}>Marcar pagado</button>
                   )}
                   {f.estado === 'pagado' && f.referencia_pago && (
-                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }} title={f.referencia_pago}>Ref: {f.referencia_pago.slice(0, 10)}…</span>
+                    <span style={{ fontSize: 10, color: 'var(--c-muted)' }} title={f.referencia_pago}>Ref: {f.referencia_pago.slice(0, 10)}…</span>
                   )}
                 </span>
               </div>
             ))}
             {riderFiltered.length === 0 && (
-              <div style={{ padding: 32, textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>Sin facturas de riders</div>
+              <div style={{ padding: 32, textAlign: 'center', color: 'var(--c-muted)', fontSize: 13 }}>Sin facturas de riders</div>
             )}
           </div>
         </>
@@ -375,7 +375,7 @@ export default function Finanzas() {
             <StatCard label="Suscripciones activas" value={cuotasStats.activas} color="#4ADE80" />
             <StatCard label="MRR (mensual)" value={`${cuotasStats.mrr.toFixed(2)}EUR`} color="#FF6B2C" />
             <StatCard label="Pago fallido" value={cuotasStats.pastDue} color="#F87171" />
-            <StatCard label="Churn este mes" value={cuotasStats.churnMes} color="#F5F5F5" />
+            <StatCard label="Churn este mes" value={cuotasStats.churnMes} color='var(--c-text)' />
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
@@ -396,40 +396,40 @@ export default function Finanzas() {
             </div>
             {cuotas.map(c => {
               const info = {
-                active:   { bg: 'rgba(34,197,94,0.15)',  color: '#4ADE80' },
-                pending:  { bg: 'rgba(251,191,36,0.15)', color: '#FBBF24' },
-                past_due: { bg: 'rgba(239,68,68,0.15)',  color: '#F87171' },
-                unpaid:   { bg: 'rgba(239,68,68,0.15)',  color: '#F87171' },
-                canceled: { bg: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' },
-              }[c.estado] || { bg: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }
+                active:   { bg: 'var(--c-success-soft)',  color: 'var(--c-success)' },
+                pending:  { bg: 'var(--c-warning-soft)', color: 'var(--c-warning)' },
+                past_due: { bg: 'var(--c-danger-soft)',  color: 'var(--c-danger)' },
+                unpaid:   { bg: 'var(--c-danger-soft)',  color: 'var(--c-danger)' },
+                canceled: { bg: 'var(--c-surface2)', color: 'var(--c-muted)' },
+              }[c.estado] || { bg: 'var(--c-surface2)', color: 'var(--c-muted)' }
               return (
                 <div key={c.id} style={ds.tableRow}>
                   <span style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: 13 }}>{c.establecimientos?.nombre || '—'}</div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{c.establecimientos?.slug || ''}</div>
+                    <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>{c.establecimientos?.slug || ''}</div>
                   </span>
                   <span style={{ width: 110 }}>
                     <span style={{ ...ds.badge, background: info.bg, color: info.color }}>{c.estado}</span>
                   </span>
                   <span style={{ width: 100 }}>
-                    <span style={{ ...ds.badge, background: c.establecimientos?.plan_pro ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.06)', color: c.establecimientos?.plan_pro ? '#4ADE80' : 'rgba(255,255,255,0.5)' }}>
+                    <span style={{ ...ds.badge, background: c.establecimientos?.plan_pro ? 'var(--c-success-soft)' : 'var(--c-surface2)', color: c.establecimientos?.plan_pro ? 'var(--c-success)' : 'var(--c-muted)' }}>
                       {c.establecimientos?.plan_pro ? 'SÍ' : 'NO'}
                     </span>
                   </span>
-                  <span style={{ width: 110, fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
+                  <span style={{ width: 110, fontSize: 11, color: 'var(--c-muted)' }}>
                     {c.created_at ? new Date(c.created_at).toLocaleDateString('es-ES') : '—'}
                   </span>
-                  <span style={{ width: 110, fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>
+                  <span style={{ width: 110, fontSize: 11, color: 'var(--c-muted)' }}>
                     {c.fecha_proximo_pago ? new Date(c.fecha_proximo_pago).toLocaleDateString('es-ES') : '—'}
                   </span>
                   <span style={{ width: 70, fontSize: 12, fontWeight: 700 }}>{(c.monto_mensual || 39).toFixed(2)}€</span>
-                  <span style={{ width: 70, fontSize: 12, color: (c.intentos_fallidos || 0) >= 1 ? '#F87171' : 'rgba(255,255,255,0.5)' }}>
+                  <span style={{ width: 70, fontSize: 12, color: (c.intentos_fallidos || 0) >= 1 ? 'var(--c-danger)' : 'var(--c-muted)' }}>
                     {c.intentos_fallidos || 0}/3
                   </span>
                 </div>
               )
             })}
-            {cuotas.length === 0 && <div style={{ padding: 32, textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>Sin suscripciones aún</div>}
+            {cuotas.length === 0 && <div style={{ padding: 32, textAlign: 'center', color: 'var(--c-muted)', fontSize: 13 }}>Sin suscripciones aún</div>}
           </div>
         </>
       )}
@@ -437,9 +437,9 @@ export default function Finanzas() {
       {pagoModal && (
         <div style={ds.modal} onClick={() => !pagoSaving && setPagoModal(null)}>
           <div style={{ ...ds.modalContent, maxWidth: 440 }} onClick={e => e.stopPropagation()}>
-            <h2 style={{ fontSize: 17, fontWeight: 700, color: '#F5F5F5', marginBottom: 6 }}>Marcar factura como pagada</h2>
-            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 16 }}>
-              {pagoModal.rider_accounts?.nombre} · {fmtSemana(pagoModal.semana_inicio, pagoModal.semana_fin)} · <strong style={{ color: '#F5F5F5' }}>{(pagoModal.total_neto || 0).toFixed(2)}€</strong>
+            <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--c-text)', marginBottom: 6 }}>Marcar factura como pagada</h2>
+            <p style={{ fontSize: 12, color: 'var(--c-muted)', marginBottom: 16 }}>
+              {pagoModal.rider_accounts?.nombre} · {fmtSemana(pagoModal.semana_inicio, pagoModal.semana_fin)} · <strong style={{ color: 'var(--c-text)' }}>{(pagoModal.total_neto || 0).toFixed(2)}€</strong>
             </p>
             <label style={ds.label}>Referencia de pago (opcional)</label>
             <textarea
@@ -463,5 +463,5 @@ export default function Finanzas() {
 }
 
 const styles = {
-  payBtn: { padding: '4px 10px', borderRadius: 6, border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: "'Inter', system-ui, -apple-system, sans-serif", background: 'rgba(255,255,255,0.06)', color: '#4ADE80' },
+  payBtn: { padding: '4px 10px', borderRadius: 6, border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: "'Inter', system-ui, -apple-system, sans-serif", background: 'var(--c-surface2)', color: 'var(--c-success)' },
 }
