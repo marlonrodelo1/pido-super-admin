@@ -12,6 +12,22 @@ function StatCard({ label, value, color = 'var(--c-text)' }) {
   )
 }
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://rmrbxrabngdmpgpfmjbo.supabase.co'
+const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+const fmtEUR = (n) => (Number(n) || 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+const connectBadge = (status) => {
+  switch (status) {
+    case 'activa':     return { bg: 'var(--c-success-soft)', color: 'var(--c-success)', label: 'Activa' }
+    case 'onboarding': return { bg: 'var(--c-warning-soft)', color: 'var(--c-warning)', label: 'Onboarding' }
+    case 'suspendida': return { bg: 'var(--c-danger-soft)',  color: 'var(--c-danger)',  label: 'Suspendida' }
+    case 'rechazada':  return { bg: 'var(--c-danger-soft)',  color: 'var(--c-danger)',  label: 'Rechazada' }
+    case 'pendiente':  return { bg: 'var(--c-warning-soft)', color: 'var(--c-warning)', label: 'Pendiente' }
+    default:           return { bg: 'var(--c-surface2)',     color: 'var(--c-muted)',   label: 'Sin conectar' }
+  }
+}
+
 export default function Finanzas() {
   const [tab, setTab] = useState('resumen')
   const [balancesRest, setBalancesRest] = useState([])
@@ -28,6 +44,18 @@ export default function Finanzas() {
   // Cuotas tiendas (plan 39€/mes)
   const [cuotas, setCuotas] = useState([])
   const [cuotasStats, setCuotasStats] = useState({ activas: 0, mrr: 0, churnMes: 0, pastDue: 0 })
+  // Liquidaciones — Stripe Connect
+  const [connectRows, setConnectRows] = useState([])
+  const [connectFiltroEstado, setConnectFiltroEstado] = useState('todos')
+  const [connectFiltroBalance, setConnectFiltroBalance] = useState(false)
+  const [connectFiltroDeuda, setConnectFiltroDeuda] = useState(false)
+  const [connectExpanded, setConnectExpanded] = useState(null)
+  const [connectHistorico, setConnectHistorico] = useState({})
+  const [limiteDraft, setLimiteDraft] = useState({})
+  const [liqAllModal, setLiqAllModal] = useState(false)
+  const [liqRunning, setLiqRunning] = useState(false)
+  const [dryRunResult, setDryRunResult] = useState(null)
+  const [liquidacionesGlobales, setLiquidacionesGlobales] = useState([])
 
   useEffect(() => {
     loadResumen()
@@ -37,7 +65,117 @@ export default function Finanzas() {
     loadRiderFacturas()
     loadRiderStats()
     loadCuotas()
+    loadConnectRows()
+    loadLiquidacionesGlobales()
   }, [])
+
+  async function callLiquidacion({ establecimiento_id = null, dry_run = false } = {}) {
+    const params = new URLSearchParams()
+    if (establecimiento_id) params.set('establecimiento_id', establecimiento_id)
+    if (dry_run) params.set('dry_run', '1')
+    const qs = params.toString() ? `?${params.toString()}` : ''
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token || SUPABASE_ANON
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/liquidacion-semanal${qs}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON,
+      },
+      body: JSON.stringify({}),
+    })
+    const body = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(body?.error || body?.message || `HTTP ${res.status}`)
+    return body
+  }
+
+  async function loadConnectRows() {
+    const { data } = await supabase.from('establecimientos')
+      .select('id, nombre, slug, activo, stripe_connect_account_id, stripe_connect_status, balance_card_acumulado, deuda_cash_acumulada, cash_bloqueado_por_deuda, limite_deuda_cash, ultima_liquidacion_at')
+      .eq('activo', true)
+      .order('nombre', { ascending: true })
+    setConnectRows(data || [])
+  }
+
+  async function loadLiquidacionesGlobales() {
+    const { data } = await supabase.from('facturas_semanales')
+      .select('*, establecimientos(nombre, slug)')
+      .order('created_at', { ascending: false })
+      .limit(200)
+    setLiquidacionesGlobales(data || [])
+  }
+
+  async function loadHistoricoEst(id) {
+    const { data } = await supabase.from('facturas_semanales')
+      .select('*')
+      .eq('establecimiento_id', id)
+      .order('created_at', { ascending: false })
+      .limit(20)
+    setConnectHistorico(prev => ({ ...prev, [id]: data || [] }))
+  }
+
+  function toggleExpand(id) {
+    if (connectExpanded === id) {
+      setConnectExpanded(null)
+    } else {
+      setConnectExpanded(id)
+      if (!connectHistorico[id]) loadHistoricoEst(id)
+    }
+  }
+
+  async function guardarLimiteDeuda(id) {
+    const v = limiteDraft[id]
+    const parsed = parseFloat(v)
+    if (isNaN(parsed) || parsed < 0) return toast('Valor inválido', 'error')
+    const { error } = await supabase.from('establecimientos').update({ limite_deuda_cash: parsed }).eq('id', id)
+    if (error) return toast('Error: ' + error.message, 'error')
+    toast('Límite actualizado')
+    setLimiteDraft(prev => { const n = { ...prev }; delete n[id]; return n })
+    loadConnectRows()
+  }
+
+  async function forzarLiquidacion(id, nombre) {
+    if (!window.confirm(`¿Forzar liquidación ahora para "${nombre}"?`)) return
+    try {
+      setLiqRunning(true)
+      const body = await callLiquidacion({ establecimiento_id: id })
+      toast(`Liquidación ejecutada: ${body?.processed ?? 1} restaurante`)
+      loadConnectRows()
+      loadLiquidacionesGlobales()
+    } catch (e) {
+      toast('Error: ' + e.message, 'error')
+    } finally {
+      setLiqRunning(false)
+    }
+  }
+
+  async function ejecutarLiquidacionGlobal() {
+    try {
+      setLiqRunning(true)
+      const body = await callLiquidacion({})
+      toast(`Liquidación semanal ejecutada: ${body?.processed ?? '?'} restaurantes`)
+      setLiqAllModal(false)
+      loadConnectRows()
+      loadLiquidacionesGlobales()
+    } catch (e) {
+      toast('Error: ' + e.message, 'error')
+    } finally {
+      setLiqRunning(false)
+    }
+  }
+
+  async function ejecutarDryRun() {
+    try {
+      setLiqRunning(true)
+      const body = await callLiquidacion({ dry_run: true })
+      setDryRunResult(body)
+    } catch (e) {
+      toast('Error: ' + e.message, 'error')
+    } finally {
+      setLiqRunning(false)
+    }
+  }
 
   async function loadCuotas() {
     const { data } = await supabase.from('suscripciones_tienda')
@@ -168,12 +306,35 @@ export default function Finanzas() {
 
   const tabs = [
     { id: 'resumen', label: 'Resumen' },
+    { id: 'connect', label: 'Connect restaurantes' },
+    { id: 'liquidaciones', label: 'Histórico liquidaciones' },
     { id: 'restaurantes', label: 'Balance Restaurantes' },
     { id: 'facturas', label: 'Facturas' },
     { id: 'movimientos', label: 'Movimientos' },
     { id: 'riders', label: 'Pagos a riders' },
     { id: 'cuotas', label: 'Cuotas tiendas' },
   ]
+
+  // Filtrado y totales de Connect
+  const connectFiltered = connectRows.filter(r => {
+    if (connectFiltroEstado !== 'todos') {
+      const s = r.stripe_connect_status || 'sin_conectar'
+      if (connectFiltroEstado === 'sin_conectar' && r.stripe_connect_status) return false
+      if (connectFiltroEstado !== 'sin_conectar' && s !== connectFiltroEstado) return false
+    }
+    if (connectFiltroDeuda && !((r.deuda_cash_acumulada || 0) > 0)) return false
+    if (connectFiltroBalance && !((r.balance_card_acumulado || 0) > 0)) return false
+    return true
+  })
+
+  const totales = connectRows.reduce((acc, r) => {
+    const bal = Number(r.balance_card_acumulado || 0)
+    const deu = Number(r.deuda_cash_acumulada || 0)
+    acc.aPagar += bal
+    acc.deudaCash += deu
+    acc.neto += (bal - deu)
+    return acc
+  }, { aPagar: 0, deudaCash: 0, neto: 0 })
 
   const riderFiltered = riderFacturas.filter(f => {
     if (riderFiltroEstado !== 'todos' && f.estado !== riderFiltroEstado) return false
@@ -209,6 +370,233 @@ export default function Finanzas() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
           <StatCard label="Comisiones totales plataforma" value={`${resumen.comisionesTotal.toFixed(2)}EUR`} color='var(--c-text)' />
           <StatCard label="Pendiente de cobro" value={`${resumen.pendiente.toFixed(2)}EUR`} color="#FF6B2C" />
+        </div>
+      )}
+
+      {tab === 'connect' && (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 20 }}>
+            <StatCard label="A pagar a restaurantes" value={fmtEUR(totales.aPagar)} color="#4ADE80" />
+            <StatCard label="Pendiente de cobro (deuda cash)" value={fmtEUR(totales.deudaCash)} color="#F87171" />
+            <StatCard label="Neto plataforma" value={fmtEUR(totales.neto)} color={totales.neto >= 0 ? 'var(--c-text)' : 'var(--c-danger)'} />
+          </div>
+
+          <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+            <select value={connectFiltroEstado} onChange={e => setConnectFiltroEstado(e.target.value)} style={{ ...ds.formInput, width: 180 }}>
+              <option value="todos">Todos los estados</option>
+              <option value="activa">Activa</option>
+              <option value="onboarding">Onboarding</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="suspendida">Suspendida</option>
+              <option value="rechazada">Rechazada</option>
+              <option value="sin_conectar">Sin conectar</option>
+            </select>
+            <label style={{ fontSize: 12, color: 'var(--c-muted)', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+              <input type="checkbox" checked={connectFiltroDeuda} onChange={e => setConnectFiltroDeuda(e.target.checked)} />
+              Solo con deuda &gt; 0
+            </label>
+            <label style={{ fontSize: 12, color: 'var(--c-muted)', display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+              <input type="checkbox" checked={connectFiltroBalance} onChange={e => setConnectFiltroBalance(e.target.checked)} />
+              Solo con balance &gt; 0
+            </label>
+            <div style={{ flex: 1 }} />
+            <span style={{ fontSize: 12, color: 'var(--c-muted)' }}>{connectFiltered.length} de {connectRows.length}</span>
+          </div>
+
+          <div style={ds.table}>
+            <div style={ds.tableHeader}>
+              <span style={{ flex: 1 }}>Restaurante</span>
+              <span style={{ width: 110 }}>Connect</span>
+              <span style={{ width: 90 }}>Balance card</span>
+              <span style={{ width: 90 }}>Deuda cash</span>
+              <span style={{ width: 90 }}>Neto</span>
+              <span style={{ width: 150 }}>Límite deuda</span>
+              <span style={{ width: 100 }}>Cash bloq.</span>
+              <span style={{ width: 180, textAlign: 'right' }}>Acciones</span>
+            </div>
+            {connectFiltered.map(r => {
+              const bal = Number(r.balance_card_acumulado || 0)
+              const deu = Number(r.deuda_cash_acumulada || 0)
+              const neto = bal - deu
+              const badge = connectBadge(r.stripe_connect_status)
+              const draft = limiteDraft[r.id]
+              const limVal = draft !== undefined ? draft : (r.limite_deuda_cash ?? 150)
+              const historico = connectHistorico[r.id] || []
+              return (
+                <div key={r.id} style={{ flexDirection: 'column' }}>
+                  <div style={{ ...ds.tableRow, alignItems: 'center' }}>
+                    <span style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, fontSize: 13 }}>{r.nombre}</div>
+                      <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>{r.slug || r.id.slice(0, 8)}</div>
+                    </span>
+                    <span style={{ width: 110 }}>
+                      <span style={{ ...ds.badge, background: badge.bg, color: badge.color }}>{badge.label}</span>
+                    </span>
+                    <span style={{ width: 90, fontSize: 12, color: 'var(--c-success)' }}>{fmtEUR(bal)}</span>
+                    <span style={{ width: 90, fontSize: 12, color: 'var(--c-danger)' }}>{fmtEUR(deu)}</span>
+                    <span style={{ width: 90, fontSize: 13, fontWeight: 700, color: neto >= 0 ? 'var(--c-success)' : 'var(--c-danger)' }}>{fmtEUR(neto)}</span>
+                    <span style={{ width: 150, display: 'flex', gap: 4, alignItems: 'center' }}>
+                      <input
+                        type="number"
+                        value={limVal}
+                        min={0}
+                        step={10}
+                        onChange={e => setLimiteDraft(prev => ({ ...prev, [r.id]: e.target.value }))}
+                        style={{ ...ds.formInput, width: 72, padding: '4px 6px', fontSize: 12 }}
+                      />
+                      {draft !== undefined && (
+                        <button onClick={() => guardarLimiteDeuda(r.id)} style={{ ...styles.payBtn, color: '#FF6B2C' }}>OK</button>
+                      )}
+                    </span>
+                    <span style={{ width: 100 }}>
+                      {r.cash_bloqueado_por_deuda
+                        ? <span style={{ ...ds.badge, background: 'var(--c-danger-soft)', color: 'var(--c-danger)' }}>Bloqueado</span>
+                        : <span style={{ fontSize: 11, color: 'var(--c-muted)' }}>—</span>}
+                    </span>
+                    <span style={{ width: 180, display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                      <button
+                        onClick={() => forzarLiquidacion(r.id, r.nombre)}
+                        disabled={liqRunning || r.stripe_connect_status !== 'activa'}
+                        title={r.stripe_connect_status !== 'activa' ? 'Connect no activa' : 'Forzar liquidación'}
+                        style={{ ...styles.payBtn, opacity: (liqRunning || r.stripe_connect_status !== 'activa') ? 0.5 : 1 }}
+                      >
+                        Liquidar
+                      </button>
+                      <button onClick={() => toggleExpand(r.id)} style={styles.payBtn}>
+                        {connectExpanded === r.id ? 'Cerrar' : 'Histórico'}
+                      </button>
+                    </span>
+                  </div>
+                  {connectExpanded === r.id && (
+                    <div style={{ background: 'var(--c-surface2)', padding: '12px 16px', borderTop: '1px solid var(--c-border)' }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-muted)', marginBottom: 8, letterSpacing: 0.3 }}>
+                        FACTURAS SEMANALES · {r.nombre} {r.ultima_liquidacion_at && <>· última: {new Date(r.ultima_liquidacion_at).toLocaleString('es-ES')}</>}
+                      </div>
+                      {historico.length === 0 && (
+                        <div style={{ fontSize: 12, color: 'var(--c-muted)', padding: '8px 0' }}>Sin liquidaciones previas</div>
+                      )}
+                      {historico.map(f => (
+                        <div key={f.id} style={{ display: 'flex', gap: 12, alignItems: 'center', fontSize: 12, padding: '6px 0', borderBottom: '1px solid var(--c-border)' }}>
+                          <span style={{ color: 'var(--c-muted)', width: 90 }}>{f.created_at ? new Date(f.created_at).toLocaleDateString('es-ES') : '—'}</span>
+                          <span style={{ flex: 1, fontWeight: 600 }}>{fmtSemana(f.semana_inicio, f.semana_fin)}</span>
+                          <span>Card: {fmtEUR(f.total_tarjeta || f.total_ganado || 0)}</span>
+                          <span>Cash: {fmtEUR(f.total_efectivo || 0)}</span>
+                          <span style={{ fontWeight: 700 }}>Neto: {fmtEUR(f.total_neto || f.total_ganado || 0)}</span>
+                          <span style={{ ...ds.badge, background: f.estado === 'pagado' ? 'var(--c-success-soft)' : 'var(--c-warning-soft)', color: f.estado === 'pagado' ? 'var(--c-success)' : 'var(--c-warning)' }}>{f.estado}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+            {connectFiltered.length === 0 && <div style={{ padding: 32, textAlign: 'center', color: 'var(--c-muted)', fontSize: 13 }}>Sin restaurantes coincidentes</div>}
+          </div>
+        </>
+      )}
+
+      {tab === 'liquidaciones' && (
+        <>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setLiqAllModal(true)}
+              disabled={liqRunning}
+              style={{ ...ds.primaryBtn, opacity: liqRunning ? 0.5 : 1 }}
+            >
+              Ejecutar liquidación semanal ahora
+            </button>
+            <button
+              onClick={ejecutarDryRun}
+              disabled={liqRunning}
+              style={{ ...ds.secondaryBtn, opacity: liqRunning ? 0.5 : 1 }}
+            >
+              Dry run (simulación)
+            </button>
+            <div style={{ flex: 1 }} />
+            <button onClick={loadLiquidacionesGlobales} style={ds.secondaryBtn}>Recargar</button>
+          </div>
+
+          {dryRunResult && (
+            <div style={{ ...ds.card, marginBottom: 16, background: 'var(--c-warning-soft)', border: '1px solid var(--c-warning)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-warning)' }}>Simulación (no se escribió nada)</div>
+                <button onClick={() => setDryRunResult(null)} style={{ ...ds.secondaryBtn, padding: '4px 10px', fontSize: 11 }}>Cerrar</button>
+              </div>
+              <pre style={{ fontSize: 11, color: 'var(--c-text)', whiteSpace: 'pre-wrap', maxHeight: 280, overflow: 'auto', margin: 0 }}>
+                {JSON.stringify(dryRunResult, null, 2)}
+              </pre>
+            </div>
+          )}
+
+          <div style={ds.table}>
+            <div style={ds.tableHeader}>
+              <span style={{ width: 110 }}>Fecha</span>
+              <span style={{ flex: 1 }}>Restaurante</span>
+              <span style={{ width: 110 }}>Periodo</span>
+              <span style={{ width: 80 }}>Card ped.</span>
+              <span style={{ width: 80 }}>Cash ped.</span>
+              <span style={{ width: 90 }}>A favor</span>
+              <span style={{ width: 90 }}>Debe</span>
+              <span style={{ width: 90 }}>Neto</span>
+              <span style={{ width: 90 }}>Estado</span>
+              <span style={{ width: 130 }}>Transfer</span>
+            </div>
+            {liquidacionesGlobales.map(f => {
+              const transferId = f.stripe_transfer_id || f.transfer_id || null
+              const aFavor = f.total_a_favor ?? f.a_favor_restaurante ?? f.total_tarjeta ?? f.total_ganado ?? 0
+              const debe = f.total_debe ?? f.debe_restaurante ?? f.total_efectivo ?? 0
+              const neto = f.total_neto ?? (aFavor - debe)
+              const estadoColor = f.estado === 'pagado'
+                ? { bg: 'var(--c-success-soft)', color: 'var(--c-success)' }
+                : f.estado === 'fallida'
+                  ? { bg: 'var(--c-danger-soft)', color: 'var(--c-danger)' }
+                  : { bg: 'var(--c-warning-soft)', color: 'var(--c-warning)' }
+              return (
+                <div key={f.id} style={ds.tableRow}>
+                  <span style={{ width: 110, fontSize: 11, color: 'var(--c-muted)' }}>
+                    {f.created_at ? new Date(f.created_at).toLocaleDateString('es-ES') : '—'}
+                  </span>
+                  <span style={{ flex: 1, fontWeight: 600, fontSize: 12 }}>{f.establecimientos?.nombre || '—'}</span>
+                  <span style={{ width: 110, fontSize: 11, color: 'var(--c-muted)' }}>{fmtSemana(f.semana_inicio, f.semana_fin)}</span>
+                  <span style={{ width: 80, fontSize: 12 }}>{f.pedidos_tarjeta ?? '—'}</span>
+                  <span style={{ width: 80, fontSize: 12 }}>{f.pedidos_efectivo ?? '—'}</span>
+                  <span style={{ width: 90, fontSize: 12, color: 'var(--c-success)' }}>{fmtEUR(aFavor)}</span>
+                  <span style={{ width: 90, fontSize: 12, color: 'var(--c-danger)' }}>{fmtEUR(debe)}</span>
+                  <span style={{ width: 90, fontSize: 13, fontWeight: 700, color: neto >= 0 ? 'var(--c-text)' : 'var(--c-danger)' }}>{fmtEUR(neto)}</span>
+                  <span style={{ width: 90 }}>
+                    <span style={{ ...ds.badge, background: estadoColor.bg, color: estadoColor.color }}>{f.estado || 'pendiente'}</span>
+                  </span>
+                  <span style={{ width: 130, fontSize: 11 }}>
+                    {transferId ? (
+                      <a href={`https://dashboard.stripe.com/connect/transfers/${transferId}`} target="_blank" rel="noopener noreferrer" style={{ color: '#FF6B2C', textDecoration: 'none' }} title={transferId}>
+                        {transferId.slice(0, 14)}…
+                      </a>
+                    ) : (
+                      <span style={{ color: 'var(--c-muted)' }}>—</span>
+                    )}
+                  </span>
+                </div>
+              )
+            })}
+            {liquidacionesGlobales.length === 0 && <div style={{ padding: 32, textAlign: 'center', color: 'var(--c-muted)', fontSize: 13 }}>Sin liquidaciones registradas</div>}
+          </div>
+        </>
+      )}
+
+      {liqAllModal && (
+        <div style={ds.modal} onClick={() => !liqRunning && setLiqAllModal(false)}>
+          <div style={{ ...ds.modalContent, maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+            <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--c-text)', marginBottom: 10 }}>Ejecutar liquidación semanal</h2>
+            <p style={{ fontSize: 13, color: 'var(--c-muted)', marginBottom: 16, lineHeight: 1.5 }}>
+              Se ejecutará <code>liquidacion-semanal</code> para <strong>todos los restaurantes activos con Stripe Connect activa</strong>. Esta acción realizará transferencias Stripe reales y no se puede revertir.
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setLiqAllModal(false)} disabled={liqRunning} style={ds.secondaryBtn}>Cancelar</button>
+              <button onClick={ejecutarLiquidacionGlobal} disabled={liqRunning} style={{ ...ds.primaryBtn, flex: 1 }}>
+                {liqRunning ? 'Ejecutando...' : 'Confirmar y ejecutar'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
