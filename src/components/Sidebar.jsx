@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { LayoutGrid, Store, User, ClipboardList, MessageCircle, DollarSign, Settings, LogOut, Map, Bell, RotateCcw, Truck, FileText } from 'lucide-react'
+import { LayoutGrid, Store, User, Users, ClipboardList, MessageCircle, DollarSign, Settings, LogOut, Map, Bell, RotateCcw, Truck, FileText } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 const menuItems = [
@@ -7,6 +7,7 @@ const menuItems = [
   { id: 'pedidos', label: 'Pedidos', Icon: ClipboardList, group: 'Operación' },
   { id: 'mapa', label: 'Mapa en vivo', Icon: Map, group: 'Operación' },
   { id: 'repartidores', label: 'Repartidores', Icon: Truck, group: 'Red' },
+  { id: 'socios', label: 'Socios', Icon: Users, group: 'Red' },
   { id: 'establecimientos', label: 'Establecimientos', Icon: Store, group: 'Red' },
   { id: 'usuarios', label: 'Usuarios', Icon: User, group: 'Red' },
   { id: 'finanzas', label: 'Finanzas', Icon: DollarSign, group: 'Negocio' },

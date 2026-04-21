@@ -14,6 +14,7 @@ import Notificaciones from './pages/Notificaciones'
 import MapaAdmin from './pages/MapaAdmin'
 import Reembolsos from './pages/Reembolsos'
 import Repartidores from './pages/Repartidores'
+import Socios from './pages/Socios'
 import LandingRiders from './pages/LandingRiders'
 import './index.css'
 
@@ -57,6 +58,7 @@ function AppContent() {
           {seccion === 'finanzas' && <Finanzas />}
           {seccion === 'reembolsos' && <Reembolsos />}
           {seccion === 'repartidores' && <Repartidores />}
+          {seccion === 'socios' && <Socios />}
           {seccion === 'landing-riders' && <LandingRiders />}
           {seccion === 'config' && <Configuracion />}
         </div>
