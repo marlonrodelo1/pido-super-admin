@@ -169,7 +169,16 @@ export default function Establecimientos() {
       }
       const { data, error } = await supabase.functions.invoke('admin-crear-restaurante', { body: payload })
       if (error) {
-        const msg = data?.message || data?.error || error.message || 'Error desconocido'
+        let serverMsg = ''
+        try {
+          const resp = error.context?.response
+          if (resp && typeof resp.json === 'function') {
+            const cloned = resp.clone ? resp.clone() : resp
+            const body = await cloned.json().catch(() => null)
+            if (body) serverMsg = body.message || body.error || JSON.stringify(body)
+          }
+        } catch {}
+        const msg = serverMsg || data?.message || data?.error || error.message || 'Error desconocido'
         setCrearError(msg)
         setSaving(false)
         return
