@@ -167,19 +167,27 @@ export default function Establecimientos() {
           ...(duenoForm.modoPwd === 'manual' ? { password: duenoForm.password } : {}),
         },
       }
-      const { data, error } = await supabase.functions.invoke('admin-crear-restaurante', { body: payload })
-      if (error) {
-        let serverMsg = ''
-        try {
-          const resp = error.context?.response
-          if (resp && typeof resp.json === 'function') {
-            const cloned = resp.clone ? resp.clone() : resp
-            const body = await cloned.json().catch(() => null)
-            if (body) serverMsg = body.message || body.error || JSON.stringify(body)
-          }
-        } catch {}
-        const msg = serverMsg || data?.message || data?.error || error.message || 'Error desconocido'
-        setCrearError(msg)
+      // Llamada con fetch directo para poder leer siempre el body de error.
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      if (!token) {
+        setCrearError('Sesion no valida. Vuelve a entrar.')
+        setSaving(false)
+        return
+      }
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-crear-restaurante`
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify(payload),
+      })
+      const data = await resp.json().catch(() => null)
+      if (!resp.ok) {
+        setCrearError(data?.message || data?.error || `Error ${resp.status}`)
         setSaving(false)
         return
       }
