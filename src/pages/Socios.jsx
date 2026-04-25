@@ -890,7 +890,7 @@ function TabRestaurantes({ socio, vinculaciones, onReload }) {
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: v.destacado ? colors.primary : colors.textMute }}>★</button>
           </span>
           <span style={{ width: 200, textAlign: 'right', display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-            {v.estado === 'solicitada' && (
+            {(v.estado === 'pendiente' || v.estado === 'solicitada') && (
               <>
                 <button onClick={() => setEstado(v, 'activa')} style={{ ...ds.actionBtn, color: colors.success, borderColor: 'rgba(22,163,74,0.3)' }}><Check size={11} /> Aprobar</button>
                 <button onClick={() => setEstado(v, 'rechazada')} style={{ ...ds.actionBtn, color: colors.danger, borderColor: 'rgba(220,38,38,0.3)' }}><X size={11} /> Rechazar</button>

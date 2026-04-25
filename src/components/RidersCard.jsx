@@ -41,11 +41,39 @@ export default function RidersCard({ establecimiento, onChanged }) {
     e.stopPropagation()
     const ok = await confirmar(`¿Desvincular "${nombre}" de este restaurante?`)
     if (!ok) return
+    // 1) Borra la vinculación del rider/carrier ↔ restaurante
     const { error } = await supabase.from('restaurante_riders')
       .delete()
       .eq('establecimiento_id', establecimiento.id)
       .eq('rider_account_id', riderId)
     if (error) return toast('Error: ' + error.message, 'error')
+
+    // 2) Si era el último rider del socio en este restaurante, retira también la
+    //    vinculación comercial socio ↔ restaurante (socio_establecimiento). Si quedan
+    //    otros riders del mismo socio vinculados, dejamos socio_establecimiento intacto.
+    try {
+      const { data: rAcc } = await supabase.from('rider_accounts')
+        .select('socio_id, shipday_api_key').eq('id', riderId).maybeSingle()
+      const socioId = rAcc?.socio_id ||
+        (rAcc?.shipday_api_key
+          ? (await supabase.from('socios').select('id').eq('shipday_api_key', rAcc.shipday_api_key).maybeSingle()).data?.id
+          : null)
+      if (socioId) {
+        const { data: otrosRiders } = await supabase.from('restaurante_riders')
+          .select('rider_account_id, rider_accounts!inner(socio_id)')
+          .eq('establecimiento_id', establecimiento.id)
+          .eq('rider_accounts.socio_id', socioId)
+        if (!otrosRiders || otrosRiders.length === 0) {
+          await supabase.from('socio_establecimiento')
+            .delete()
+            .eq('socio_id', socioId)
+            .eq('establecimiento_id', establecimiento.id)
+        }
+      }
+    } catch (err) {
+      console.warn('[RidersCard] limpieza socio_establecimiento falló:', err)
+    }
+
     toast('Socio desvinculado')
     load()
     onChanged?.()
@@ -293,13 +321,58 @@ function AddRiderModal({ establecimiento, vinculados, onClose, onSaved }) {
   async function vincularExistentes() {
     if (selectedIds.size === 0) return toast('Selecciona al menos uno', 'error')
     setSaving(true)
-    const rows = Array.from(selectedIds).map((id, idx) => ({
+    const ids = Array.from(selectedIds)
+    const rows = ids.map((id, idx) => ({
       establecimiento_id: establecimiento.id,
       rider_account_id: id,
       prioridad: 100 + idx,
     }))
+    // 1) Vincula rider/carrier ↔ restaurante
     const { error } = await supabase.from('restaurante_riders').insert(rows)
     if (error) { toast('Error: ' + error.message, 'error'); setSaving(false); return }
+
+    // 2) Resuelve los socios de esos riders y crea/actualiza socio_establecimiento
+    //    como 'activa' (vinculación iniciada por el superadmin = autoridad superior,
+    //    no requiere aprobación adicional del socio).
+    try {
+      const { data: rAccs } = await supabase.from('rider_accounts')
+        .select('id, socio_id, shipday_api_key').in('id', ids)
+      const socioIds = new Set()
+      for (const ra of rAccs || []) {
+        if (ra.socio_id) {
+          socioIds.add(ra.socio_id)
+        } else if (ra.shipday_api_key) {
+          const { data: s } = await supabase.from('socios')
+            .select('id').eq('shipday_api_key', ra.shipday_api_key).maybeSingle()
+          if (s?.id) socioIds.add(s.id)
+        }
+      }
+      const nowIso = new Date().toISOString()
+      for (const socioId of socioIds) {
+        // Upsert manual: si existe, marcar activa; si no, crear.
+        const { data: existing } = await supabase.from('socio_establecimiento')
+          .select('id, estado').eq('socio_id', socioId)
+          .eq('establecimiento_id', establecimiento.id).maybeSingle()
+        if (existing) {
+          if (existing.estado !== 'activa') {
+            await supabase.from('socio_establecimiento')
+              .update({ estado: 'activa', aceptado_at: nowIso, updated_at: nowIso })
+              .eq('id', existing.id)
+          }
+        } else {
+          await supabase.from('socio_establecimiento').insert({
+            socio_id: socioId,
+            establecimiento_id: establecimiento.id,
+            estado: 'activa',
+            solicitado_at: nowIso,
+            aceptado_at: nowIso,
+          })
+        }
+      }
+    } catch (err) {
+      console.warn('[RidersCard] sync socio_establecimiento falló:', err)
+    }
+
     toast(`${selectedIds.size} socio${selectedIds.size === 1 ? '' : 's'} vinculado${selectedIds.size === 1 ? '' : 's'}`)
     onSaved()
   }
