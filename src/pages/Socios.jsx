@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { ds, colors } from '../lib/darkStyles'
-import { Users, ExternalLink, Plus, Eye, EyeOff, ChevronDown, ChevronUp, X, Save } from 'lucide-react'
+import { Users, ExternalLink, Plus, Eye, EyeOff, ChevronDown, ChevronUp, X, Save, KeyRound } from 'lucide-react'
 import { toast, confirmar } from '../App'
+import ResetPasswordModal from '../components/ResetPasswordModal'
 
 const ESTADOS_VINC = ['pendiente', 'activa', 'rechazada']
 
@@ -24,6 +25,7 @@ export default function Socios() {
   const [editLimite, setEditLimite] = useState({})
 
   const [showNuevo, setShowNuevo] = useState(false)
+  const [resetPwdSocio, setResetPwdSocio] = useState(null) // socio object o null
 
   // Filtros vinculaciones
   const [fEstado, setFEstado] = useState('todos')
@@ -308,6 +310,20 @@ export default function Socios() {
                         <DetailRow label="Carrier ID">
                           <span style={{ fontSize: 12, color: colors.textDim, fontFamily: 'monospace' }}>{s.shipday_carrier_id || '—'}</span>
                         </DetailRow>
+                        <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${colors.border}` }}>
+                          <button
+                            onClick={() => setResetPwdSocio(s)}
+                            disabled={!s.user_id}
+                            title={s.user_id ? 'Restablecer contraseña del socio' : 'Socio sin cuenta de acceso'}
+                            style={{
+                              ...ds.secondaryBtn,
+                              opacity: s.user_id ? 1 : 0.4,
+                              display: 'inline-flex', alignItems: 'center', gap: 6,
+                            }}
+                          >
+                            <KeyRound size={13} /> Restablecer contraseña
+                          </button>
+                        </div>
                       </div>
 
                       <div style={{ background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 10, padding: 12 }}>
@@ -413,6 +429,17 @@ export default function Socios() {
       )}
 
       {showNuevo && <NuevoSocioModal onClose={() => setShowNuevo(false)} onSaved={() => { setShowNuevo(false); load() }} />}
+
+      {resetPwdSocio && resetPwdSocio.user_id && (
+        <ResetPasswordModal
+          userId={resetPwdSocio.user_id}
+          userEmail={resetPwdSocio.email}
+          userLabel={resetPwdSocio.nombre_comercial || resetPwdSocio.nombre || 'Socio'}
+          userRole="socio"
+          hasAuthAccount={true}
+          onClose={() => setResetPwdSocio(null)}
+        />
+      )}
     </div>
   )
 }

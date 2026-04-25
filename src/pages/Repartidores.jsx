@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { ds } from '../lib/darkStyles'
-import { Plus, CheckCircle2, AlertCircle, Copy, Truck, X, Check, Ban } from 'lucide-react'
+import { Plus, CheckCircle2, AlertCircle, Copy, Truck, X, Check, Ban, KeyRound } from 'lucide-react'
 import { toast, confirmar } from '../App'
+import ResetPasswordModal from '../components/ResetPasswordModal'
 
 const WEBHOOK_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/shipday-webhook`
 
@@ -357,6 +358,8 @@ function RiderDetalle({ rider, onBack, onSaved, origenNombre }) {
   const [edit, setEdit] = useState(false)
   const [restaurantes, setRestaurantes] = useState([])
   const [st, setSt] = useState(null)
+  const [resetPwd, setResetPwd] = useState(false)
+  const [authUser, setAuthUser] = useState(null) // { id, email } si rider tiene cuenta de acceso
 
   useEffect(() => { load() }, [rider.id])
 
@@ -369,6 +372,17 @@ function RiderDetalle({ rider, onBack, onSaved, origenNombre }) {
     ])
     setRestaurantes(rrRes.data || [])
     setSt(stRes.data)
+
+    // Buscar si el rider tiene cuenta de acceso (auth.users) — vía email coincidente en `usuarios`.
+    // Los riders en `rider_accounts` no tienen FK directa a auth, pero si su email aparece en
+    // `usuarios` (cliente, socio o lo que sea) y comparten email, podemos resetear esa cuenta.
+    if (rider.email) {
+      const { data } = await supabase.from('usuarios')
+        .select('id, email, rol').eq('email', rider.email.toLowerCase()).maybeSingle()
+      setAuthUser(data || null)
+    } else {
+      setAuthUser(null)
+    }
   }
 
   const estadoInfo = ESTADOS[rider.estado] || ESTADOS.pendiente
@@ -397,6 +411,14 @@ function RiderDetalle({ rider, onBack, onSaved, origenNombre }) {
           ) : (
             <span style={{ ...ds.badge, background: 'var(--c-surface2)', color: 'var(--c-muted)', fontSize: 12, padding: '6px 12px' }}>○ Offline</span>
           ))}
+          <button
+            onClick={() => setResetPwd(true)}
+            disabled={!authUser?.id}
+            title={authUser?.id ? 'Restablecer contraseña' : 'Este rider no tiene cuenta de acceso (solo Shipday)'}
+            style={{ ...ds.secondaryBtn, opacity: authUser?.id ? 1 : 0.4, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
+            <KeyRound size={13} /> Contraseña
+          </button>
           <button onClick={() => setEdit(true)} style={ds.primaryBtn}>Editar</button>
         </div>
 
@@ -440,6 +462,17 @@ function RiderDetalle({ rider, onBack, onSaved, origenNombre }) {
       </div>
 
       {edit && <RiderModal rider={rider} onClose={() => setEdit(false)} onSaved={() => { setEdit(false); onSaved(); load() }} />}
+
+      {resetPwd && authUser?.id && (
+        <ResetPasswordModal
+          userId={authUser.id}
+          userEmail={authUser.email || rider.email}
+          userLabel={rider.nombre}
+          userRole={authUser.rol || 'rider'}
+          hasAuthAccount={true}
+          onClose={() => setResetPwd(false)}
+        />
+      )}
     </div>
   )
 }

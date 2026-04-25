@@ -2,12 +2,13 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { uploadImage } from '../lib/upload'
 import { ds } from '../lib/darkStyles'
-import { Plus, X, Upload, Save, Trash2 } from 'lucide-react'
+import { Plus, X, Upload, Save, Trash2, KeyRound } from 'lucide-react'
 import { toast, confirmar } from '../App'
 import CargaMasivaModal from '../components/CargaMasivaModal'
 import ImportUrlModal from '../components/ImportUrlModal'
 import RidersCard from '../components/RidersCard'
 import PlanTiendaCard from '../components/PlanTiendaCard'
+import ResetPasswordModal from '../components/ResetPasswordModal'
 
 const CATEGORIAS_PADRE = ['comida', 'farmacia', 'marketplace']
 
@@ -35,6 +36,16 @@ export default function Establecimientos() {
   const [resenas, setResenas] = useState([])
   const [showCargaMasiva, setShowCargaMasiva] = useState(false)
   const [showImportUrl, setShowImportUrl] = useState(false)
+  const [resetPwd, setResetPwd] = useState(false)
+  const [ownerEmail, setOwnerEmail] = useState(null)
+
+  useEffect(() => {
+    if (!detalle?.user_id) { setOwnerEmail(null); return }
+    let cancelled = false
+    supabase.from('usuarios').select('email').eq('id', detalle.user_id).maybeSingle()
+      .then(({ data }) => { if (!cancelled) setOwnerEmail(data?.email || null) })
+    return () => { cancelled = true }
+  }, [detalle?.user_id])
   const logoRef = useRef()
   const bannerRef = useRef()
   const prodImgRef = useRef()
@@ -230,7 +241,17 @@ export default function Establecimientos() {
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               {!editando ? (
-                <button onClick={() => { setForm(initForm(detalle)); setEditando(true) }} style={ds.primaryBtn}>Editar</button>
+                <>
+                  <button
+                    onClick={() => setResetPwd(true)}
+                    disabled={!detalle.user_id}
+                    title={detalle.user_id ? 'Restablecer contraseña del dueño' : 'Sin dueño vinculado'}
+                    style={{ ...ds.secondaryBtn, display: 'flex', alignItems: 'center', gap: 4, opacity: detalle.user_id ? 1 : 0.4 }}
+                  >
+                    <KeyRound size={14} /> Contraseña
+                  </button>
+                  <button onClick={() => { setForm(initForm(detalle)); setEditando(true) }} style={ds.primaryBtn}>Editar</button>
+                </>
               ) : (
                 <>
                   <button onClick={guardarEstablecimiento} disabled={saving} style={{ ...ds.primaryBtn, display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -476,6 +497,17 @@ export default function Establecimientos() {
               </div>
             </div>
           </div>
+        )}
+
+        {resetPwd && detalle.user_id && (
+          <ResetPasswordModal
+            userId={detalle.user_id}
+            userEmail={ownerEmail || detalle.email}
+            userLabel={`Dueño de ${detalle.nombre}`}
+            userRole="restaurante"
+            hasAuthAccount={true}
+            onClose={() => setResetPwd(false)}
+          />
         )}
       </div>
     )

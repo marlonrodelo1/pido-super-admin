@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { ds } from '../lib/darkStyles'
-import { Save, X } from 'lucide-react'
+import { Save, X, KeyRound } from 'lucide-react'
+import ResetPasswordModal from '../components/ResetPasswordModal'
 
 export default function Usuarios() {
   const [items, setItems] = useState([])
@@ -12,6 +13,7 @@ export default function Usuarios() {
   const [form, setForm] = useState({})
   const [saving, setSaving] = useState(false)
   const [guardado, setGuardado] = useState(false)
+  const [resetPwd, setResetPwd] = useState(false)
 
   useEffect(() => { load() }, [])
 
@@ -77,7 +79,12 @@ export default function Usuarios() {
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               {!editando ? (
-                <button onClick={() => { setForm({ nombre: detalle.nombre || '', apellido: detalle.apellido || '', telefono: detalle.telefono || '', direccion: detalle.direccion || '', metodo_pago_preferido: detalle.metodo_pago_preferido || 'tarjeta' }); setEditando(true) }} style={ds.primaryBtn}>Editar</button>
+                <>
+                  <button onClick={() => setResetPwd(true)} style={{ ...ds.secondaryBtn, display: 'flex', alignItems: 'center', gap: 4 }} title="Restablecer contraseña">
+                    <KeyRound size={14} /> Contraseña
+                  </button>
+                  <button onClick={() => { setForm({ nombre: detalle.nombre || '', apellido: detalle.apellido || '', telefono: detalle.telefono || '', direccion: detalle.direccion || '', metodo_pago_preferido: detalle.metodo_pago_preferido || 'tarjeta' }); setEditando(true) }} style={ds.primaryBtn}>Editar</button>
+                </>
               ) : (
                 <>
                   <button onClick={guardarUsuario} disabled={saving} style={{ ...ds.primaryBtn, display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -159,6 +166,17 @@ export default function Usuarios() {
           ))}
           {pedidosUsuario.length === 0 && <div style={{ ...ds.card, textAlign: 'center', padding: 32, color: 'var(--c-muted)', fontSize: 13 }}>Sin pedidos</div>}
         </div>
+
+        {resetPwd && (
+          <ResetPasswordModal
+            userId={detalle.id}
+            userEmail={detalle.email}
+            userLabel={`${detalle.nombre || ''} ${detalle.apellido || ''}`.trim() || 'Usuario'}
+            userRole={detalle.rol || 'cliente'}
+            hasAuthAccount={true}
+            onClose={() => setResetPwd(false)}
+          />
+        )}
       </div>
     )
   }
