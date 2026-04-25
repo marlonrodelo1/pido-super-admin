@@ -8,6 +8,7 @@ import CargaMasivaModal from '../components/CargaMasivaModal'
 import ImportUrlModal from '../components/ImportUrlModal'
 import RidersCard from '../components/RidersCard'
 import PlanTiendaCard from '../components/PlanTiendaCard'
+import HorarioEstadoCard from '../components/HorarioEstadoCard'
 import ResetPasswordModal from '../components/ResetPasswordModal'
 import AddressAutocomplete from '../components/AddressAutocomplete'
 
@@ -504,10 +505,16 @@ export default function Establecimientos() {
           )}
         </div>
 
-        {/* Repartidores vinculados */}
+        {/* Socios vinculados */}
         <RidersCard
           establecimiento={detalle}
           onChanged={() => load()}
+        />
+
+        {/* Horario y estado */}
+        <HorarioEstadoCard
+          establecimiento={detalle}
+          onChanged={async () => { const { data } = await supabase.from('establecimientos').select('*').eq('id', detalle.id).single(); if (data) setDetalle(data); load() }}
         />
 
         {/* Plan Tienda Pública */}
