@@ -4,7 +4,7 @@ import { ds, colors } from '../lib/darkStyles'
 import {
   Users, ExternalLink, Plus, Eye, EyeOff, ChevronRight, ArrowLeft, X, Save, KeyRound,
   Search, CircleDot, Truck, Store, ClipboardList, Wallet, Settings, FileText,
-  Pencil, Check, AlertCircle, Copy, Phone, Mail, Globe, AtSign, Music,
+  Pencil, Check, AlertCircle, Copy, Phone, Mail, Globe, AtSign, Music, RefreshCw,
 } from 'lucide-react'
 import { toast, confirmar } from '../App'
 import ResetPasswordModal from '../components/ResetPasswordModal'
@@ -119,31 +119,40 @@ export default function Socios() {
     setBalances(lastMap)
   }
 
-  // Determina los rider_accounts de un socio:
-  // 1) Match por shipday_api_key
-  // 2) Match por establecimiento_origen_id si pertenece a un restaurante vinculado al socio
+  // Determina los rider_accounts (carriers) de un socio:
+  // 1) Match directo por rider_accounts.socio_id (prioritario, modelo nuevo)
+  // 2) Fallback: match por shipday_api_key (compatibilidad pre-migración)
+  // 3) Fallback: establecimiento_origen_id (legacy, anterior al modelo socio)
   const ridersBySocio = useMemo(() => {
     const map = {}
     socios.forEach(s => {
       const ridersDelSocio = []
 
-      // 1) Match por API key
+      // 1) Match directo por socio_id
+      riderAccounts.forEach(r => {
+        if (r.socio_id && r.socio_id === s.id) {
+          ridersDelSocio.push({ ...r, _matchBy: 'socio_id' })
+        }
+      })
+
+      // 2) Match por API key (riders que aún no tienen socio_id seteado)
       if (s.shipday_api_key) {
         riderAccounts.forEach(r => {
-          if (r.shipday_api_key === s.shipday_api_key) {
-            ridersDelSocio.push({ ...r, _matchBy: 'api_key' })
+          if (!r.socio_id && r.shipday_api_key === s.shipday_api_key) {
+            if (!ridersDelSocio.some(x => x.id === r.id)) {
+              ridersDelSocio.push({ ...r, _matchBy: 'api_key' })
+            }
           }
         })
       }
 
-      // 2) Match por establecimiento_origen_id
+      // 3) Match por establecimiento_origen_id (legacy)
       const estIdsSocio = vinculaciones
         .filter(v => v.socio_id === s.id && v.estado === 'activa')
         .map(v => v.establecimiento_id)
       if (estIdsSocio.length > 0) {
         riderAccounts.forEach(r => {
-          if (r.establecimiento_origen_id && estIdsSocio.includes(r.establecimiento_origen_id)) {
-            // No duplicar si ya está por API key
+          if (!r.socio_id && r.establecimiento_origen_id && estIdsSocio.includes(r.establecimiento_origen_id)) {
             if (!ridersDelSocio.some(x => x.id === r.id)) {
               ridersDelSocio.push({ ...r, _matchBy: 'establecimiento_origen' })
             }
@@ -327,6 +336,12 @@ export default function Socios() {
                     {!s.activo && <span style={{ ...ds.badge, padding: '1px 6px', fontSize: 9 }}>INACTIVO</span>}
                     {hasMarketplace && (
                       <span title="Marketplace público abierto" style={{ width: 6, height: 6, borderRadius: '50%', background: colors.success }} />
+                    )}
+                    {s.facturacion_multirider_activa && s.multirider_estado === 'impago' && (
+                      <span title="Suscripción multi-rider impagada" style={{ ...ds.badge, padding: '1px 6px', fontSize: 9, background: 'rgba(220,38,38,0.15)', color: '#dc2626', borderColor: 'rgba(220,38,38,0.4)' }}>IMPAGO 39€</span>
+                    )}
+                    {s.facturacion_multirider_activa && s.multirider_estado !== 'impago' && (
+                      <span title="Plan multi-rider activo (39€/mes)" style={{ ...ds.badge, padding: '1px 6px', fontSize: 9, background: 'rgba(234,88,12,0.12)', color: '#ea580c', borderColor: 'rgba(234,88,12,0.3)' }}>39€/MES</span>
                     )}
                   </div>
                   <div style={{ fontSize: 11, color: colors.textMute, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -564,6 +579,7 @@ function TabResumen({ socio, balance }) {
 // ──────────────────────────────────────────────────────────────────────────────
 function TabRiders({ socio, riders, riderStatus, onReload }) {
   const [pedidosCount, setPedidosCount] = useState({}) // rider_account_id -> count entregados
+  const [syncing, setSyncing] = useState(false)
 
   useEffect(() => {
     if (riders.length === 0) return
@@ -579,33 +595,119 @@ function TabRiders({ socio, riders, riderStatus, onReload }) {
     })()
   }, [riders.map(r => r.id).join(',')])
 
-  if (riders.length === 0) {
+  async function sincronizar() {
+    if (syncing) return
+    if (!socio.shipday_api_key) {
+      toast('El socio no tiene shipday_api_key configurada', 'error')
+      return
+    }
+    setSyncing(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-socio-carriers', {
+        body: { socio_id: socio.id },
+      })
+      if (error) {
+        toast('Error sincronizando: ' + error.message, 'error')
+      } else if (data?.success) {
+        toast(
+          `Sincronizado: ${data.n_activos} carrier${data.n_activos === 1 ? '' : 's'} ` +
+          `(${data.n_nuevos} nuevo${data.n_nuevos === 1 ? '' : 's'}, ` +
+          `${data.n_marcados_inactivos} marcado${data.n_marcados_inactivos === 1 ? '' : 's'} inactivo${data.n_marcados_inactivos === 1 ? '' : 's'})`
+        )
+        onReload?.()
+      } else {
+        toast('Respuesta inesperada de Shipday', 'error')
+      }
+    } catch (e) {
+      toast('Error: ' + (e?.message || 'desconocido'), 'error')
+    } finally {
+      setSyncing(false)
+    }
+  }
+
+  const ridersActivos = riders.filter(r => r.activa !== false && r.estado === 'activa')
+  const multiRider = ridersActivos.length >= 2
+  const single = ridersActivos.length === 1
+  const sinRiders = riders.length === 0
+
+  // Header común con botón sincronizar
+  const SyncHeader = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: colors.text }}>
+          Carriers en la cuenta Shipday del socio
+        </div>
+        <div style={{ fontSize: 11.5, color: colors.textMute, marginTop: 2 }}>
+          {socio.shipday_api_key
+            ? <>API key: <code style={{ fontSize: 11 }}>{socio.shipday_api_key.slice(0, 10)}…</code></>
+            : <span style={{ color: colors.danger }}>Sin shipday_api_key configurada</span>}
+        </div>
+      </div>
+      <button
+        onClick={sincronizar}
+        disabled={syncing || !socio.shipday_api_key}
+        style={{
+          ...ds.primaryBtn,
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          opacity: (syncing || !socio.shipday_api_key) ? 0.6 : 1,
+          cursor: (syncing || !socio.shipday_api_key) ? 'not-allowed' : 'pointer',
+        }}
+        title="Lee los carriers en Shipday y los sincroniza con la base de datos">
+        <RefreshCw size={14} className={syncing ? 'socio-spin' : ''} />
+        {syncing ? 'Sincronizando…' : 'Sincronizar carriers'}
+        <style>{`@keyframes socio-spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } } .socio-spin { animation: socio-spin 1s linear infinite; }`}</style>
+      </button>
+    </div>
+  )
+
+  if (sinRiders) {
     return (
-      <div style={{ ...ds.card, padding: 32, textAlign: 'center' }}>
-        <Truck size={32} color={colors.textMute} style={{ marginBottom: 10 }} />
-        <div style={{ fontSize: 14, fontWeight: 600, color: colors.text, marginBottom: 4 }}>
-          Sin riders vinculados
+      <div>
+        {SyncHeader}
+        <div style={{ ...ds.card, padding: 32, textAlign: 'center' }}>
+          <Truck size={32} color={colors.textMute} style={{ marginBottom: 10 }} />
+          <div style={{ fontSize: 14, fontWeight: 600, color: colors.text, marginBottom: 4 }}>
+            Sin carriers sincronizados
+          </div>
+          <div style={{ fontSize: 12.5, color: colors.textMute, lineHeight: 1.5, maxWidth: 520, margin: '0 auto' }}>
+            Pulsa <b>Sincronizar carriers</b> para leer los carriers que el socio tiene en su cuenta Shipday.
+            {!socio.shipday_api_key && (
+              <> Antes hay que configurar la <code>shipday_api_key</code> del socio en la pestaña Configuración.</>
+            )}
+          </div>
         </div>
-        <div style={{ fontSize: 12.5, color: colors.textMute, lineHeight: 1.5, maxWidth: 480, margin: '0 auto' }}>
-          Este socio aún no tiene cuenta Shipday vinculada. Configura su <code>shipday_api_key</code> en la pestaña
-          Configuración o crea un rider desde un establecimiento de su red.
-        </div>
+        <ExplicacionRiders />
       </div>
     )
   }
 
-  // Si solo hay 1 rider, lo mostramos como tarjeta destacada
-  const single = riders.length === 1
-
   return (
     <div>
+      {SyncHeader}
+
+      {multiRider && (
+        <div style={{
+          ...ds.card, padding: 14, marginBottom: 14,
+          borderColor: 'rgba(234,88,12,0.45)',
+          background: 'rgba(234,88,12,0.10)',
+        }}>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#ea580c', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
+            ⚠ Plan multi-rider
+          </div>
+          <div style={{ fontSize: 12.5, color: colors.textDim, lineHeight: 1.5 }}>
+            Este socio tiene <b>{ridersActivos.length} riders activos</b> en Shipday.
+            Plan multi-rider: <b>39 €/mes</b> (gestión de facturación pendiente de implementar).
+          </div>
+        </div>
+      )}
+
       {single && (
         <div style={{ ...ds.card, padding: 16, marginBottom: 14, borderColor: colors.primaryBorder, background: colors.primarySoft }}>
           <div style={{ fontSize: 11.5, fontWeight: 700, color: colors.primary, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
             El socio reparte personalmente
           </div>
           <div style={{ fontSize: 12.5, color: colors.textDim }}>
-            Solo hay 1 cuenta Shipday. Si añade más de 1 rider, se aplica la tarifa multi-rider de 39 €/mes.
+            Solo hay 1 carrier en su cuenta Shipday. Si añade más de 1, se aplica la tarifa multi-rider de 39 €/mes.
           </div>
         </div>
       )}
@@ -616,13 +718,13 @@ function TabRiders({ socio, riders, riderStatus, onReload }) {
           const isOnline = !!st?.is_online
           const estadoStyle = ESTADO_BADGE[r.estado] || ESTADO_BADGE.pendiente
           return (
-            <div key={r.id} style={{ ...ds.card, padding: 14 }}>
+            <div key={r.id} style={{ ...ds.card, padding: 14, opacity: r.activa === false ? 0.6 : 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                 <div style={{ position: 'relative', flexShrink: 0 }}>
                   <div style={{ width: 40, height: 40, borderRadius: 10, background: colors.elev2, display: 'grid', placeItems: 'center', fontWeight: 700, color: colors.textDim, fontSize: 14 }}>
                     {(r.nombre || 'R').charAt(0).toUpperCase()}
                   </div>
-                  {r.estado === 'activa' && (
+                  {r.estado === 'activa' && r.activa !== false && (
                     <span style={{
                       position: 'absolute', bottom: -1, right: -1,
                       width: 12, height: 12, borderRadius: '50%',
@@ -638,12 +740,17 @@ function TabRiders({ socio, riders, riderStatus, onReload }) {
                   <div style={{ fontSize: 11, color: colors.textMute, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {r.email || r.telefono || '—'}
                   </div>
+                  {r.shipday_carrier_id && (
+                    <div style={{ fontSize: 10, color: colors.textFaint, fontFamily: 'monospace', marginTop: 2 }}>
+                      carrier #{r.shipday_carrier_id}
+                    </div>
+                  )}
                 </div>
-                <span style={{ ...ds.badge, ...estadoStyle }}>{r.estado}</span>
+                <span style={{ ...ds.badge, ...estadoStyle }}>{r.activa === false ? 'inactivo' : r.estado}</span>
               </div>
 
               <div style={{ fontSize: 11.5, color: colors.textMute, lineHeight: 1.6 }}>
-                {r.estado === 'activa' && (
+                {r.estado === 'activa' && r.activa !== false && (
                   <div>
                     <b style={{ color: isOnline ? colors.success : colors.textDim }}>{isOnline ? 'Online' : 'Offline'}</b>
                     {st?.last_checked && <span> · revisado {fmtRelative(st.last_checked)}</span>}
@@ -657,7 +764,12 @@ function TabRiders({ socio, riders, riderStatus, onReload }) {
                 <div>Pedidos entregados: <b style={{ color: colors.text }}>{pedidosCount[r.id] || 0}</b></div>
                 {r._matchBy === 'establecimiento_origen' && (
                   <div style={{ fontSize: 10.5, color: colors.warning, marginTop: 4 }}>
-                    ⚠ Vinculado por restaurante origen, no por API key
+                    ⚠ Vinculado por restaurante origen (legacy)
+                  </div>
+                )}
+                {r._matchBy === 'api_key' && !r.shipday_carrier_id && (
+                  <div style={{ fontSize: 10.5, color: colors.warning, marginTop: 4 }}>
+                    ⚠ Sin carrier_id — sincroniza para asociarlo a Shipday
                   </div>
                 )}
               </div>
@@ -666,10 +778,21 @@ function TabRiders({ socio, riders, riderStatus, onReload }) {
         })}
       </div>
 
-      <div style={{ marginTop: 14, fontSize: 11.5, color: colors.textMute, lineHeight: 1.5 }}>
-        Para añadir un rider nuevo a este socio, crea la cuenta desde un restaurante de su red o desde la pestaña
-        Configuración. Si el socio gestiona varios riders dentro de su cuenta Shipday, no aparecerán aquí
-        (relación por <code>shipday_api_key</code>).
+      <ExplicacionRiders />
+    </div>
+  )
+}
+
+function ExplicacionRiders() {
+  return (
+    <div style={{ ...ds.card, padding: 14, marginTop: 14, background: 'transparent' }}>
+      <div style={{ fontSize: 12, fontWeight: 700, color: colors.text, marginBottom: 6 }}>
+        Cómo gestionar los riders del socio
+      </div>
+      <div style={{ fontSize: 12, color: colors.textMute, lineHeight: 1.55 }}>
+        Estos son los carriers dentro de la cuenta Shipday del socio. Para añadir más riders, el socio debe
+        crearlos desde su propio panel de Shipday — aparecerán aquí al pulsar <b>Sincronizar carriers</b>.
+        Pidoo no crea ni gestiona cuentas Shipday adicionales: <b>1 socio = 1 cuenta Shipday = 1 API key</b>.
       </div>
     </div>
   )
@@ -993,18 +1116,8 @@ function TabConfig({ socio, riders, riderStatus }) {
         </DetailRow>
       </div>
 
-      <div style={{ ...ds.card, padding: 18 }}>
-        <h3 style={ds.h2}>Subscripción multi-rider</h3>
-        <div style={{ fontSize: 12.5, color: colors.textMute, lineHeight: 1.6, marginBottom: 10 }}>
-          Plan 39 €/mes cuando el socio tiene 2+ riders activos en Shipday.
-        </div>
-        <div style={{
-          padding: '10px 12px', background: colors.elev2, borderRadius: 8,
-          fontSize: 12, color: colors.textDim, border: `1px dashed ${colors.border}`,
-        }}>
-          ⏳ Pendiente de implementar (facturación automática multi-rider).
-        </div>
-      </div>
+      <SuscripcionMultiriderCard socio={socio} />
+
 
       <div style={{ ...ds.card, padding: 18 }}>
         <h3 style={ds.h2}>Datos fiscales</h3>
@@ -1437,3 +1550,169 @@ function NuevoSocioModal({ onClose, onSaved }) {
     </div>
   )
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Suscripción multi-rider (39 €/mes) — UI superadmin
+// ──────────────────────────────────────────────────────────────────────────────
+function SuscripcionMultiriderCard({ socio }) {
+  const [busy, setBusy] = useState(false)
+
+  const fmtFecha = (iso) => {
+    if (!iso) return '—'
+    try { return new Date(iso).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) }
+    catch { return '—' }
+  }
+
+  const callFn = async (slug, body) => {
+    const { data: { session } } = await supabase.auth.getSession()
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${slug}`
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session?.access_token || ''}`,
+        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify(body || {}),
+    })
+    const j = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(j.error || 'Error')
+    return j
+  }
+
+  const forzarSync = async () => {
+    setBusy(true)
+    try {
+      await callFn('check-socio-riders-count', { socio_id: socio.id })
+      toast('Sync de carriers completado')
+      // Refrescar la página entera no es ideal — recomendamos al usuario refrescar
+      window.location.reload()
+    } catch (e) {
+      toast(e.message || 'Error al sincronizar', 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const cancelarSub = async () => {
+    if (!await confirmar('¿Cancelar la suscripción multi-rider al final del periodo en curso?')) return
+    setBusy(true)
+    try {
+      const r = await callFn('gestionar-facturacion-socio-multirider', { socio_id: socio.id, accion: 'cancelar' })
+      toast(`Cancelación programada${r.ends_at ? ` — termina ${fmtFecha(r.ends_at)}` : ''}`)
+    } catch (e) {
+      toast(e.message || 'Error al cancelar', 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const marcarPagado = async () => {
+    if (!await confirmar('Marcar como pagado manualmente. ¿Continuar?')) return
+    setBusy(true)
+    try {
+      await supabase.from('socios').update({
+        multirider_estado: 'al_dia',
+        marketplace_activo: true,
+      }).eq('id', socio.id)
+      toast('Marcado como al día')
+      window.location.reload()
+    } catch (e) {
+      toast(e.message || 'Error', 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const n = socio.n_riders_actual ?? 1
+  const activa = !!socio.facturacion_multirider_activa
+  const subId = socio.stripe_subscription_multirider_id
+  const estado = socio.multirider_estado || 'al_dia'
+  const ultimoCheck = socio.multirider_ultimo_check
+  const proximoPago = socio.multirider_proximo_pago
+
+  let estadoLabel = '—'
+  let estadoColor = colors.textDim
+  let estadoBg = colors.elev2
+  if (!activa && n <= 1) {
+    estadoLabel = 'No aplica (1 rider)'
+    estadoColor = colors.textMute
+  } else if (!activa && n >= 2) {
+    estadoLabel = 'Pendiente de activar'
+    estadoColor = '#ea580c'
+    estadoBg = 'rgba(234,88,12,0.12)'
+  } else if (activa && estado === 'al_dia') {
+    estadoLabel = 'Activa · Al día'
+    estadoColor = '#16a34a'
+    estadoBg = 'rgba(22,163,74,0.12)'
+  } else if (activa && (estado === 'reintento1' || estado === 'reintento2')) {
+    estadoLabel = `Activa · Reintento ${estado === 'reintento2' ? '2/3' : '1/3'}`
+    estadoColor = '#ea580c'
+    estadoBg = 'rgba(234,88,12,0.14)'
+  } else if (activa && estado === 'impago') {
+    estadoLabel = 'Impago · Marketplace desactivado'
+    estadoColor = '#dc2626'
+    estadoBg = 'rgba(220,38,38,0.14)'
+  }
+
+  return (
+    <div style={{ ...ds.card, padding: 18 }}>
+      <h3 style={ds.h2}>Suscripción multi-rider</h3>
+      <div style={{ fontSize: 12.5, color: colors.textMute, lineHeight: 1.6, marginBottom: 12 }}>
+        Plan 39 €/mes cuando el socio tiene 2+ riders activos en Shipday.
+      </div>
+
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '10px 12px', background: estadoBg, borderRadius: 8,
+        border: `1px solid ${colors.border}`, marginBottom: 12,
+      }}>
+        <span style={{ fontSize: 12.5, fontWeight: 600, color: estadoColor }}>{estadoLabel}</span>
+        <span style={{ fontSize: 11.5, color: colors.textDim }}>
+          {n} rider{n === 1 ? '' : 's'} activo{n === 1 ? '' : 's'}
+        </span>
+      </div>
+
+      <div style={{ display: 'grid', gap: 8, fontSize: 12, marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', color: colors.textDim }}>
+          <span>Subscription ID</span>
+          <span style={{ fontFamily: 'monospace', fontSize: 11 }}>{subId || '—'}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', color: colors.textDim }}>
+          <span>Próximo cargo</span>
+          <span>{fmtFecha(proximoPago)}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', color: colors.textDim }}>
+          <span>Último sync carriers</span>
+          <span>{ultimoCheck ? fmtRelative(ultimoCheck) : 'Sin datos'}</span>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <button onClick={forzarSync} disabled={busy} style={{ ...ds.secondaryBtn, opacity: busy ? 0.5 : 1 }}>
+          🔄 Forzar sync de carriers
+        </button>
+        {activa && (
+          <button onClick={cancelarSub} disabled={busy} style={{ ...ds.secondaryBtn, opacity: busy ? 0.5 : 1 }}>
+            Cancelar al periodo
+          </button>
+        )}
+        {estado === 'impago' && (
+          <button
+            onClick={marcarPagado}
+            disabled={busy}
+            style={{
+              ...ds.primaryBtn,
+              background: '#dc2626',
+              borderColor: '#dc2626',
+              opacity: busy ? 0.5 : 1,
+            }}
+          >
+            Marcar como pagado manualmente
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+

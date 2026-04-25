@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { ds } from '../lib/darkStyles'
-import { Plus, Truck, X, Trash2, CheckCircle2, AlertCircle, Phone, Mail, Calendar, Package } from 'lucide-react'
+import { Plus, Truck, X, Trash2, CheckCircle2, AlertCircle, Phone, Mail, Calendar, Package, Copy, ExternalLink } from 'lucide-react'
 import { toast, confirmar } from '../App'
 
 export default function RidersCard({ establecimiento, onChanged }) {
@@ -268,18 +268,21 @@ function AddRiderModal({ establecimiento, vinculados, onClose, onSaved }) {
   const [buscar, setBuscar] = useState('')
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [saving, setSaving] = useState(false)
-
-  // Nuevo rider
-  const [nombre, setNombre] = useState('')
-  const [telefono, setTelefono] = useState('')
-  const [apiKey, setApiKey] = useState('')
-  const [verifying, setVerifying] = useState(false)
-  const [verifyResult, setVerifyResult] = useState(null)
+  const URL_REGISTRO_SOCIOS = 'https://socio.pidoo.es'
 
   useEffect(() => {
     supabase.from('rider_accounts').select('*').eq('activa', true).eq('estado', 'activa').order('nombre')
       .then(({ data }) => setRiders(data || []))
   }, [])
+
+  async function copiarUrl() {
+    try {
+      await navigator.clipboard.writeText(URL_REGISTRO_SOCIOS)
+      toast('URL copiada al portapapeles')
+    } catch {
+      toast('No se pudo copiar', 'error')
+    }
+  }
 
   function toggle(id) {
     const s = new Set(selectedIds)
@@ -298,48 +301,6 @@ function AddRiderModal({ establecimiento, vinculados, onClose, onSaved }) {
     const { error } = await supabase.from('restaurante_riders').insert(rows)
     if (error) { toast('Error: ' + error.message, 'error'); setSaving(false); return }
     toast(`${selectedIds.size} socio${selectedIds.size === 1 ? '' : 's'} vinculado${selectedIds.size === 1 ? '' : 's'}`)
-    onSaved()
-  }
-
-  async function verificarNuevo() {
-    const key = apiKey.trim()
-    if (!key) return toast('Pega la API key primero', 'error')
-    setVerifying(true)
-    setVerifyResult(null)
-    try {
-      const resp = await fetch('https://api.shipday.com/carriers', {
-        method: 'GET', headers: { 'Authorization': `Basic ${key}` },
-      })
-      if (!resp.ok) {
-        setVerifyResult({ ok: false, msg: `Key inválida (HTTP ${resp.status})` })
-      } else {
-        const data = await resp.json()
-        const list = Array.isArray(data) ? data : (data.carriers || data.data || [])
-        setVerifyResult({ ok: true, total: list.length })
-      }
-    } catch {
-      setVerifyResult({ ok: false, msg: 'Error de red' })
-    }
-    setVerifying(false)
-  }
-
-  async function crearYVincular() {
-    if (!nombre.trim() || !apiKey.trim()) return toast('Nombre y API key obligatorios', 'error')
-    setSaving(true)
-    const { data: nuevo, error: e1 } = await supabase.from('rider_accounts')
-      .insert({
-        nombre: nombre.trim(), telefono: telefono.trim() || null,
-        shipday_api_key: apiKey.trim(),
-        activa: true, estado: 'activa', aprobado_en: new Date().toISOString(),
-        establecimiento_origen_id: establecimiento.id,
-      })
-      .select().single()
-    if (e1) { toast('Error: ' + e1.message, 'error'); setSaving(false); return }
-    const { error: e2 } = await supabase.from('restaurante_riders').insert({
-      establecimiento_id: establecimiento.id, rider_account_id: nuevo.id, prioridad: 100,
-    })
-    if (e2) { toast('Error vinculando: ' + e2.message, 'error'); setSaving(false); return }
-    toast('Socio creado y vinculado')
     onSaved()
   }
 
@@ -415,38 +376,56 @@ function AddRiderModal({ establecimiento, vinculados, onClose, onSaved }) {
             </div>
           </div>
         ) : (
-          <div style={{ display: 'grid', gap: 10 }}>
-            <div>
-              <label style={ds.label}>Nombre</label>
-              <input value={nombre} onChange={e => setNombre(e.target.value)} style={ds.formInput} placeholder="Ej: Pedro Martín" />
-            </div>
-            <div>
-              <label style={ds.label}>Teléfono (opcional)</label>
-              <input value={telefono} onChange={e => setTelefono(e.target.value)} style={ds.formInput} placeholder="600 123 456" />
-            </div>
-            <div>
-              <label style={ds.label}>API Key Shipday personal</label>
-              <input value={apiKey} onChange={e => { setApiKey(e.target.value); setVerifyResult(null) }} style={{ ...ds.formInput, fontFamily: 'monospace', fontSize: 12 }} placeholder="xxxxx.xxxxxxxx" />
-            </div>
-            {verifyResult && (
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '8px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-                background: verifyResult.ok ? 'var(--c-success-soft)' : 'var(--c-danger-soft)',
-                color: verifyResult.ok ? 'var(--c-success)' : 'var(--c-danger)',
-              }}>
-                {verifyResult.ok
-                  ? <><CheckCircle2 size={14} /> Key válida — {verifyResult.total} carrier{verifyResult.total === 1 ? '' : 's'}</>
-                  : <><AlertCircle size={14} /> {verifyResult.msg}</>
-                }
+          <div style={{ display: 'grid', gap: 12 }}>
+            <div style={{
+              padding: 14, borderRadius: 10,
+              background: 'var(--c-primary-soft)',
+              border: '1px solid var(--c-primary-border, rgba(255,107,44,0.25))',
+            }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#FF6B2C', marginBottom: 6 }}>
+                Pidoo no crea cuentas de socio desde aquí
               </div>
-            )}
-            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              <button onClick={verificarNuevo} disabled={verifying || !apiKey.trim()} style={{ ...ds.secondaryBtn, opacity: verifying || !apiKey.trim() ? 0.5 : 1 }}>
-                {verifying ? 'Verificando...' : 'Verificar'}
+              <div style={{ fontSize: 12.5, color: 'var(--c-text)', lineHeight: 1.55 }}>
+                Para añadir un nuevo socio que no exista todavía en Pidoo, indícale que se registre en{' '}
+                <b>socio.pidoo.es</b> con su API Key de Shipday. Una vez registrado y aprobado por el
+                superadmin, lo verás aquí en <b>“Elegir existente”</b> y podrás vincularlo al restaurante.
+              </div>
+            </div>
+
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '10px 12px', borderRadius: 10,
+              background: 'var(--c-surface2)',
+              border: '1px solid var(--c-border)',
+            }}>
+              <code style={{ flex: 1, fontSize: 12, color: 'var(--c-text)', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {URL_REGISTRO_SOCIOS}
+              </code>
+              <button
+                onClick={copiarUrl}
+                style={{ ...ds.secondaryBtn, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}
+              >
+                <Copy size={12} /> Copiar
               </button>
-              <button onClick={crearYVincular} disabled={saving} style={{ ...ds.primaryBtn, flex: 1, opacity: saving ? 0.5 : 1 }}>
-                {saving ? 'Guardando...' : 'Crear y vincular'}
+              <a
+                href={URL_REGISTRO_SOCIOS}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ ...ds.secondaryBtn, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, textDecoration: 'none' }}
+              >
+                <ExternalLink size={12} /> Abrir
+              </a>
+            </div>
+
+            <div style={{ fontSize: 11.5, color: 'var(--c-muted)', lineHeight: 1.5 }}>
+              <b>Recordatorio del modelo:</b> 1 socio = 1 cuenta Shipday = 1 API key. Los riders que el socio
+              añada dentro de su cuenta Shipday se sincronizan automáticamente desde la ficha del socio.
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              <button onClick={onClose} style={{ ...ds.secondaryBtn, flex: 1 }}>Cerrar</button>
+              <button onClick={() => setTab('existente')} style={{ ...ds.primaryBtn, flex: 1 }}>
+                Elegir existente
               </button>
             </div>
           </div>
