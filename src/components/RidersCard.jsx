@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { ds } from '../lib/darkStyles'
-import { Plus, Truck, X, Trash2, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Plus, Truck, X, Trash2, CheckCircle2, AlertCircle, Phone, Mail, Calendar, Package } from 'lucide-react'
 import { toast, confirmar } from '../App'
 
 export default function RidersCard({ establecimiento, onChanged }) {
   const [vinc, setVinc] = useState([])
   const [status, setStatus] = useState({})
   const [showAdd, setShowAdd] = useState(false)
+  const [detalleSocio, setDetalleSocio] = useState(null)
 
   useEffect(() => {
     if (!establecimiento?.id) return
@@ -21,7 +22,7 @@ export default function RidersCard({ establecimiento, onChanged }) {
 
   async function load() {
     const { data } = await supabase.from('restaurante_riders')
-      .select('prioridad, rider_accounts(id, nombre, telefono, activa, estado)')
+      .select('prioridad, created_at, rider_accounts(id, nombre, telefono, email, activa, estado, shipday_api_key, aprobado_en)')
       .eq('establecimiento_id', establecimiento.id)
       .order('prioridad', { ascending: true })
     setVinc(data || [])
@@ -36,7 +37,8 @@ export default function RidersCard({ establecimiento, onChanged }) {
     }
   }
 
-  async function desvincular(riderId, nombre) {
+  async function desvincular(e, riderId, nombre) {
+    e.stopPropagation()
     const ok = await confirmar(`¿Desvincular "${nombre}" de este restaurante?`)
     if (!ok) return
     const { error } = await supabase.from('restaurante_riders')
@@ -44,7 +46,7 @@ export default function RidersCard({ establecimiento, onChanged }) {
       .eq('establecimiento_id', establecimiento.id)
       .eq('rider_account_id', riderId)
     if (error) return toast('Error: ' + error.message, 'error')
-    toast('Rider desvinculado')
+    toast('Socio desvinculado')
     load()
     onChanged?.()
   }
@@ -53,7 +55,7 @@ export default function RidersCard({ establecimiento, onChanged }) {
   const total = vinc.filter(v => v.rider_accounts?.activa && v.rider_accounts?.estado === 'activa').length
 
   const headerBadge = (() => {
-    if (total === 0) return { bg: 'var(--c-danger-soft)', border: 'rgba(239,68,68,0.35)', color: 'var(--c-danger)', label: 'Sin repartidores vinculados' }
+    if (total === 0) return { bg: 'var(--c-danger-soft)', border: 'rgba(239,68,68,0.35)', color: 'var(--c-danger)', label: 'Sin socios vinculados' }
     if (online === 0) return { bg: 'var(--c-danger-soft)', border: 'rgba(239,68,68,0.35)', color: 'var(--c-danger)', label: `Ninguno en línea (0/${total})` }
     return { bg: 'var(--c-success-soft)', border: 'rgba(34,197,94,0.35)', color: 'var(--c-success)', label: `${online}/${total} en línea` }
   })()
@@ -62,7 +64,7 @@ export default function RidersCard({ establecimiento, onChanged }) {
     <div style={{ ...ds.card, padding: 20, marginTop: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
         <Truck size={18} color="#FF6B2C" />
-        <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', flex: 1 }}>Repartidores vinculados</h3>
+        <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', flex: 1 }}>Socios vinculados</h3>
         <button onClick={() => setShowAdd(true)} style={{ ...ds.primaryBtn, display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, padding: '8px 14px' }}>
           <Plus size={12} /> Añadir
         </button>
@@ -78,7 +80,7 @@ export default function RidersCard({ establecimiento, onChanged }) {
 
       {vinc.length === 0 ? (
         <div style={{ padding: 20, textAlign: 'center', color: 'var(--c-muted)', fontSize: 12 }}>
-          Aún no hay repartidores vinculados a este restaurante.
+          Aún no hay socios vinculados a este restaurante.
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -88,11 +90,21 @@ export default function RidersCard({ establecimiento, onChanged }) {
             const st = status[r.id]
             const online = st?.is_online
             return (
-              <div key={r.id} style={{
-                display: 'flex', alignItems: 'center', padding: '10px 14px',
-                background: 'var(--c-surface2)', borderRadius: 10,
-                opacity: r.activa ? 1 : 0.5,
-              }}>
+              <button
+                key={r.id}
+                onClick={() => setDetalleSocio({ rider: r, vinculacion: v, status: st })}
+                aria-label={`Ver detalle de ${r.nombre}`}
+                style={{
+                  display: 'flex', alignItems: 'center', padding: '10px 14px',
+                  background: 'var(--c-surface2)', borderRadius: 10,
+                  opacity: r.activa ? 1 : 0.5,
+                  border: 'none', cursor: 'pointer', textAlign: 'left', width: '100%',
+                  fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+                  transition: 'background 0.12s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'var(--c-surface3, var(--c-surface2))' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'var(--c-surface2)' }}
+              >
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>
                     {r.nombre}{!r.activa && <span style={{ fontSize: 10, color: 'var(--c-danger)', marginLeft: 6 }}>(inactivo)</span>}
@@ -112,13 +124,19 @@ export default function RidersCard({ establecimiento, onChanged }) {
                 ) : (
                   <span style={{ ...ds.badge, background: 'var(--c-surface2)', color: 'var(--c-muted)', marginRight: 8 }}>○ Offline</span>
                 )}
-                <button onClick={() => desvincular(r.id, r.nombre)} style={{
-                  ...ds.actionBtn, color: 'var(--c-danger)',
-                  display: 'flex', alignItems: 'center', gap: 4,
-                }}>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={e => desvincular(e, r.id, r.nombre)}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); desvincular(e, r.id, r.nombre) } }}
+                  style={{
+                    ...ds.actionBtn, color: 'var(--c-danger)',
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                  }}
+                >
                   <Trash2 size={11} /> Desvincular
-                </button>
-              </div>
+                </span>
+              </button>
             )
           })}
         </div>
@@ -132,6 +150,114 @@ export default function RidersCard({ establecimiento, onChanged }) {
           onSaved={() => { setShowAdd(false); load(); onChanged?.() }}
         />
       )}
+
+      {detalleSocio && (
+        <SocioVinculadoModal
+          rider={detalleSocio.rider}
+          vinculacion={detalleSocio.vinculacion}
+          status={detalleSocio.status}
+          establecimiento={establecimiento}
+          onClose={() => setDetalleSocio(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+function SocioVinculadoModal({ rider, vinculacion, status, establecimiento, onClose }) {
+  const [pedidosCount, setPedidosCount] = useState(null)
+
+  useEffect(() => {
+    let cancel = false
+    supabase
+      .from('pedidos')
+      .select('id', { count: 'exact', head: true })
+      .eq('establecimiento_id', establecimiento.id)
+      .eq('rider_account_id', rider.id)
+      .then(({ count }) => { if (!cancel) setPedidosCount(count ?? 0) })
+    return () => { cancel = true }
+  }, [rider.id, establecimiento.id])
+
+  function fmtFecha(s) {
+    if (!s) return '—'
+    try { return new Date(s).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }
+    catch { return s }
+  }
+
+  const online = status?.is_online
+  const estadoLabel = !rider.activa ? 'Inactivo'
+    : rider.estado === 'pendiente' ? 'Pendiente'
+    : rider.estado === 'rechazada' ? 'Rechazado'
+    : online ? 'En línea' : 'Offline'
+  const estadoColor = !rider.activa || rider.estado === 'rechazada' ? 'var(--c-danger)'
+    : rider.estado === 'pendiente' ? 'var(--c-warning)'
+    : online ? 'var(--c-success)' : 'var(--c-muted)'
+
+  return (
+    <div style={ds.modal} onClick={onClose}>
+      <div className="admin-modal-content" style={{ ...ds.modalContent, maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+          <Truck size={18} color="#FF6B2C" />
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--c-text)', flex: 1 }}>{rider.nombre}</h2>
+          <button onClick={onClose} aria-label="Cerrar" style={{ background: 'var(--c-surface2)', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} color='var(--c-text)' /></button>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+          <span style={{ ...ds.badge, background: 'var(--c-surface2)', color: estadoColor, fontWeight: 700 }}>● {estadoLabel}</span>
+          {status?.last_checked && (
+            <span style={{ fontSize: 11, color: 'var(--c-muted)' }}>chequeado: {fmtFecha(status.last_checked)}</span>
+          )}
+        </div>
+
+        {/* Datos del socio */}
+        <div style={{ ...ds.card, padding: 14, marginBottom: 12 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Datos del socio</div>
+          <div style={{ display: 'grid', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--c-text)' }}>
+              <Phone size={14} color="var(--c-muted)" />{rider.telefono || '—'}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--c-text)' }}>
+              <Mail size={14} color="var(--c-muted)" />{rider.email || '—'}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--c-text)' }}>
+              <Calendar size={14} color="var(--c-muted)" />Aprobado: {fmtFecha(rider.aprobado_en)}
+            </div>
+            {status?.last_error && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--c-warning)', background: 'var(--c-warning-soft)', padding: '6px 10px', borderRadius: 8 }}>
+                <AlertCircle size={14} />Último error: {status.last_error}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Datos de la vinculación */}
+        <div style={{ ...ds.card, padding: 14, marginBottom: 12 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Vinculación con {establecimiento.nombre}</div>
+          <div style={{ display: 'grid', gap: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+              <span style={{ color: 'var(--c-muted)' }}>Prioridad</span>
+              <span style={{ color: 'var(--c-text)', fontWeight: 700 }}>{vinculacion.prioridad ?? '—'}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+              <span style={{ color: 'var(--c-muted)' }}>Vinculado el</span>
+              <span style={{ color: 'var(--c-text)' }}>{fmtFecha(vinculacion.created_at)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div style={{ ...ds.card, padding: 14, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--c-primary-soft)', display: 'grid', placeItems: 'center' }}>
+            <Package size={18} color="#FF6B2C" />
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Pedidos hechos</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-text)' }}>{pedidosCount === null ? '...' : pedidosCount}</div>
+          </div>
+        </div>
+
+        <button onClick={onClose} style={{ ...ds.secondaryBtn, width: '100%' }}>Cerrar</button>
+      </div>
     </div>
   )
 }
@@ -171,7 +297,7 @@ function AddRiderModal({ establecimiento, vinculados, onClose, onSaved }) {
     }))
     const { error } = await supabase.from('restaurante_riders').insert(rows)
     if (error) { toast('Error: ' + error.message, 'error'); setSaving(false); return }
-    toast(`${selectedIds.size} rider${selectedIds.size === 1 ? '' : 's'} vinculado${selectedIds.size === 1 ? '' : 's'}`)
+    toast(`${selectedIds.size} socio${selectedIds.size === 1 ? '' : 's'} vinculado${selectedIds.size === 1 ? '' : 's'}`)
     onSaved()
   }
 
@@ -213,7 +339,7 @@ function AddRiderModal({ establecimiento, vinculados, onClose, onSaved }) {
       establecimiento_id: establecimiento.id, rider_account_id: nuevo.id, prioridad: 100,
     })
     if (e2) { toast('Error vinculando: ' + e2.message, 'error'); setSaving(false); return }
-    toast('Rider creado y vinculado')
+    toast('Socio creado y vinculado')
     onSaved()
   }
 
@@ -227,7 +353,7 @@ function AddRiderModal({ establecimiento, vinculados, onClose, onSaved }) {
       <div className="admin-modal-content" style={ds.modalContent} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
           <Truck size={18} color="#FF6B2C" />
-          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--c-text)', flex: 1 }}>Añadir repartidor</h2>
+          <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--c-text)', flex: 1 }}>Añadir socio</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--c-muted)', cursor: 'pointer', fontSize: 20 }}>×</button>
         </div>
 
@@ -245,10 +371,10 @@ function AddRiderModal({ establecimiento, vinculados, onClose, onSaved }) {
 
         {tab === 'existente' ? (
           <div>
-            <input value={buscar} onChange={e => setBuscar(e.target.value)} placeholder="Buscar rider..." style={{ ...ds.formInput, marginBottom: 12 }} />
+            <input value={buscar} onChange={e => setBuscar(e.target.value)} placeholder="Buscar socio..." style={{ ...ds.formInput, marginBottom: 12 }} />
             {disponibles.length === 0 ? (
               <div style={{ padding: 20, textAlign: 'center', color: 'var(--c-muted)', fontSize: 12 }}>
-                {riders.length === 0 ? 'No hay riders creados aún. Usa "Crear nuevo".' : 'Todos los riders activos ya están vinculados.'}
+                {riders.length === 0 ? 'No hay socios creados aún. Usa "Crear nuevo".' : 'Todos los socios activos ya están vinculados.'}
               </div>
             ) : (
               <div style={{ maxHeight: 300, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
