@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { ds } from '../lib/darkStyles'
-import { Save, X, KeyRound } from 'lucide-react'
+import { Save, X, KeyRound, Trash2 } from 'lucide-react'
 import ResetPasswordModal from '../components/ResetPasswordModal'
+import EliminarEntidadModal from '../components/EliminarEntidadModal'
 
 export default function Usuarios() {
   const [items, setItems] = useState([])
@@ -14,6 +15,7 @@ export default function Usuarios() {
   const [saving, setSaving] = useState(false)
   const [guardado, setGuardado] = useState(false)
   const [resetPwd, setResetPwd] = useState(false)
+  const [showEliminar, setShowEliminar] = useState(false)
 
   useEffect(() => { load() }, [])
 
@@ -83,6 +85,21 @@ export default function Usuarios() {
                   <button onClick={() => setResetPwd(true)} style={{ ...ds.secondaryBtn, display: 'flex', alignItems: 'center', gap: 4 }} title="Restablecer contraseña">
                     <KeyRound size={14} /> Contraseña
                   </button>
+                  {(detalle.rol || 'cliente') === 'cliente' && (
+                    <button
+                      onClick={() => setShowEliminar(true)}
+                      title="Eliminar usuario definitivamente"
+                      style={{
+                        ...ds.secondaryBtn,
+                        color: '#DC2626',
+                        borderColor: 'rgba(220,38,38,0.32)',
+                        background: 'rgba(220,38,38,0.06)',
+                        display: 'flex', alignItems: 'center', gap: 4,
+                      }}
+                    >
+                      <Trash2 size={14} /> Eliminar
+                    </button>
+                  )}
                   <button onClick={() => { setForm({ nombre: detalle.nombre || '', apellido: detalle.apellido || '', telefono: detalle.telefono || '', direccion: detalle.direccion || '', metodo_pago_preferido: detalle.metodo_pago_preferido || 'tarjeta' }); setEditando(true) }} style={ds.primaryBtn}>Editar</button>
                 </>
               ) : (
@@ -175,6 +192,19 @@ export default function Usuarios() {
             userRole={detalle.rol || 'cliente'}
             hasAuthAccount={true}
             onClose={() => setResetPwd(false)}
+          />
+        )}
+
+        {showEliminar && (
+          <EliminarEntidadModal
+            tipo="usuario"
+            entidad={detalle}
+            onClose={() => setShowEliminar(false)}
+            onDeleted={() => {
+              setShowEliminar(false)
+              setDetalle(null)
+              setItems(prev => prev.filter(u => u.id !== detalle.id))
+            }}
           />
         )}
       </div>

@@ -10,6 +10,7 @@ import RidersCard from '../components/RidersCard'
 import PlanTiendaCard from '../components/PlanTiendaCard'
 import HorarioEstadoCard from '../components/HorarioEstadoCard'
 import ResetPasswordModal from '../components/ResetPasswordModal'
+import EliminarEntidadModal from '../components/EliminarEntidadModal'
 import AddressAutocomplete from '../components/AddressAutocomplete'
 
 const CATEGORIAS_PADRE = ['comida', 'farmacia', 'marketplace']
@@ -38,6 +39,7 @@ export default function Establecimientos() {
   const [showCargaMasiva, setShowCargaMasiva] = useState(false)
   const [showImportUrl, setShowImportUrl] = useState(false)
   const [resetPwd, setResetPwd] = useState(false)
+  const [showEliminar, setShowEliminar] = useState(false)
   const [ownerEmail, setOwnerEmail] = useState(null)
   // Crear restaurante: datos del dueño + estado del flujo
   const [duenoForm, setDuenoForm] = useState({ nombre: '', apellido: '', telefono: '', email: '', password: '', modoPwd: 'auto' })
@@ -440,6 +442,19 @@ export default function Establecimientos() {
                     style={{ ...ds.secondaryBtn, display: 'flex', alignItems: 'center', gap: 4, opacity: detalle.user_id ? 1 : 0.4 }}
                   >
                     <KeyRound size={14} /> Contraseña
+                  </button>
+                  <button
+                    onClick={() => setShowEliminar(true)}
+                    title="Eliminar restaurante definitivamente"
+                    style={{
+                      ...ds.secondaryBtn,
+                      color: '#DC2626',
+                      borderColor: 'rgba(220,38,38,0.32)',
+                      background: 'rgba(220,38,38,0.06)',
+                      display: 'flex', alignItems: 'center', gap: 4,
+                    }}
+                  >
+                    <Trash2 size={14} /> Eliminar
                   </button>
                   <button onClick={() => { setForm(initForm(detalle)); setEditando(true) }} style={ds.primaryBtn}>Editar</button>
                 </>
@@ -922,6 +937,21 @@ export default function Establecimientos() {
             userRole="restaurante"
             hasAuthAccount={true}
             onClose={() => setResetPwd(false)}
+          />
+        )}
+
+        {showEliminar && (
+          <EliminarEntidadModal
+            tipo="establecimiento"
+            entidad={{ ...detalle, email: ownerEmail || detalle.email }}
+            onClose={() => setShowEliminar(false)}
+            onDeleted={() => {
+              setShowEliminar(false)
+              const id = detalle.id
+              setDetalle(null)
+              setItems(prev => prev.filter(e => e.id !== id))
+              load()
+            }}
           />
         )}
       </div>

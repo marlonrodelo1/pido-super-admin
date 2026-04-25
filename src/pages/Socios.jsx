@@ -4,10 +4,11 @@ import { ds, colors } from '../lib/darkStyles'
 import {
   Users, ExternalLink, Plus, Eye, EyeOff, ChevronRight, ArrowLeft, X, Save, KeyRound,
   Search, CircleDot, Truck, Store, ClipboardList, Wallet, Settings, FileText,
-  Pencil, Check, AlertCircle, Copy, Phone, Mail, Globe, AtSign, Music, RefreshCw,
+  Pencil, Check, AlertCircle, Copy, Phone, Mail, Globe, AtSign, Music, RefreshCw, Trash2,
 } from 'lucide-react'
 import { toast, confirmar } from '../App'
 import ResetPasswordModal from '../components/ResetPasswordModal'
+import EliminarEntidadModal from '../components/EliminarEntidadModal'
 
 // ──────────────────────────────────────────────────────────────────────────────
 // NOTA SOBRE EL MODELO DE DATOS
@@ -59,6 +60,7 @@ export default function Socios() {
   const [showNuevo, setShowNuevo] = useState(false)
   const [resetPwdSocio, setResetPwdSocio] = useState(null)
   const [editSocio, setEditSocio] = useState(null)
+  const [eliminarSocio, setEliminarSocio] = useState(null)
 
   useEffect(() => { load() }, [])
 
@@ -225,21 +227,38 @@ export default function Socios() {
   if (socioActivo) {
     const sActual = socios.find(s => s.id === socioActivo.id) || socioActivo
     return (
-      <SocioDetalle
-        socio={sActual}
-        riders={ridersBySocio[sActual.id] || []}
-        riderStatus={riderStatus}
-        vinculaciones={vinculaciones.filter(v => v.socio_id === sActual.id)}
-        balance={balances[sActual.id]}
-        tab={tab}
-        setTab={setTab}
-        onBack={() => { setSocioActivo(null); setTab('resumen') }}
-        onReload={load}
-        onResetPwd={() => setResetPwdSocio(sActual)}
-        onEdit={() => setEditSocio(sActual)}
-        onToggleActivo={() => toggleActivo(sActual)}
-        onToggleMarketplace={() => toggleMarketplace(sActual)}
-      />
+      <>
+        <SocioDetalle
+          socio={sActual}
+          riders={ridersBySocio[sActual.id] || []}
+          riderStatus={riderStatus}
+          vinculaciones={vinculaciones.filter(v => v.socio_id === sActual.id)}
+          balance={balances[sActual.id]}
+          tab={tab}
+          setTab={setTab}
+          onBack={() => { setSocioActivo(null); setTab('resumen') }}
+          onReload={load}
+          onResetPwd={() => setResetPwdSocio(sActual)}
+          onEdit={() => setEditSocio(sActual)}
+          onDelete={() => setEliminarSocio(sActual)}
+          onToggleActivo={() => toggleActivo(sActual)}
+          onToggleMarketplace={() => toggleMarketplace(sActual)}
+        />
+        {eliminarSocio && (
+          <EliminarEntidadModal
+            tipo="socio"
+            entidad={eliminarSocio}
+            onClose={() => setEliminarSocio(null)}
+            onDeleted={() => {
+              const id = eliminarSocio.id
+              setEliminarSocio(null)
+              setSocioActivo(null)
+              setSocios(prev => prev.filter(s => s.id !== id))
+              load()
+            }}
+          />
+        )}
+      </>
     )
   }
 
@@ -401,7 +420,7 @@ export default function Socios() {
 // ──────────────────────────────────────────────────────────────────────────────
 function SocioDetalle({
   socio, riders, riderStatus, vinculaciones, balance, tab, setTab,
-  onBack, onReload, onResetPwd, onEdit, onToggleActivo, onToggleMarketplace,
+  onBack, onReload, onResetPwd, onEdit, onDelete, onToggleActivo, onToggleMarketplace,
 }) {
   const ridersActivos = riders.filter(r => r.estado === 'activa')
   const ridersOnline = ridersActivos.filter(r => riderStatus[r.id]?.is_online).length
@@ -450,6 +469,18 @@ function SocioDetalle({
             <button onClick={onResetPwd} disabled={!socio.user_id} title={socio.user_id ? 'Restablecer contraseña' : 'Sin cuenta auth'}
               style={{ ...ds.secondaryBtn, opacity: socio.user_id ? 1 : 0.4 }}>
               <KeyRound size={13} /> Contraseña
+            </button>
+            <button
+              onClick={onDelete}
+              title="Eliminar socio definitivamente"
+              style={{
+                ...ds.secondaryBtn,
+                color: '#DC2626',
+                borderColor: 'rgba(220,38,38,0.32)',
+                background: 'rgba(220,38,38,0.06)',
+              }}
+            >
+              <Trash2 size={13} /> Eliminar socio
             </button>
           </div>
         </div>
