@@ -2,13 +2,14 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { uploadImage } from '../lib/upload'
 import { ds } from '../lib/darkStyles'
-import { Plus, X, Upload, Save, Trash2, KeyRound, Search, ChevronLeft, ChevronRight, Pencil } from 'lucide-react'
+import { Plus, X, Upload, Save, Trash2, KeyRound, Search, ChevronLeft, ChevronRight, Pencil, Copy, Eye, EyeOff, Wand2, Check, Share2 } from 'lucide-react'
 import { toast, confirmar } from '../App'
 import CargaMasivaModal from '../components/CargaMasivaModal'
 import ImportUrlModal from '../components/ImportUrlModal'
 import RidersCard from '../components/RidersCard'
 import PlanTiendaCard from '../components/PlanTiendaCard'
 import ResetPasswordModal from '../components/ResetPasswordModal'
+import AddressAutocomplete from '../components/AddressAutocomplete'
 
 const CATEGORIAS_PADRE = ['comida', 'farmacia', 'marketplace']
 
@@ -37,6 +38,12 @@ export default function Establecimientos() {
   const [showImportUrl, setShowImportUrl] = useState(false)
   const [resetPwd, setResetPwd] = useState(false)
   const [ownerEmail, setOwnerEmail] = useState(null)
+  // Crear restaurante: datos del dueño + estado del flujo
+  const [duenoForm, setDuenoForm] = useState({ nombre: '', apellido: '', telefono: '', email: '', password: '', modoPwd: 'auto' })
+  const [showCrearPwd, setShowCrearPwd] = useState(false)
+  const [crearError, setCrearError] = useState(null)
+  const [crearExito, setCrearExito] = useState(null) // { dueno: {email, password_temporal, id}, establecimiento: {id, nombre} }
+  const [showExitoPwd, setShowExitoPwd] = useState(false)
   // Estado nuevo: dropdowns categorías + filtros productos
   const [showAddCatGeneral, setShowAddCatGeneral] = useState(false)
   const [selectedCartCatId, setSelectedCartCatId] = useState('') // categoría seleccionada en bloque "Categorías de la carta"
@@ -106,24 +113,128 @@ export default function Establecimientos() {
       email: est?.email || '', telefono: est?.telefono || '', direccion: est?.direccion || '',
       radio_cobertura_km: est?.radio_cobertura_km || 5, descripcion: est?.descripcion || '',
       banner_url: est?.banner_url || '', logo_url: est?.logo_url || '',
+      latitud: est?.latitud ?? null, longitud: est?.longitud ?? null,
     }
   }
 
   async function guardarEstablecimiento() {
     setSaving(true)
+    setCrearError(null)
     if (detalle) {
       const { error } = await supabase.from('establecimientos').update(form).eq('id', detalle.id)
       if (error) { toast('Error: ' + error.message, 'error'); setSaving(false); return }
       setDetalle({ ...detalle, ...form })
       setEditando(false)
-    } else {
-      const { error } = await supabase.from('establecimientos').insert({ ...form, activo: true, rating: 0, total_resenas: 0 })
-      if (error) { toast('Error: ' + error.message, 'error'); setSaving(false); return }
-      setShowCrear(false)
+      setForm({})
+      load()
+      setSaving(false)
+      return
     }
+
+    // Modo CREAR -> edge function admin-crear-restaurante
+    const emailDueno = (duenoForm.email || '').trim().toLowerCase()
+    if (!emailDueno) {
+      setCrearError('Email del dueño obligatorio')
+      setSaving(false)
+      return
+    }
+    if (duenoForm.modoPwd === 'manual' && (!duenoForm.password || duenoForm.password.length < 8)) {
+      setCrearError('La contraseña manual debe tener mínimo 8 caracteres')
+      setSaving(false)
+      return
+    }
+
+    try {
+      const payload = {
+        establecimiento: {
+          nombre: form.nombre,
+          tipo: form.tipo,
+          categoria_padre: form.categoria_padre,
+          telefono: form.telefono || null,
+          direccion: form.direccion || null,
+          latitud: form.latitud ?? null,
+          longitud: form.longitud ?? null,
+          radio_cobertura_km: form.radio_cobertura_km ?? 5,
+          logo_url: form.logo_url || null,
+          banner_url: form.banner_url || null,
+          descripcion: form.descripcion || null,
+        },
+        dueno: {
+          email: emailDueno,
+          nombre: duenoForm.nombre || null,
+          apellido: duenoForm.apellido || null,
+          telefono: duenoForm.telefono || form.telefono || null,
+          ...(duenoForm.modoPwd === 'manual' ? { password: duenoForm.password } : {}),
+        },
+      }
+      const { data, error } = await supabase.functions.invoke('admin-crear-restaurante', { body: payload })
+      if (error) {
+        const msg = data?.message || data?.error || error.message || 'Error desconocido'
+        setCrearError(msg)
+        setSaving(false)
+        return
+      }
+      if (!data?.success) {
+        setCrearError(data?.message || data?.error || 'Respuesta inesperada del servidor')
+        setSaving(false)
+        return
+      }
+      // Éxito: mostrar pantalla de credenciales
+      setCrearExito({ dueno: data.dueno, establecimiento: data.establecimiento })
+      setShowExitoPwd(false)
+      load()
+    } catch (e) {
+      setCrearError(e.message || String(e))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function generarPasswordAleatoria(length = 12) {
+    const charset = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    let out = ''
+    const arr = new Uint32Array(length)
+    crypto.getRandomValues(arr)
+    for (let i = 0; i < length; i++) out += charset[arr[i] % charset.length]
+    return out
+  }
+
+  function cerrarModalCrear() {
+    setShowCrear(false)
     setForm({})
-    load()
-    setSaving(false)
+    setDuenoForm({ nombre: '', apellido: '', telefono: '', email: '', password: '', modoPwd: 'auto' })
+    setCrearError(null)
+    setCrearExito(null)
+    setShowCrearPwd(false)
+    setShowExitoPwd(false)
+  }
+
+  async function copiarTexto(texto) {
+    try {
+      await navigator.clipboard.writeText(texto)
+      toast('Copiado al portapapeles')
+    } catch {
+      toast('No se pudo copiar', 'error')
+    }
+  }
+
+  function textoCredenciales() {
+    if (!crearExito) return ''
+    const nombre = crearExito.establecimiento.nombre
+    return `Bienvenido a Pidoo, ${nombre}!\n\nPara entrar a tu panel:\n- URL: https://panel.pidoo.es\n- Email: ${crearExito.dueno.email}\n- Contraseña: ${crearExito.dueno.password_temporal}\n\nCambia la contraseña en cuanto entres.`
+  }
+
+  async function compartirCredenciales() {
+    const texto = textoCredenciales()
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Credenciales Pidoo', text: texto })
+      } catch (e) {
+        if (e?.name !== 'AbortError') toast('No se pudo compartir', 'error')
+      }
+    } else {
+      await copiarTexto(texto)
+    }
   }
 
   async function handleUpload(file, field) {
@@ -347,7 +458,20 @@ export default function Establecimientos() {
               </select></div>
               <div><label style={ds.label}>Email</label><input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} style={ds.formInput} /></div>
               <div><label style={ds.label}>Teléfono</label><input value={form.telefono} onChange={e => setForm({ ...form, telefono: e.target.value })} style={ds.formInput} /></div>
-              <div style={{ gridColumn: '1/-1' }}><label style={ds.label}>Dirección</label><input value={form.direccion} onChange={e => setForm({ ...form, direccion: e.target.value })} style={ds.formInput} /></div>
+              <div style={{ gridColumn: '1/-1' }}>
+                <label style={ds.label}>Dirección</label>
+                <AddressAutocomplete
+                  value={form.direccion || ''}
+                  onChange={(v) => setForm(prev => ({ ...prev, direccion: v }))}
+                  onSelect={(p) => setForm(prev => ({ ...prev, direccion: p.direccion, latitud: p.latitud, longitud: p.longitud }))}
+                  placeholder="Buscar dirección…"
+                />
+                {form.latitud != null && form.longitud != null && (
+                  <div style={{ marginTop: 6, fontSize: 11.5, color: 'var(--c-muted)' }}>
+                    Coordenadas: {Number(form.latitud).toFixed(6)}, {Number(form.longitud).toFixed(6)}
+                  </div>
+                )}
+              </div>
               <div><label style={ds.label}>Radio (km)</label><input type="number" value={form.radio_cobertura_km} onChange={e => setForm({ ...form, radio_cobertura_km: +e.target.value })} style={ds.formInput} /></div>
               <div style={{ gridColumn: '1/-1' }}><label style={ds.label}>Descripción</label><textarea value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} rows={2} style={{ ...ds.formInput, resize: 'vertical' }} /></div>
             </div>
@@ -840,47 +964,214 @@ export default function Establecimientos() {
 
       {/* Modal crear */}
       {showCrear && (
-        <div style={ds.modal} onClick={() => setShowCrear(false)}>
+        <div style={ds.modal} onClick={cerrarModalCrear}>
           <div className="admin-modal-content" style={ds.modalContent} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-text)' }}>Crear establecimiento</h2>
-              <button onClick={() => setShowCrear(false)} style={{ background: 'var(--c-surface2)', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} color='var(--c-text)' /></button>
-            </div>
-            <div className="admin-grid-2col-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div style={{ gridColumn: '1/-1' }}><label style={ds.label}>Nombre *</label><input value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} style={ds.formInput} /></div>
-              <div><label style={ds.label}>Tipo</label><select value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })} style={ds.select}>
-                <option value="restaurante">Restaurante</option><option value="cafeteria">Cafetería</option><option value="supermercado">Supermercado</option><option value="farmacia">Farmacia</option><option value="tienda">Tienda</option>
-              </select></div>
-              <div><label style={ds.label}>Categoría padre</label><select value={form.categoria_padre} onChange={e => setForm({ ...form, categoria_padre: e.target.value })} style={ds.select}>
-                {CATEGORIAS_PADRE.map(c => <option key={c} value={c}>{c === 'comida' ? '🍕 Comida' : c === 'farmacia' ? '💊 Farmacia' : '🛒 Market'}</option>)}
-              </select></div>
-              <div><label style={ds.label}>Email</label><input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} style={ds.formInput} /></div>
-              <div><label style={ds.label}>Teléfono</label><input value={form.telefono} onChange={e => setForm({ ...form, telefono: e.target.value })} style={ds.formInput} /></div>
-              <div style={{ gridColumn: '1/-1' }}><label style={ds.label}>Dirección</label><input value={form.direccion} onChange={e => setForm({ ...form, direccion: e.target.value })} style={ds.formInput} /></div>
-              <div><label style={ds.label}>Radio (km)</label><input type="number" value={form.radio_cobertura_km} onChange={e => setForm({ ...form, radio_cobertura_km: +e.target.value })} style={ds.formInput} /></div>
-              <div><label style={ds.label}>Logo</label>
-                <label style={{ ...ds.formInput, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-                  <Upload size={14} /> {form.logo_url ? 'Logo subido ✓' : 'Subir logo (200x200 px)'}
-                  <input type="file" accept="image/*" hidden onChange={e => handleUpload(e.target.files[0], 'logo_url')} />
-                </label>
+            {!crearExito ? (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                  <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-text)' }}>Crear establecimiento</h2>
+                  <button onClick={cerrarModalCrear} style={{ background: 'var(--c-surface2)', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} color='var(--c-text)' /></button>
+                </div>
+
+                {crearError && (
+                  <div style={{
+                    padding: '10px 12px', borderRadius: 8, marginBottom: 14,
+                    background: 'rgba(220,38,38,0.10)', border: '1px solid rgba(220,38,38,0.32)',
+                    color: 'var(--c-danger)', fontSize: 12.5, lineHeight: 1.4,
+                  }}>
+                    {crearError}
+                  </div>
+                )}
+
+                {/* SECCIÓN 1: Datos del restaurante */}
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6, color: 'var(--c-muted)', marginBottom: 8 }}>
+                  Datos del restaurante
+                </div>
+                <div className="admin-grid-2col-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div style={{ gridColumn: '1/-1' }}><label style={ds.label}>Nombre *</label><input value={form.nombre || ''} onChange={e => setForm({ ...form, nombre: e.target.value })} style={ds.formInput} /></div>
+                  <div><label style={ds.label}>Tipo</label><select value={form.tipo || 'restaurante'} onChange={e => setForm({ ...form, tipo: e.target.value })} style={ds.select}>
+                    <option value="restaurante">Restaurante</option><option value="cafeteria">Cafetería</option><option value="supermercado">Supermercado</option><option value="farmacia">Farmacia</option><option value="tienda">Tienda</option>
+                  </select></div>
+                  <div><label style={ds.label}>Categoría padre</label><select value={form.categoria_padre || 'comida'} onChange={e => setForm({ ...form, categoria_padre: e.target.value })} style={ds.select}>
+                    {CATEGORIAS_PADRE.map(c => <option key={c} value={c}>{c === 'comida' ? '🍕 Comida' : c === 'farmacia' ? '💊 Farmacia' : '🛒 Market'}</option>)}
+                  </select></div>
+                  <div><label style={ds.label}>Teléfono restaurante</label><input value={form.telefono || ''} onChange={e => setForm({ ...form, telefono: e.target.value })} style={ds.formInput} /></div>
+                  <div><label style={ds.label}>Radio (km)</label><input type="number" value={form.radio_cobertura_km ?? 5} onChange={e => setForm({ ...form, radio_cobertura_km: +e.target.value })} style={ds.formInput} /></div>
+                  <div style={{ gridColumn: '1/-1' }}>
+                    <label style={ds.label}>Dirección *</label>
+                    <AddressAutocomplete
+                      value={form.direccion || ''}
+                      onChange={(v) => setForm(prev => ({ ...prev, direccion: v, latitud: null, longitud: null }))}
+                      onSelect={(p) => setForm(prev => ({ ...prev, direccion: p.direccion, latitud: p.latitud, longitud: p.longitud }))}
+                      placeholder="Empieza a escribir y elige una sugerencia…"
+                    />
+                    {form.direccion && (form.latitud == null || form.longitud == null) && (
+                      <div style={{
+                        marginTop: 6, padding: '8px 10px', borderRadius: 8,
+                        background: 'rgba(234,179,8,0.10)', border: '1px solid rgba(234,179,8,0.38)',
+                        color: '#a16207', fontSize: 12, lineHeight: 1.4,
+                      }}>
+                        No has elegido una sugerencia. Las coordenadas se aproximarán al crear el restaurante.
+                      </div>
+                    )}
+                    {form.latitud != null && form.longitud != null && (
+                      <div style={{ marginTop: 6, fontSize: 11.5, color: 'var(--c-muted)' }}>
+                        Coordenadas: {form.latitud.toFixed(6)}, {form.longitud.toFixed(6)}
+                      </div>
+                    )}
+                  </div>
+                  <div><label style={ds.label}>Logo</label>
+                    <label style={{ ...ds.formInput, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                      <Upload size={14} /> {form.logo_url ? 'Logo subido ✓' : 'Subir logo'}
+                      <input type="file" accept="image/*" hidden onChange={e => handleUpload(e.target.files[0], 'logo_url')} />
+                    </label>
+                  </div>
+                  <div><label style={ds.label}>Banner</label>
+                    <label style={{ ...ds.formInput, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                      <Upload size={14} /> {form.banner_url ? 'Banner subido ✓' : 'Subir banner'}
+                      <input type="file" accept="image/*" hidden onChange={e => handleUpload(e.target.files[0], 'banner_url')} />
+                    </label>
+                  </div>
+                  <div style={{ gridColumn: '1/-1' }}><label style={ds.label}>Descripción</label><textarea value={form.descripcion || ''} onChange={e => setForm({ ...form, descripcion: e.target.value })} rows={2} style={{ ...ds.formInput, resize: 'vertical' }} /></div>
+                </div>
+
+                {/* SECCIÓN 2: Datos del dueño */}
+                <div style={{
+                  fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6,
+                  color: 'var(--c-muted)', marginTop: 22, marginBottom: 8,
+                  paddingTop: 16, borderTop: '1px solid var(--c-border)',
+                }}>
+                  Datos del dueño / acceso al panel
+                </div>
+                <div className="admin-grid-2col-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div><label style={ds.label}>Nombre del dueño</label><input value={duenoForm.nombre} onChange={e => setDuenoForm({ ...duenoForm, nombre: e.target.value })} style={ds.formInput} /></div>
+                  <div><label style={ds.label}>Teléfono dueño</label><input value={duenoForm.telefono} placeholder={form.telefono || ''} onChange={e => setDuenoForm({ ...duenoForm, telefono: e.target.value })} style={ds.formInput} /></div>
+                  <div style={{ gridColumn: '1/-1' }}><label style={ds.label}>Email del dueño *</label><input type="email" value={duenoForm.email} onChange={e => setDuenoForm({ ...duenoForm, email: e.target.value })} style={ds.formInput} placeholder="dueno@ejemplo.com" /></div>
+
+                  <div style={{ gridColumn: '1/-1' }}>
+                    <label style={ds.label}>Contraseña</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', minHeight: 44, borderRadius: 8, border: `1px solid ${duenoForm.modoPwd === 'auto' ? '#FF6B2C' : 'var(--c-border-strong)'}`, background: duenoForm.modoPwd === 'auto' ? 'rgba(255,107,44,0.06)' : 'var(--c-surface2)', cursor: 'pointer', fontSize: 13, color: 'var(--c-text)' }}>
+                        <input type="radio" name="modoPwd" checked={duenoForm.modoPwd === 'auto'} onChange={() => setDuenoForm({ ...duenoForm, modoPwd: 'auto' })} style={{ accentColor: '#FF6B2C' }} />
+                        Generar contraseña automática (recomendado)
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', minHeight: 44, borderRadius: 8, border: `1px solid ${duenoForm.modoPwd === 'manual' ? '#FF6B2C' : 'var(--c-border-strong)'}`, background: duenoForm.modoPwd === 'manual' ? 'rgba(255,107,44,0.06)' : 'var(--c-surface2)', cursor: 'pointer', fontSize: 13, color: 'var(--c-text)' }}>
+                        <input type="radio" name="modoPwd" checked={duenoForm.modoPwd === 'manual'} onChange={() => setDuenoForm({ ...duenoForm, modoPwd: 'manual', password: duenoForm.password || generarPasswordAleatoria(12) })} style={{ accentColor: '#FF6B2C' }} />
+                        Establecer contraseña manual
+                      </label>
+                      {duenoForm.modoPwd === 'manual' && (
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <input type={showCrearPwd ? 'text' : 'password'} value={duenoForm.password} onChange={e => setDuenoForm({ ...duenoForm, password: e.target.value })} style={{ ...ds.formInput, fontFamily: 'monospace', flex: '1 1 220px', minWidth: 200 }} placeholder="Mínimo 8 caracteres" />
+                          <button type="button" onClick={() => setShowCrearPwd(s => !s)} style={{ ...ds.secondaryBtn, minWidth: 44, minHeight: 44, padding: 0, justifyContent: 'center' }} title={showCrearPwd ? 'Ocultar' : 'Mostrar'}>
+                            {showCrearPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                          <button type="button" onClick={() => setDuenoForm({ ...duenoForm, password: generarPasswordAleatoria(12) })} style={{ ...ds.secondaryBtn, display: 'flex', alignItems: 'center', gap: 4, minHeight: 44 }}>
+                            <Wand2 size={14} /> Aleatoria 12
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ fontSize: 11, color: 'var(--c-muted)', marginTop: 14 }}>
+                  Al crear se generará la cuenta del dueño en <code>panel.pidoo.es</code>. Tras crear el restaurante, añade sus repartidores desde la ficha para activar Delivery.
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+                  <button onClick={cerrarModalCrear} style={{ ...ds.secondaryBtn, minHeight: 44 }} disabled={saving}>Cancelar</button>
+                  <button onClick={guardarEstablecimiento} disabled={saving || !form.nombre?.trim() || !duenoForm.email?.trim()} style={{ ...ds.primaryBtn, minHeight: 44, opacity: saving || !form.nombre?.trim() || !duenoForm.email?.trim() ? 0.5 : 1 }}>
+                    {saving ? 'Creando...' : 'Crear restaurante y cuenta'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              /* PANTALLA DE ÉXITO */
+              <div>
+                <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                  <div style={{
+                    width: 64, height: 64, borderRadius: '50%',
+                    background: 'rgba(34,197,94,0.12)', border: '2px solid rgba(34,197,94,0.5)',
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    marginBottom: 12,
+                  }}>
+                    <Check size={32} color="#22c55e" strokeWidth={3} />
+                  </div>
+                  <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)', marginBottom: 4 }}>✓ Restaurante creado</h2>
+                  <div style={{ fontSize: 14, color: 'var(--c-muted)' }}>{crearExito.establecimiento.nombre}</div>
+                </div>
+
+                <div style={{
+                  background: 'var(--c-surface2)', borderRadius: 12, padding: 16,
+                  border: '1px solid var(--c-border-strong)', marginBottom: 16,
+                  display: 'flex', flexDirection: 'column', gap: 12,
+                }}>
+                  {/* Email */}
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Email</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ flex: 1, fontFamily: 'monospace', fontSize: 14, color: 'var(--c-text)', wordBreak: 'break-all' }}>{crearExito.dueno.email}</div>
+                      <button onClick={() => copiarTexto(crearExito.dueno.email)} style={{ ...ds.secondaryBtn, minWidth: 44, minHeight: 44, padding: 0, justifyContent: 'center' }} title="Copiar email">
+                        <Copy size={16} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Contraseña */}
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Contraseña</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ flex: 1, fontFamily: 'monospace', fontSize: 16, fontWeight: 700, color: 'var(--c-text)', wordBreak: 'break-all', letterSpacing: 0.5 }}>
+                        {showExitoPwd ? crearExito.dueno.password_temporal : '•'.repeat(crearExito.dueno.password_temporal.length)}
+                      </div>
+                      <button onClick={() => setShowExitoPwd(s => !s)} style={{ ...ds.secondaryBtn, minWidth: 44, minHeight: 44, padding: 0, justifyContent: 'center' }} title={showExitoPwd ? 'Ocultar' : 'Mostrar'}>
+                        {showExitoPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                      <button onClick={() => copiarTexto(crearExito.dueno.password_temporal)} style={{ ...ds.secondaryBtn, minWidth: 44, minHeight: 44, padding: 0, justifyContent: 'center' }} title="Copiar contraseña">
+                        <Copy size={16} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* URL */}
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>URL para entrar</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ flex: 1, fontFamily: 'monospace', fontSize: 14, color: 'var(--c-text)' }}>https://panel.pidoo.es</div>
+                      <button onClick={() => copiarTexto('https://panel.pidoo.es')} style={{ ...ds.secondaryBtn, minWidth: 44, minHeight: 44, padding: 0, justifyContent: 'center' }} title="Copiar URL">
+                        <Copy size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <button onClick={compartirCredenciales} style={{
+                  width: '100%', minHeight: 52, padding: '12px 16px',
+                  background: '#FF6B2C', color: '#fff', border: 'none', borderRadius: 12,
+                  fontSize: 15, fontWeight: 700, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  marginBottom: 10,
+                }}>
+                  <Share2 size={18} />
+                  📤 {typeof navigator !== 'undefined' && navigator.share ? 'Compartir credenciales' : 'Copiar todo'}
+                </button>
+
+                <button onClick={cerrarModalCrear} style={{
+                  width: '100%', minHeight: 44, padding: '10px 16px',
+                  ...ds.secondaryBtn, justifyContent: 'center', fontSize: 14,
+                }}>
+                  Cerrar y volver a la lista
+                </button>
+
+                <div style={{
+                  marginTop: 14, padding: '10px 12px', borderRadius: 8,
+                  background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.30)',
+                  fontSize: 11.5, color: 'var(--c-text-soft)', lineHeight: 1.5,
+                }}>
+                  ⚠️ Anota o comparte la contraseña ahora — no la podrás recuperar después (siempre puedes restablecerla desde la ficha del restaurante).
+                </div>
               </div>
-              <div style={{ gridColumn: '1/-1' }}><label style={ds.label}>Banner</label>
-                <label style={{ ...ds.formInput, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-                  <Upload size={14} /> {form.banner_url ? 'Banner subido ✓' : 'Subir banner (800x300 px)'}
-                  <input type="file" accept="image/*" hidden onChange={e => handleUpload(e.target.files[0], 'banner_url')} />
-                </label>
-              </div>
-              <div style={{ gridColumn: '1/-1' }}><label style={ds.label}>Descripción</label><textarea value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} rows={2} style={{ ...ds.formInput, resize: 'vertical' }} /></div>
-              <div style={{ gridColumn: '1/-1', fontSize: 11, color: 'var(--c-muted)', marginTop: 4 }}>
-                Tras crear el restaurante, añade sus repartidores desde la ficha para activar Delivery.
-              </div>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
-              <button onClick={() => setShowCrear(false)} style={ds.secondaryBtn}>Cancelar</button>
-              <button onClick={guardarEstablecimiento} disabled={saving || !form.nombre?.trim()} style={{ ...ds.primaryBtn, opacity: saving || !form.nombre?.trim() ? 0.5 : 1 }}>
-                {saving ? 'Creando...' : 'Crear'}
-              </button>
-            </div>
+            )}
           </div>
         </div>
       )}
