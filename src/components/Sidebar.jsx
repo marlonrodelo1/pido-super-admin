@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react'
-import { LayoutGrid, Store, User, Users, ClipboardList, MessageCircle, DollarSign, Settings, LogOut, Map, Bell, RotateCcw, Truck, FileText, X } from 'lucide-react'
+import { LayoutGrid, Store, User, Users, ClipboardList, MessageCircle, DollarSign, Settings, LogOut, Map, Bell, RotateCcw, FileText, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', Icon: LayoutGrid, group: 'Operación' },
   { id: 'pedidos', label: 'Pedidos', Icon: ClipboardList, group: 'Operación' },
   { id: 'mapa', label: 'Mapa en vivo', Icon: Map, group: 'Operación' },
-  { id: 'repartidores', label: 'Repartidores', Icon: Truck, group: 'Red' },
   { id: 'socios', label: 'Socios', Icon: Users, group: 'Red' },
   { id: 'establecimientos', label: 'Establecimientos', Icon: Store, group: 'Red' },
   { id: 'usuarios', label: 'Usuarios', Icon: User, group: 'Red' },
@@ -63,7 +62,7 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
     <aside style={sidebarStyle}>
       {/* Brand */}
       <div style={styles.brand}>
-        <div style={styles.logo}>P</div>
+        <img src="/favicon.svg" alt="Pidoo" style={styles.logo} />
         <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
           <span style={styles.brandTitle}>Pidoo</span>
           <span style={styles.brandSub}>Super Admin</span>
@@ -96,7 +95,7 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
             <div style={styles.groupLabel}>{g.name}</div>
             {g.items.map(item => {
               const isActive = active === item.id
-              const showBadge = item.id === 'repartidores' && pendientes > 0
+              const showBadge = item.id === 'socios' && pendientes > 0
               return (
                 <button
                   key={item.id}
@@ -182,11 +181,9 @@ const styles = {
   },
   logo: {
     width: 28, height: 28, borderRadius: 8,
-    background: 'linear-gradient(135deg,#FF6B2C,#FF3D00)',
-    display: 'grid', placeItems: 'center',
-    color: '#fff', fontWeight: 900, fontSize: 13, letterSpacing: '-0.5px',
     boxShadow: '0 0 0 1px rgba(255,107,44,0.35), 0 8px 20px -6px rgba(255,107,44,0.45)',
     flexShrink: 0,
+    display: 'block',
   },
   brandTitle: { fontWeight: 800, fontSize: 14, letterSpacing: '-0.3px', color: 'var(--c-text)' },
   brandSub: {
