@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { uploadImage } from '../lib/upload'
 import { ds } from '../lib/darkStyles'
-import { Plus, X, Upload, Save, Trash2, KeyRound } from 'lucide-react'
+import { Plus, X, Upload, Save, Trash2, KeyRound, Search, ChevronLeft, ChevronRight, Pencil } from 'lucide-react'
 import { toast, confirmar } from '../App'
 import CargaMasivaModal from '../components/CargaMasivaModal'
 import ImportUrlModal from '../components/ImportUrlModal'
@@ -23,7 +23,6 @@ export default function Establecimientos() {
   const [catsGenerales, setCatsGenerales] = useState([])
   const [estCats, setEstCats] = useState([])
   const [form, setForm] = useState({})
-  const [catForm, setCatForm] = useState({ nombre: '', orden: 0 })
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(null)
   // Productos y extras
@@ -38,6 +37,30 @@ export default function Establecimientos() {
   const [showImportUrl, setShowImportUrl] = useState(false)
   const [resetPwd, setResetPwd] = useState(false)
   const [ownerEmail, setOwnerEmail] = useState(null)
+  // Estado nuevo: dropdowns categorías + filtros productos
+  const [showAddCatGeneral, setShowAddCatGeneral] = useState(false)
+  const [selectedCartCatId, setSelectedCartCatId] = useState('') // categoría seleccionada en bloque "Categorías de la carta"
+  const [showCatModal, setShowCatModal] = useState(false) // modal crear/editar categoría carta
+  const [catModalForm, setCatModalForm] = useState({ id: null, nombre: '', orden: 0 })
+  const [prodSearch, setProdSearch] = useState('')
+  const [prodSearchDebounced, setProdSearchDebounced] = useState('')
+  const [prodFiltroCatId, setProdFiltroCatId] = useState('all') // 'all' | 'none' | <id>
+  const [prodPage, setProdPage] = useState(1)
+  const [prodPageSize, setProdPageSize] = useState(10)
+
+  // Debounce búsqueda productos (200ms)
+  useEffect(() => {
+    const t = setTimeout(() => setProdSearchDebounced(prodSearch), 200)
+    return () => clearTimeout(t)
+  }, [prodSearch])
+
+  // Sincroniza filtro categoría productos con la categoría seleccionada arriba
+  useEffect(() => {
+    if (selectedCartCatId) setProdFiltroCatId(selectedCartCatId)
+  }, [selectedCartCatId])
+
+  // Reset página al cambiar filtros
+  useEffect(() => { setProdPage(1) }, [prodSearchDebounced, prodFiltroCatId, prodPageSize])
 
   useEffect(() => {
     if (!detalle?.user_id) { setOwnerEmail(null); return }
@@ -118,15 +141,34 @@ export default function Establecimientos() {
     setUploading(null)
   }
 
-  async function agregarCategoria() {
-    if (!catForm.nombre.trim()) return
-    await supabase.from('categorias').insert({ establecimiento_id: detalle.id, nombre: catForm.nombre.trim(), orden: catForm.orden, activa: true })
-    setCatForm({ nombre: '', orden: 0 })
+  async function eliminarCategoria(id) {
+    if (!(await confirmar('¿Eliminar esta categoría? Los productos asignados quedarán sin categoría.'))) return
+    await supabase.from('categorias').delete().eq('id', id)
+    if (selectedCartCatId === id) setSelectedCartCatId('')
     loadCategorias(detalle.id)
   }
 
-  async function eliminarCategoria(id) {
-    await supabase.from('categorias').delete().eq('id', id)
+  function abrirCrearCategoriaModal() {
+    setCatModalForm({ id: null, nombre: '', orden: categorias.length })
+    setShowCatModal(true)
+  }
+
+  function abrirEditarCategoriaModal(c) {
+    setCatModalForm({ id: c.id, nombre: c.nombre, orden: c.orden })
+    setShowCatModal(true)
+  }
+
+  async function guardarCategoriaModal() {
+    const nombre = catModalForm.nombre.trim()
+    if (!nombre) return
+    if (catModalForm.id) {
+      await supabase.from('categorias').update({ nombre, orden: catModalForm.orden }).eq('id', catModalForm.id)
+    } else {
+      const { data } = await supabase.from('categorias').insert({ establecimiento_id: detalle.id, nombre, orden: catModalForm.orden, activa: true }).select().single()
+      if (data?.id) setSelectedCartCatId(data.id)
+    }
+    setShowCatModal(false)
+    setCatModalForm({ id: null, nombre: '', orden: 0 })
     loadCategorias(detalle.id)
   }
 
@@ -214,6 +256,26 @@ export default function Establecimientos() {
     if (buscar && !e.nombre.toLowerCase().includes(buscar.toLowerCase())) return false
     return true
   })
+
+  // --- Memos productos (filtro + paginación) ---
+  const productosFiltrados = useMemo(() => {
+    const q = prodSearchDebounced.trim().toLowerCase()
+    return productos.filter(p => {
+      if (prodFiltroCatId === 'none' && p.categoria_id) return false
+      if (prodFiltroCatId !== 'all' && prodFiltroCatId !== 'none' && p.categoria_id !== prodFiltroCatId) return false
+      if (q && !p.nombre.toLowerCase().includes(q) && !(p.descripcion || '').toLowerCase().includes(q)) return false
+      return true
+    })
+  }, [productos, prodFiltroCatId, prodSearchDebounced])
+
+  const totalPagesProd = Math.max(1, Math.ceil(productosFiltrados.length / prodPageSize))
+  const productosPagina = useMemo(() => {
+    const start = (prodPage - 1) * prodPageSize
+    return productosFiltrados.slice(start, start + prodPageSize)
+  }, [productosFiltrados, prodPage, prodPageSize])
+
+  const catsNoAsignadas = useMemo(() => catsGenerales.filter(c => !estCats.includes(c.id)), [catsGenerales, estCats])
+  const catsAsignadas = useMemo(() => catsGenerales.filter(c => estCats.includes(c.id)), [catsGenerales, estCats])
 
   // --- DETALLE ---
   if (detalle) {
@@ -313,74 +375,232 @@ export default function Establecimientos() {
           onChanged={async () => { await load(); const { data } = await supabase.from('establecimientos').select('*').eq('id', detalle.id).single(); if (data) setDetalle(data) }}
         />
 
-        {/* Categorías generales */}
+        {/* Categorías generales — chips asignadas + dropdown añadir */}
         <div style={{ marginTop: 20 }}>
           <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', marginBottom: 10 }}>Categorías generales</h3>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {catsGenerales.map(c => {
-              const sel = estCats.includes(c.id)
-              return (
-                <button key={c.id} onClick={() => toggleCatGeneral(c.id)} style={{
-                  padding: '8px 14px', borderRadius: 10, border: sel ? '2px solid #FF6B2C' : '1px solid var(--c-border-strong)',
-                  background: sel ? 'var(--c-primary-soft)' : 'var(--c-surface2)',
-                  color: sel ? '#FF6B2C' : 'var(--c-muted)', fontSize: 12, fontWeight: 600,
-                  cursor: 'pointer', fontFamily: "'Inter', system-ui, -apple-system, sans-serif", display: 'flex', alignItems: 'center', gap: 4,
-                }}>
-                  {c.emoji} {c.nombre}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+            {catsAsignadas.length === 0 && (
+              <span style={{ fontSize: 12, ...ds.muted }}>Sin categorías asignadas</span>
+            )}
+            {catsAsignadas.map(c => (
+              <span key={c.id} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '6px 8px 6px 12px', borderRadius: 999,
+                border: '1px solid rgba(255,107,44,0.32)',
+                background: 'rgba(255,107,44,0.10)',
+                color: '#FF6B2C', fontSize: 12, fontWeight: 600,
+                fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+              }}>
+                {c.emoji} {c.nombre}
+                <button
+                  aria-label={`Quitar categoría ${c.nombre}`}
+                  onClick={() => toggleCatGeneral(c.id)}
+                  style={{
+                    background: 'transparent', border: 'none', cursor: 'pointer',
+                    color: '#FF6B2C', display: 'inline-flex', alignItems: 'center',
+                    padding: 2, borderRadius: 999,
+                  }}
+                >
+                  <X size={12} />
                 </button>
-              )
-            })}
+              </span>
+            ))}
+            <div style={{ position: 'relative' }}>
+              <button
+                aria-label="Añadir categoría general"
+                onClick={() => setShowAddCatGeneral(s => !s)}
+                disabled={catsNoAsignadas.length === 0}
+                style={{
+                  ...ds.secondaryBtn, fontSize: 12,
+                  opacity: catsNoAsignadas.length === 0 ? 0.5 : 1,
+                  cursor: catsNoAsignadas.length === 0 ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <Plus size={12} /> {catsNoAsignadas.length === 0 ? 'Todas asignadas' : 'Añadir categoría'}
+              </button>
+              {showAddCatGeneral && catsNoAsignadas.length > 0 && (
+                <>
+                  <div onClick={() => setShowAddCatGeneral(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+                  <div style={{
+                    position: 'absolute', top: '100%', left: 0, marginTop: 6, zIndex: 60,
+                    minWidth: 220, maxWidth: 320, maxHeight: 280, overflowY: 'auto',
+                    background: '#fff', border: '1px solid var(--c-border-strong)',
+                    borderRadius: 10, boxShadow: '0 8px 24px rgba(15,15,15,0.14)',
+                    padding: 4,
+                  }}>
+                    {catsNoAsignadas.map(c => (
+                      <button
+                        key={c.id}
+                        onClick={() => { toggleCatGeneral(c.id); setShowAddCatGeneral(false) }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 8,
+                          width: '100%', padding: '10px 12px', minHeight: 44,
+                          background: 'transparent', border: 'none', borderRadius: 6,
+                          fontSize: 13, color: 'var(--c-text)', cursor: 'pointer',
+                          fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+                          textAlign: 'left',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--c-surface2)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                      >
+                        <span>{c.emoji}</span> {c.nombre}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Categorías de la carta */}
+        {/* Categorías de la carta — selector + acciones */}
         <div style={{ marginTop: 20 }}>
           <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', marginBottom: 10 }}>Categorías de la carta</h3>
-          {categorias.map(c => (
-            <div key={c.id} style={{ ...ds.card, padding: '10px 16px', marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--c-text)' }}>{c.nombre}</span>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <span style={{ fontSize: 11, ...ds.muted }}>Orden: {c.orden}</span>
-                <button onClick={() => eliminarCategoria(c.id)} style={{ ...ds.actionBtn, color: 'var(--c-danger)' }}><Trash2 size={12} /></button>
-              </div>
+          {categorias.length === 0 ? (
+            <div style={{ ...ds.card, padding: 16, textAlign: 'center' }}>
+              <div style={{ fontSize: 13, color: 'var(--c-muted)', marginBottom: 10 }}>Aún no hay categorías</div>
+              <button onClick={abrirCrearCategoriaModal} style={ds.primaryBtn}>
+                <Plus size={14} /> Crea tu primera categoría
+              </button>
             </div>
-          ))}
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <input value={catForm.nombre} onChange={e => setCatForm({ ...catForm, nombre: e.target.value })} placeholder="Nueva categoría..." style={{ ...ds.formInput, flex: 1 }} />
-            <input type="number" value={catForm.orden} onChange={e => setCatForm({ ...catForm, orden: +e.target.value })} style={{ ...ds.formInput, width: 70 }} placeholder="Ord" />
-            <button onClick={agregarCategoria} style={ds.primaryBtn}>Añadir</button>
-          </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <select
+                aria-label="Seleccionar categoría de la carta"
+                value={selectedCartCatId}
+                onChange={e => setSelectedCartCatId(e.target.value)}
+                style={{ ...ds.select, flex: '1 1 220px', minWidth: 200, maxWidth: 380 }}
+              >
+                <option value="">— Selecciona categoría —</option>
+                {categorias.map(c => (
+                  <option key={c.id} value={c.id}>{c.nombre} (orden {c.orden})</option>
+                ))}
+              </select>
+              <button onClick={abrirCrearCategoriaModal} style={ds.secondaryBtn} aria-label="Nueva categoría">
+                <Plus size={14} /> Nueva
+              </button>
+              {selectedCartCatId && (() => {
+                const c = categorias.find(x => x.id === selectedCartCatId)
+                if (!c) return null
+                return (
+                  <>
+                    <button onClick={() => abrirEditarCategoriaModal(c)} style={ds.secondaryBtn} aria-label={`Editar ${c.nombre}`}>
+                      <Pencil size={12} /> Editar
+                    </button>
+                    <button onClick={() => eliminarCategoria(c.id)} style={{ ...ds.secondaryBtn, color: 'var(--c-danger)', borderColor: 'rgba(220,38,38,0.32)' }} aria-label={`Eliminar ${c.nombre}`}>
+                      <Trash2 size={12} /> Eliminar
+                    </button>
+                  </>
+                )
+              })()}
+            </div>
+          )}
         </div>
 
-        {/* Productos */}
+        {/* Productos — buscador + filtro categoría + paginación */}
         <div style={{ marginTop: 20 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)' }}>Productos ({productos.length})</h3>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button onClick={() => setShowImportUrl(true)} style={{ ...ds.secondaryBtn, fontSize: 11, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 4 }}>🔗 Importar URL</button>
-              <button onClick={() => setShowCargaMasiva(true)} style={{ ...ds.secondaryBtn, fontSize: 11, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 4 }}><Upload size={12} /> Carga masiva</button>
-              <button onClick={() => { setEditProd('new'); setProdForm({ nombre: '', descripcion: '', precio: '', categoria_id: '', imagen_url: '' }); setProdExtras([]) }} style={{ ...ds.primaryBtn, fontSize: 11, padding: '6px 12px' }}>+ Producto</button>
+          <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, gap: 8, flexWrap: 'wrap' }}>
+            <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)' }}>
+              Productos ({productosFiltrados.length}{productosFiltrados.length !== productos.length ? ` de ${productos.length}` : ''})
+            </h3>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <button onClick={() => setShowImportUrl(true)} style={{ ...ds.secondaryBtn, fontSize: 11, padding: '0 12px', height: 30, display: 'flex', alignItems: 'center', gap: 4 }}>🔗 Importar URL</button>
+              <button onClick={() => setShowCargaMasiva(true)} style={{ ...ds.secondaryBtn, fontSize: 11, padding: '0 12px', height: 30, display: 'flex', alignItems: 'center', gap: 4 }}><Upload size={12} /> Carga masiva</button>
+              <button onClick={() => { setEditProd('new'); setProdForm({ nombre: '', descripcion: '', precio: '', categoria_id: selectedCartCatId || '', imagen_url: '' }); setProdExtras([]) }} style={{ ...ds.primaryBtn, fontSize: 11, padding: '0 12px', height: 30 }}>+ Producto</button>
             </div>
           </div>
 
-          {productos.map(p => (
+          {/* Toolbar buscador + filtro */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+            <div style={{ position: 'relative', flex: '1 1 240px', minWidth: 200 }}>
+              <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--c-muted)', pointerEvents: 'none' }} />
+              <input
+                type="search"
+                aria-label="Buscar producto"
+                placeholder="Buscar producto..."
+                value={prodSearch}
+                onChange={e => setProdSearch(e.target.value)}
+                style={{ ...ds.formInput, paddingLeft: 32, height: 38 }}
+              />
+            </div>
+            <select
+              aria-label="Filtrar por categoría"
+              value={prodFiltroCatId}
+              onChange={e => { setProdFiltroCatId(e.target.value); if (e.target.value !== selectedCartCatId) setSelectedCartCatId(e.target.value && e.target.value !== 'all' && e.target.value !== 'none' ? e.target.value : '') }}
+              style={{ ...ds.select, flex: '1 1 200px', minWidth: 180, maxWidth: 280, height: 38 }}
+            >
+              <option value="all">Todas las categorías</option>
+              <option value="none">Sin categoría</option>
+              {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </select>
+            <select
+              aria-label="Productos por página"
+              value={prodPageSize}
+              onChange={e => setProdPageSize(Number(e.target.value))}
+              style={{ ...ds.select, width: 110, height: 38 }}
+            >
+              <option value={10}>10 / pág</option>
+              <option value={25}>25 / pág</option>
+              <option value={50}>50 / pág</option>
+            </select>
+          </div>
+
+          {/* Lista paginada */}
+          {productosPagina.map(p => (
             <div key={p.id} style={{ ...ds.card, padding: '10px 16px', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 12, opacity: p.disponible ? 1 : 0.4 }}>
               <div style={{ width: 40, height: 40, borderRadius: 8, background: 'var(--c-surface2)', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--c-muted)' }}>
                 {p.imagen_url ? <img src={p.imagen_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '📷'}
               </div>
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--c-text)' }}>{p.nombre}</div>
-                {p.descripcion && <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>{p.descripcion}</div>}
+                {p.descripcion && <div style={{ fontSize: 11, color: 'var(--c-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.descripcion}</div>}
               </div>
-              <span style={{ fontWeight: 700, fontSize: 13, color: '#FF6B2C', minWidth: 60, textAlign: 'right' }}>{p.precio.toFixed(2)} €</span>
+              <span style={{ fontWeight: 700, fontSize: 13, color: '#FF6B2C', minWidth: 60, textAlign: 'right' }}>{Number(p.precio).toFixed(2)} €</span>
               <div style={{ display: 'flex', gap: 4 }}>
-                <button onClick={() => toggleDisponible(p.id, p.disponible)} style={{ ...ds.actionBtn, color: p.disponible ? 'var(--c-text)' : 'var(--c-danger)', fontSize: 10 }}>{p.disponible ? 'On' : 'Off'}</button>
-                <button onClick={() => abrirEditarProd(p)} style={{ ...ds.actionBtn, fontSize: 10 }}>Editar</button>
-                <button onClick={() => eliminarProd(p.id)} style={{ ...ds.actionBtn, color: 'var(--c-danger)', fontSize: 10 }}>×</button>
+                <button onClick={() => toggleDisponible(p.id, p.disponible)} style={{ ...ds.actionBtn, color: p.disponible ? 'var(--c-text)' : 'var(--c-danger)', fontSize: 10 }} aria-label={p.disponible ? 'Desactivar producto' : 'Activar producto'}>{p.disponible ? 'On' : 'Off'}</button>
+                <button onClick={() => abrirEditarProd(p)} style={{ ...ds.actionBtn, fontSize: 10 }} aria-label="Editar producto">Editar</button>
+                <button onClick={() => eliminarProd(p.id)} style={{ ...ds.actionBtn, color: 'var(--c-danger)', fontSize: 10 }} aria-label="Eliminar producto">×</button>
               </div>
             </div>
           ))}
-          {productos.length === 0 && <div style={{ padding: 24, textAlign: 'center', color: 'var(--c-muted)', fontSize: 12 }}>Sin productos</div>}
+
+          {productosFiltrados.length === 0 && (
+            <div style={{ ...ds.card, padding: 24, textAlign: 'center', color: 'var(--c-muted)', fontSize: 12 }}>
+              {productos.length === 0 ? 'Sin productos' : 'No hay productos que coincidan'}
+              {productos.length > 0 && (
+                <div style={{ marginTop: 10 }}>
+                  <button onClick={() => { setProdSearch(''); setProdFiltroCatId('all'); setSelectedCartCatId('') }} style={ds.secondaryBtn}>Limpiar filtros</button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Paginación */}
+          {productosFiltrados.length > prodPageSize && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, gap: 8, flexWrap: 'wrap' }}>
+              <div style={{ fontSize: 11.5, color: 'var(--c-muted)' }}>
+                Página {prodPage} de {totalPagesProd} · {productosFiltrados.length} productos
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button
+                  onClick={() => setProdPage(p => Math.max(1, p - 1))}
+                  disabled={prodPage === 1}
+                  aria-label="Página anterior"
+                  style={{ ...ds.secondaryBtn, opacity: prodPage === 1 ? 0.5 : 1, cursor: prodPage === 1 ? 'not-allowed' : 'pointer' }}
+                >
+                  <ChevronLeft size={14} /> Anterior
+                </button>
+                <button
+                  onClick={() => setProdPage(p => Math.min(totalPagesProd, p + 1))}
+                  disabled={prodPage >= totalPagesProd}
+                  aria-label="Página siguiente"
+                  style={{ ...ds.secondaryBtn, opacity: prodPage >= totalPagesProd ? 0.5 : 1, cursor: prodPage >= totalPagesProd ? 'not-allowed' : 'pointer' }}
+                >
+                  Siguiente <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Extras */}
@@ -493,6 +713,53 @@ export default function Establecimientos() {
                 <button onClick={() => setEditProd(null)} style={ds.secondaryBtn}>Cancelar</button>
                 <button onClick={guardarProd} disabled={savingProd || !prodForm.nombre?.trim() || !prodForm.precio} style={{ ...ds.primaryBtn, opacity: savingProd || !prodForm.nombre?.trim() ? 0.5 : 1 }}>
                   {savingProd ? 'Guardando...' : editProd === 'new' ? 'Crear' : 'Guardar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal crear/editar categoría de carta */}
+        {showCatModal && (
+          <div style={ds.modal} onClick={() => setShowCatModal(false)}>
+            <div className="admin-modal-content" style={{ ...ds.modalContent, maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-text)' }}>
+                  {catModalForm.id ? 'Editar categoría' : 'Nueva categoría'}
+                </h2>
+                <button onClick={() => setShowCatModal(false)} style={{ background: 'var(--c-surface2)', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} aria-label="Cerrar">
+                  <X size={16} color='var(--c-text)' />
+                </button>
+              </div>
+              <div style={{ display: 'grid', gap: 12 }}>
+                <div>
+                  <label style={ds.label}>Nombre *</label>
+                  <input
+                    autoFocus
+                    value={catModalForm.nombre}
+                    onChange={e => setCatModalForm({ ...catModalForm, nombre: e.target.value })}
+                    onKeyDown={e => { if (e.key === 'Enter' && catModalForm.nombre.trim()) guardarCategoriaModal() }}
+                    style={ds.formInput}
+                  />
+                </div>
+                <div>
+                  <label style={ds.label}>Orden</label>
+                  <input
+                    type="number"
+                    value={catModalForm.orden}
+                    onChange={e => setCatModalForm({ ...catModalForm, orden: +e.target.value })}
+                    style={ds.formInput}
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+                <button onClick={() => setShowCatModal(false)} style={ds.secondaryBtn}>Cancelar</button>
+                <button
+                  onClick={guardarCategoriaModal}
+                  disabled={!catModalForm.nombre.trim()}
+                  style={{ ...ds.primaryBtn, opacity: !catModalForm.nombre.trim() ? 0.5 : 1 }}
+                >
+                  {catModalForm.id ? 'Guardar' : 'Crear'}
                 </button>
               </div>
             </div>
