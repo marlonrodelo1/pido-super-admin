@@ -112,7 +112,7 @@ export default function Notificaciones() {
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 24 }}>
         <div style={ds.card}>
           <div style={{ fontSize: 11, color: 'var(--c-muted)', fontWeight: 600 }}>Clientes</div>
           <div style={{ fontSize: 24, fontWeight: 800, color: '#FF6B2C' }}>{stats.clientes}</div>

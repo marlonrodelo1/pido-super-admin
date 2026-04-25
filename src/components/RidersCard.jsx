@@ -224,7 +224,7 @@ function AddRiderModal({ establecimiento, vinculados, onClose, onSaved }) {
 
   return (
     <div style={ds.modal} onClick={onClose}>
-      <div style={ds.modalContent} onClick={e => e.stopPropagation()}>
+      <div className="admin-modal-content" style={ds.modalContent} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
           <Truck size={18} color="#FF6B2C" />
           <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--c-text)', flex: 1 }}>Añadir repartidor</h2>

@@ -62,7 +62,7 @@ export default function Pedidos() {
             )}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 13, marginBottom: 24, color: 'var(--c-text)' }}>
+          <div className="admin-grid-2col-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 13, marginBottom: 24, color: 'var(--c-text)' }}>
             <div><strong>Subtotal:</strong> {detalle.subtotal?.toFixed(2)}EUR</div>
             <div><strong>Envio:</strong> {detalle.coste_envio?.toFixed(2)}EUR</div>
             <div><strong>Propina:</strong> {detalle.propina?.toFixed(2)}EUR</div>
@@ -121,19 +121,19 @@ export default function Pedidos() {
           <span style={{ width: 80 }}>Total</span>
           <span style={{ width: 90 }}>Estado</span>
           <span style={{ width: 70 }}>Pago</span>
-          <span style={{ width: 70 }}>Canal</span>
+          <span data-tablet-sm-hide="true" style={{ width: 70 }}>Canal</span>
           <span style={{ flex: 1 }}>Fecha</span>
           <span style={{ width: 50 }}></span>
         </div>
         {filtrados.map(p => (
-          <div key={p.id} style={ds.tableRow}>
+          <div key={p.id} className="ds-row-touch" style={ds.tableRow}>
             <span style={{ width: 80, fontWeight: 700, fontSize: 12 }}>{p.codigo}</span>
             <span style={{ width: 80, fontSize: 12 }}>{p.total?.toFixed(2)}EUR</span>
             <span style={{ width: 90 }}><span style={{ ...ds.badge, background: (estadoColor[p.estado] || '#6B7280') + '15', color: estadoColor[p.estado] }}>{p.estado}</span></span>
             <span style={{ width: 70 }}><span style={{ ...ds.badge, background: p.metodo_pago === 'tarjeta' ? 'var(--c-info-soft)' : 'var(--c-warning-soft)', color: p.metodo_pago === 'tarjeta' ? 'var(--c-info)' : 'var(--c-warning)' }}>{p.metodo_pago}</span></span>
-            <span style={{ width: 70 }}><span style={{ ...ds.badge, background: 'var(--c-primary-soft)', color: '#FF6B2C' }}>PIDO</span></span>
+            <span data-tablet-sm-hide="true" style={{ width: 70 }}><span style={{ ...ds.badge, background: 'var(--c-primary-soft)', color: '#FF6B2C' }}>PIDO</span></span>
             <span style={{ flex: 1, fontSize: 11, color: 'var(--c-muted)' }}>{new Date(p.created_at).toLocaleString('es-ES')}</span>
-            <span style={{ width: 50 }}><button onClick={() => verDetalle(p)} style={ds.actionBtn}>Ver</button></span>
+            <span style={{ width: 50 }}><button className="admin-action-btn" onClick={() => verDetalle(p)} style={ds.actionBtn}>Ver</button></span>
           </div>
         ))}
         {filtrados.length === 0 && <div style={{ padding: 32, textAlign: 'center', color: 'var(--c-muted)', fontSize: 13 }}>Sin pedidos</div>}

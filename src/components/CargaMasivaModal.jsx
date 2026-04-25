@@ -114,7 +114,7 @@ export default function CargaMasivaModal({ establecimiento, categorias, onClose,
   // ── idle ──
   if (step === 'idle') return (
     <div style={ds.modal} onClick={onClose}>
-      <div style={{ ...ds.modalContent, maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+      <div className="admin-modal-content" style={{ ...ds.modalContent, maxWidth: 480 }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-text)', margin: 0 }}>Carga masiva de productos</h2>
           <button onClick={onClose} style={{ ...ds.actionBtn, color: 'var(--c-muted)' }}><X size={16} /></button>
@@ -157,7 +157,7 @@ export default function CargaMasivaModal({ establecimiento, categorias, onClose,
   // ── preview ──
   if (step === 'preview') return (
     <div style={ds.modal} onClick={() => setStep('idle')}>
-      <div style={{ ...ds.modalContent, maxWidth: 700 }} onClick={e => e.stopPropagation()}>
+      <div className="admin-modal-content" style={{ ...ds.modalContent, maxWidth: 700 }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-text)', margin: 0 }}>Vista previa</h2>
           <button onClick={() => setStep('idle')} style={{ ...ds.actionBtn, color: 'var(--c-muted)' }}><X size={16} /></button>
@@ -246,7 +246,7 @@ export default function CargaMasivaModal({ establecimiento, categorias, onClose,
   // ── uploading ──
   if (step === 'uploading') return (
     <div style={ds.modal}>
-      <div style={{ ...ds.modalContent, maxWidth: 400, textAlign: 'center' }}>
+      <div className="admin-modal-content" style={{ ...ds.modalContent, maxWidth: 400, textAlign: 'center' }}>
         <FileSpreadsheet size={32} style={{ color: '#FF6B2C', marginBottom: 12 }} />
         <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--c-text)', marginBottom: 8 }}>Subiendo productos...</div>
         <div style={{ fontSize: 12, color: 'var(--c-muted)', marginBottom: 16 }}>
@@ -267,7 +267,7 @@ export default function CargaMasivaModal({ establecimiento, categorias, onClose,
   // ── done ──
   return (
     <div style={ds.modal}>
-      <div style={{ ...ds.modalContent, maxWidth: 440 }}>
+      <div className="admin-modal-content" style={{ ...ds.modalContent, maxWidth: 440 }}>
         <div style={{ textAlign: 'center', marginBottom: 20 }}>
           <CheckCircle size={40} style={{ color: 'var(--c-text)', marginBottom: 10 }} />
           <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-text)', margin: 0 }}>Carga completada</h2>

@@ -73,23 +73,23 @@ export default function Dashboard() {
           <span style={{ width: 100 }}>Codigo</span>
           <span style={{ width: 80 }}>Total</span>
           <span style={{ width: 80 }}>Estado</span>
-          <span style={{ width: 70 }}>Pago</span>
-          <span style={{ width: 70 }}>Canal</span>
+          <span data-tablet-sm-hide="true" style={{ width: 70 }}>Pago</span>
+          <span data-tablet-hide="true" style={{ width: 70 }}>Canal</span>
           <span style={{ flex: 1 }}>Fecha</span>
         </div>
         {recientes.map(p => (
-          <div key={p.id} style={ds.tableRow}>
+          <div key={p.id} className="ds-row-touch" style={ds.tableRow}>
             <span style={{ width: 100, fontWeight: 700, fontSize: 12 }}>{p.codigo}</span>
             <span style={{ width: 80, fontSize: 12 }}>{p.total?.toFixed(2)}€</span>
             <span style={{ width: 80 }}>
               <span style={{ ...ds.badge, background: (estadoColor[p.estado] || '#6B7280') + '25', color: estadoColor[p.estado] || '#6B7280' }}>{p.estado}</span>
             </span>
-            <span style={{ width: 70 }}>
+            <span data-tablet-sm-hide="true" style={{ width: 70 }}>
               <span style={{ ...ds.badge, background: p.metodo_pago === 'tarjeta' ? 'rgba(59,130,246,0.15)' : 'var(--c-warning-soft)', color: p.metodo_pago === 'tarjeta' ? 'var(--c-info)' : 'var(--c-warning)' }}>
                 {p.metodo_pago === 'tarjeta' ? 'Tarjeta' : 'Efectivo'}
               </span>
             </span>
-            <span style={{ width: 70 }}>
+            <span data-tablet-hide="true" style={{ width: 70 }}>
               <span style={{ ...ds.badge, background: 'var(--c-primary-soft)', color: '#FF6B2C' }}>PIDO</span>
             </span>
             <span style={{ flex: 1, fontSize: 11, ...ds.muted }}>{new Date(p.created_at).toLocaleString('es-ES')}</span>

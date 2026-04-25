@@ -150,6 +150,7 @@ export const ds = {
     position: 'fixed', inset: 0, background: 'rgba(15,15,15,0.45)',
     zIndex: 1000, display: 'flex', alignItems: 'center',
     justifyContent: 'center', backdropFilter: 'blur(4px)',
+    padding: 16,
   },
   modalContent: {
     background: colors.surface, borderRadius: 14, padding: 24,
@@ -158,3 +159,4 @@ export const ds = {
     boxShadow: '0 24px 60px rgba(15,15,15,0.18)',
   },
 }
+

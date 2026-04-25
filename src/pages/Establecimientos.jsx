@@ -222,7 +222,7 @@ export default function Establecimientos() {
         <button onClick={() => { setDetalle(null); setEditando(false) }} style={ds.backBtn}>← Volver</button>
 
         <div style={{ ...ds.card, padding: 28 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+          <div className="admin-page-header" style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
             <div style={{ width: 60, height: 60, borderRadius: 14, background: 'var(--c-surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, overflow: 'hidden', cursor: 'pointer', position: 'relative' }}
               onClick={() => logoRef.current?.click()}>
               {(form.logo_url || detalle.logo_url) ? <img src={form.logo_url || detalle.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🍽️'}
@@ -275,7 +275,7 @@ export default function Establecimientos() {
           </div>
 
           {editando ? (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="admin-grid-2col-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div><label style={ds.label}>Tipo</label><select value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })} style={ds.select}>
                 <option value="restaurante">Restaurante</option><option value="cafeteria">Cafetería</option><option value="panaderia">Panadería</option>
                 <option value="supermercado">Supermercado</option><option value="farmacia">Farmacia</option><option value="tienda">Tienda</option>
@@ -290,7 +290,7 @@ export default function Establecimientos() {
               <div style={{ gridColumn: '1/-1' }}><label style={ds.label}>Descripción</label><textarea value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} rows={2} style={{ ...ds.formInput, resize: 'vertical' }} /></div>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 13, color: 'var(--c-text)' }}>
+            <div className="admin-grid-2col-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 13, color: 'var(--c-text)' }}>
               <div><span style={ds.muted}>Email:</span> {detalle.email || '-'}</div>
               <div><span style={ds.muted}>Telefono:</span> {detalle.telefono || '-'}</div>
               <div><span style={ds.muted}>Direccion:</span> {detalle.direccion || '-'}</div>
@@ -443,12 +443,12 @@ export default function Establecimientos() {
         {/* Modal editar/crear producto */}
         {editProd && (
           <div style={ds.modal} onClick={() => setEditProd(null)}>
-            <div style={ds.modalContent} onClick={e => e.stopPropagation()}>
+            <div className="admin-modal-content" style={ds.modalContent} onClick={e => e.stopPropagation()}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                 <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-text)' }}>{editProd === 'new' ? 'Nuevo producto' : 'Editar producto'}</h2>
                 <button onClick={() => setEditProd(null)} style={{ background: 'var(--c-surface2)', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} color='var(--c-text)' /></button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="admin-grid-2col-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div style={{ gridColumn: '1/-1' }}><label style={ds.label}>Nombre *</label><input value={prodForm.nombre} onChange={e => setProdForm({ ...prodForm, nombre: e.target.value })} style={ds.formInput} /></div>
                 <div><label style={ds.label}>Precio (€) *</label><input type="number" step="0.01" value={prodForm.precio} onChange={e => setProdForm({ ...prodForm, precio: e.target.value })} style={ds.formInput} /></div>
                 <div><label style={ds.label}>Categoría</label>
@@ -516,7 +516,7 @@ export default function Establecimientos() {
   // --- LISTA ---
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, gap: 12 }}>
         <h1 style={ds.h1}>Establecimientos</h1>
         <button onClick={() => { setForm(initForm()); setShowCrear(true) }} style={{ ...ds.primaryBtn, display: 'flex', alignItems: 'center', gap: 6 }}>
           <Plus size={16} /> Crear
@@ -536,29 +536,33 @@ export default function Establecimientos() {
 
       <div style={ds.table}>
         <div style={ds.tableHeader}>
-          <span style={{ width: 44 }}></span><span style={{ flex: 1 }}>Nombre</span><span style={{ width: 100 }}>Categoría</span>
-          <span style={{ width: 60 }}>Rating</span><span style={{ width: 80 }}>Estado</span><span style={{ width: 120 }}>Acciones</span>
+          <span style={{ width: 44 }}></span>
+          <span style={{ flex: 1 }}>Nombre</span>
+          <span data-tablet-sm-hide="true" style={{ width: 100 }}>Categoría</span>
+          <span data-tablet-hide="true" style={{ width: 60 }}>Rating</span>
+          <span style={{ width: 80 }}>Estado</span>
+          <span style={{ width: 120 }}>Acciones</span>
         </div>
         {filtrados.map(e => (
-          <div key={e.id} style={ds.tableRow}>
+          <div key={e.id} className="ds-row-touch" style={ds.tableRow}>
             <span style={{ width: 44 }}>
               <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--c-surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, overflow: 'hidden' }}>
                 {e.logo_url ? <img src={e.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🍽️'}
               </div>
             </span>
             <span style={{ flex: 1, fontWeight: 700, fontSize: 13, cursor: 'pointer', color: 'var(--c-text)' }} onClick={() => { setDetalle(e); loadCategorias(e.id); loadEstCats(e.id); loadProductos(e.id); loadResenas(e.id) }}>{e.nombre}</span>
-            <span style={{ width: 100 }}>
+            <span data-tablet-sm-hide="true" style={{ width: 100 }}>
               <span style={{ ...ds.badge, background: 'var(--c-surface2)', color: 'var(--c-text-soft)' }}>
                 {e.categoria_padre === 'comida' ? '🍕' : e.categoria_padre === 'farmacia' ? '💊' : '🛒'} {e.categoria_padre}
               </span>
             </span>
-            <span style={{ width: 60, fontSize: 12, color: 'var(--c-text)' }}>{e.rating?.toFixed(1)}</span>
+            <span data-tablet-hide="true" style={{ width: 60, fontSize: 12, color: 'var(--c-text)' }}>{e.rating?.toFixed(1)}</span>
             <span style={{ width: 80 }}>
               <span style={{ ...ds.badge, background: e.activo ? 'var(--c-surface2)' : 'var(--c-danger-soft)', color: e.activo ? 'var(--c-text)' : 'var(--c-danger)' }}>{e.activo ? 'Activo' : 'Inactivo'}</span>
             </span>
             <span style={{ width: 120, display: 'flex', gap: 6 }}>
-              <button onClick={() => { setDetalle(e); loadCategorias(e.id); loadEstCats(e.id); loadProductos(e.id); loadResenas(e.id) }} style={ds.actionBtn}>Editar</button>
-              <button onClick={() => toggleActivo(e.id, e.activo)} style={{ ...ds.actionBtn, color: e.activo ? 'var(--c-danger)' : 'var(--c-text)' }}>
+              <button className="admin-action-btn" onClick={() => { setDetalle(e); loadCategorias(e.id); loadEstCats(e.id); loadProductos(e.id); loadResenas(e.id) }} style={ds.actionBtn}>Editar</button>
+              <button className="admin-action-btn" onClick={() => toggleActivo(e.id, e.activo)} style={{ ...ds.actionBtn, color: e.activo ? 'var(--c-danger)' : 'var(--c-text)' }}>
                 {e.activo ? 'Off' : 'On'}
               </button>
             </span>
@@ -570,12 +574,12 @@ export default function Establecimientos() {
       {/* Modal crear */}
       {showCrear && (
         <div style={ds.modal} onClick={() => setShowCrear(false)}>
-          <div style={ds.modalContent} onClick={e => e.stopPropagation()}>
+          <div className="admin-modal-content" style={ds.modalContent} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-text)' }}>Crear establecimiento</h2>
               <button onClick={() => setShowCrear(false)} style={{ background: 'var(--c-surface2)', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} color='var(--c-text)' /></button>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="admin-grid-2col-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div style={{ gridColumn: '1/-1' }}><label style={ds.label}>Nombre *</label><input value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} style={ds.formInput} /></div>
               <div><label style={ds.label}>Tipo</label><select value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })} style={ds.select}>
                 <option value="restaurante">Restaurante</option><option value="cafeteria">Cafetería</option><option value="supermercado">Supermercado</option><option value="farmacia">Farmacia</option><option value="tienda">Tienda</option>

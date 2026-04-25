@@ -62,7 +62,7 @@ export default function ImportUrlModal({ establecimiento, onClose, onComplete })
   // ── idle ──
   if (step === 'idle') return (
     <div style={ds.modal} onClick={onClose}>
-      <div style={{ ...ds.modalContent, maxWidth: 540 }} onClick={e => e.stopPropagation()}>
+      <div className="admin-modal-content" style={{ ...ds.modalContent, maxWidth: 540 }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Link2 size={18} color="#FF6B2C" />
@@ -114,7 +114,7 @@ export default function ImportUrlModal({ establecimiento, onClose, onComplete })
   // ── analyzing ──
   if (step === 'analyzing') return (
     <div style={ds.modal}>
-      <div style={{ ...ds.modalContent, maxWidth: 400, textAlign: 'center', padding: 28 }}>
+      <div className="admin-modal-content" style={{ ...ds.modalContent, maxWidth: 400, textAlign: 'center', padding: 28 }}>
         <Link2 size={32} color="#FF6B2C" style={{ marginBottom: 10 }} />
         <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', marginBottom: 6 }}>Analizando tienda…</div>
         <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>Descargando catálogo y extras desde el servidor.</div>
@@ -128,7 +128,7 @@ export default function ImportUrlModal({ establecimiento, onClose, onComplete })
   // ── preview ──
   if (step === 'preview' && preview) return (
     <div style={ds.modal} onClick={() => setStep('idle')}>
-      <div style={{ ...ds.modalContent, maxWidth: 640 }} onClick={e => e.stopPropagation()}>
+      <div className="admin-modal-content" style={{ ...ds.modalContent, maxWidth: 640 }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Store size={18} color="#FF6B2C" />
@@ -181,7 +181,7 @@ export default function ImportUrlModal({ establecimiento, onClose, onComplete })
   // ── importing ──
   if (step === 'importing') return (
     <div style={ds.modal}>
-      <div style={{ ...ds.modalContent, maxWidth: 400, textAlign: 'center', padding: 28 }}>
+      <div className="admin-modal-content" style={{ ...ds.modalContent, maxWidth: 400, textAlign: 'center', padding: 28 }}>
         <Upload size={32} color="#FF6B2C" style={{ marginBottom: 10 }} />
         <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', marginBottom: 6 }}>Importando…</div>
         <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>Creando categorías, productos y extras en la base de datos.</div>
@@ -195,7 +195,7 @@ export default function ImportUrlModal({ establecimiento, onClose, onComplete })
   // ── done ──
   if (step === 'done' && result) return (
     <div style={ds.modal}>
-      <div style={{ ...ds.modalContent, maxWidth: 420, textAlign: 'center', padding: 28 }}>
+      <div className="admin-modal-content" style={{ ...ds.modalContent, maxWidth: 420, textAlign: 'center', padding: 28 }}>
         <CheckCircle size={40} color='var(--c-text)' style={{ marginBottom: 12 }} />
         <h2 style={{ fontSize: 17, fontWeight: 800, color: 'var(--c-text)', margin: '0 0 16px' }}>Importación completa</h2>
 

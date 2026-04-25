@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Menu } from 'lucide-react'
 import { AdminProvider, useAdmin } from './context/AdminContext'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import Sidebar from './components/Sidebar'
@@ -16,13 +17,45 @@ import Reembolsos from './pages/Reembolsos'
 import Repartidores from './pages/Repartidores'
 import Socios from './pages/Socios'
 import LandingRiders from './pages/LandingRiders'
+import { useMediaQuery, BP } from './lib/useMediaQuery'
 import './index.css'
+
+const SECCION_TITULOS = {
+  dashboard: 'Dashboard',
+  establecimientos: 'Establecimientos',
+  usuarios: 'Usuarios',
+  pedidos: 'Pedidos',
+  mapa: 'Mapa en vivo',
+  notificaciones: 'Notificaciones',
+  soporte: 'Soporte',
+  finanzas: 'Finanzas',
+  reembolsos: 'Reembolsos',
+  repartidores: 'Repartidores',
+  socios: 'Socios',
+  'landing-riders': 'Landing Riders',
+  config: 'Configuración',
+}
 
 const FONT = "'Inter', system-ui, -apple-system, sans-serif"
 
 function AppContent() {
   const { user, loading, logout } = useAdmin()
   const [seccion, setSeccion] = useState('dashboard')
+  const isTabletDown = useMediaQuery(BP.tabletDown)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // Cerrar drawer al cambiar de sección en tablet
+  useEffect(() => {
+    if (isTabletDown) setSidebarOpen(false)
+  }, [seccion, isTabletDown])
+
+  // Bloquear scroll del body cuando el drawer está abierto
+  useEffect(() => {
+    if (isTabletDown && sidebarOpen) {
+      document.body.style.overflow = 'hidden'
+      return () => { document.body.style.overflow = '' }
+    }
+  }, [isTabletDown, sidebarOpen])
 
   if (loading) {
     return (
@@ -43,11 +76,109 @@ function AppContent() {
 
   if (!user) return <Login />
 
+  const drawerOpen = isTabletDown && sidebarOpen
+  const userInitial = (user?.email?.[0] || 'M').toUpperCase()
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh', fontFamily: FONT, background: 'var(--c-bg)' }}>
-      <Sidebar active={seccion} onChange={setSeccion} onLogout={logout} user={user} />
-      <main style={{ flex: 1, marginLeft: 220, background: 'var(--c-bg)', minHeight: '100vh' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 32px 48px' }}>
+      {/* Sidebar: en desktop fijo siempre visible; en tablet se muestra como drawer overlay */}
+      {(!isTabletDown || drawerOpen) && (
+        <Sidebar
+          active={seccion}
+          onChange={setSeccion}
+          onLogout={logout}
+          user={user}
+          mobile={isTabletDown}
+          onClose={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Backdrop oscuro cuando drawer abierto */}
+      {drawerOpen && (
+        <div
+          className="admin-sidebar-backdrop"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      <main
+        style={{
+          flex: 1,
+          marginLeft: isTabletDown ? 0 : 220,
+          background: 'var(--c-bg)',
+          minHeight: '100vh',
+        }}
+      >
+        {/* Topbar visible solo en tablet */}
+        {isTabletDown && (
+          <header
+            style={{
+              position: 'fixed',
+              top: 0, left: 0, right: 0,
+              height: 56,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              padding: '0 14px',
+              background: 'var(--c-surface)',
+              borderBottom: '1px solid var(--c-border)',
+              zIndex: 30,
+              boxShadow: '0 1px 2px rgba(15,15,15,0.04)',
+            }}
+          >
+            <button
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Abrir menú"
+              style={{
+                width: 44, height: 44,
+                display: 'grid', placeItems: 'center',
+                borderRadius: 10,
+                background: 'transparent',
+                color: 'var(--c-text)',
+                cursor: 'pointer',
+              }}
+            >
+              <Menu size={22} />
+            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{
+                width: 28, height: 28, borderRadius: 8,
+                background: 'linear-gradient(135deg,#FF6B2C,#FF3D00)',
+                display: 'grid', placeItems: 'center',
+                color: '#fff', fontWeight: 900, fontSize: 13,
+              }}>P</div>
+              <div style={{
+                fontSize: 15, fontWeight: 800, color: 'var(--c-text)',
+                letterSpacing: '-0.3px', whiteSpace: 'nowrap',
+                overflow: 'hidden', textOverflow: 'ellipsis',
+              }}>
+                {SECCION_TITULOS[seccion] || 'Pidoo'}
+              </div>
+            </div>
+            <div style={{ flex: 1 }} />
+            <span style={{
+              fontSize: 9, letterSpacing: '0.12em', fontWeight: 700, textTransform: 'uppercase',
+              color: 'var(--c-primary)',
+              padding: '3px 6px',
+              border: '1px solid var(--c-primary-border)',
+              background: 'var(--c-primary-soft)',
+              borderRadius: 4,
+            }}>LIVE</span>
+            <div style={{
+              width: 32, height: 32, borderRadius: '50%',
+              background: 'var(--c-surface2)',
+              border: '1px solid var(--c-border)',
+              display: 'grid', placeItems: 'center',
+              fontWeight: 700, fontSize: 13, color: 'var(--c-text)',
+            }}>{userInitial}</div>
+          </header>
+        )}
+
+        <div
+          className={`admin-main-container ${isTabletDown ? 'admin-main-with-topbar' : ''}`}
+          style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 32px 48px' }}
+        >
           {seccion === 'dashboard' && <Dashboard />}
           {seccion === 'establecimientos' && <Establecimientos />}
           {seccion === 'usuarios' && <Usuarios />}

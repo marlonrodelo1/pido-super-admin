@@ -99,7 +99,7 @@ export default function Usuarios() {
           {guardado && <div style={{ background: 'var(--c-surface2)', color: 'var(--c-text)', fontSize: 12, fontWeight: 600, padding: '8px 14px', borderRadius: 8, marginBottom: 16, textAlign: 'center' }}>Cambios guardados</div>}
 
           {editando ? (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="admin-grid-2col-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div><label style={ds.label}>Nombre</label><input value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} style={ds.formInput} /></div>
               <div><label style={ds.label}>Apellido</label><input value={form.apellido} onChange={e => setForm({ ...form, apellido: e.target.value })} style={ds.formInput} /></div>
               <div><label style={ds.label}>Teléfono</label><input value={form.telefono} onChange={e => setForm({ ...form, telefono: e.target.value })} style={ds.formInput} /></div>
@@ -118,7 +118,7 @@ export default function Usuarios() {
           ) : (
             <>
               {/* Stats */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 20 }}>
                 <div style={{ background: 'var(--c-surface2)', borderRadius: 10, padding: 14 }}>
                   <div style={{ fontSize: 10, color: 'var(--c-muted)', fontWeight: 600, marginBottom: 4 }}>Total gastado</div>
                   <div style={{ fontSize: 20, fontWeight: 800, color: '#FF6B2C' }}>{totalGastado.toFixed(2)} €</div>
@@ -133,7 +133,7 @@ export default function Usuarios() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 13, color: 'var(--c-text)', marginBottom: 20 }}>
+              <div className="admin-grid-2col-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 13, color: 'var(--c-text)', marginBottom: 20 }}>
                 <div><span style={{ color: 'var(--c-muted)' }}>Teléfono:</span> {detalle.telefono || '—'}</div>
                 <div><span style={{ color: 'var(--c-muted)' }}>Dirección:</span> {detalle.direccion || '—'}</div>
                 <div><span style={{ color: 'var(--c-muted)' }}>Pago preferido:</span> {detalle.metodo_pago_preferido === 'efectivo' ? '💵 Efectivo' : '💳 Tarjeta'}</div>
@@ -198,24 +198,24 @@ export default function Usuarios() {
         <div style={ds.tableHeader}>
           <span style={{ width: 44 }}></span>
           <span style={{ flex: 1 }}>Nombre</span>
-          <span style={{ width: 200 }}>Email</span>
-          <span style={{ width: 110 }}>Teléfono</span>
-          <span style={{ width: 90 }}>Registro</span>
+          <span data-tablet-sm-hide="true" style={{ width: 200 }}>Email</span>
+          <span data-tablet-hide="true" style={{ width: 110 }}>Teléfono</span>
+          <span data-tablet-hide="true" style={{ width: 90 }}>Registro</span>
           <span style={{ width: 60 }}>Acción</span>
         </div>
         {filtrados.map(u => (
-          <div key={u.id} style={ds.tableRow}>
+          <div key={u.id} className="ds-row-touch" style={ds.tableRow}>
             <span style={{ width: 44 }}>
               <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--c-primary-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#FF6B2C', overflow: 'hidden' }}>
                 {u.avatar_url ? <img src={u.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (u.nombre?.[0] || 'U').toUpperCase()}
               </div>
             </span>
             <span style={{ flex: 1, fontWeight: 700, fontSize: 13, color: 'var(--c-text)', cursor: 'pointer' }} onClick={() => verDetalle(u)}>{u.nombre} {u.apellido || ''}</span>
-            <span style={{ width: 200, fontSize: 12, color: 'var(--c-muted)' }}>{u.email}</span>
-            <span style={{ width: 110, fontSize: 12, color: 'var(--c-muted)' }}>{u.telefono || '—'}</span>
-            <span style={{ width: 90, fontSize: 11, color: 'var(--c-muted)' }}>{new Date(u.created_at).toLocaleDateString('es-ES')}</span>
+            <span data-tablet-sm-hide="true" style={{ width: 200, fontSize: 12, color: 'var(--c-muted)' }}>{u.email}</span>
+            <span data-tablet-hide="true" style={{ width: 110, fontSize: 12, color: 'var(--c-muted)' }}>{u.telefono || '—'}</span>
+            <span data-tablet-hide="true" style={{ width: 90, fontSize: 11, color: 'var(--c-muted)' }}>{new Date(u.created_at).toLocaleDateString('es-ES')}</span>
             <span style={{ width: 60 }}>
-              <button onClick={() => verDetalle(u)} style={ds.actionBtn}>Ver</button>
+              <button className="admin-action-btn" onClick={() => verDetalle(u)} style={ds.actionBtn}>Ver</button>
             </span>
           </div>
         ))}

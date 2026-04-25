@@ -143,7 +143,7 @@ export default function Socios() {
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 20 }}>
         <StatCard label="Socios activos" value={stats.activos} />
         <StatCard label="Marketplaces abiertos" value={stats.marketplaces} />
         <StatCard label="Vinculaciones activas" value={stats.vinculos} />
@@ -181,11 +181,11 @@ export default function Socios() {
           <div style={ds.table}>
             <div style={ds.tableHeader}>
               <span style={{ flex: 1 }}>Socio</span>
-              <span style={{ width: 120 }}>Slug</span>
-              <span style={{ width: 180 }}>Contacto</span>
-              <span style={{ width: 70, textAlign: 'center' }}>Rests.</span>
-              <span style={{ width: 110 }}>Límite</span>
-              <span style={{ width: 70, textAlign: 'center' }}>Activo</span>
+              <span data-tablet-hide="true" style={{ width: 120 }}>Slug</span>
+              <span data-tablet-hide="true" style={{ width: 180 }}>Contacto</span>
+              <span data-tablet-sm-hide="true" style={{ width: 70, textAlign: 'center' }}>Rests.</span>
+              <span data-tablet-hide="true" style={{ width: 110 }}>Límite</span>
+              <span data-tablet-sm-hide="true" style={{ width: 70, textAlign: 'center' }}>Activo</span>
               <span style={{ width: 100, textAlign: 'center' }}>Marketplace</span>
               <span style={{ width: 80, textAlign: 'right' }}></span>
             </div>
@@ -210,7 +210,7 @@ export default function Socios() {
 
               return (
                 <div key={s.id} style={{ borderBottom: `1px solid ${colors.border}` }}>
-                  <div style={{ ...ds.tableRow, borderBottom: 'none' }}>
+                  <div className="ds-row-touch" style={{ ...ds.tableRow, borderBottom: 'none' }}>
                     <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                       {s.logo_url
                         ? <img src={s.logo_url} alt="" style={{ width: 32, height: 32, borderRadius: 8, objectFit: 'cover', background: colors.elev2, flexShrink: 0 }} />
@@ -236,18 +236,18 @@ export default function Socios() {
                         )}
                       </span>
                     </span>
-                    <span style={{ width: 120, fontSize: 12, color: colors.textDim, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span data-tablet-hide="true" style={{ width: 120, fontSize: 12, color: colors.textDim, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {s.slug || '—'}
                     </span>
-                    <span style={{ width: 180, fontSize: 11, color: colors.textMute, lineHeight: 1.4 }}>
+                    <span data-tablet-hide="true" style={{ width: 180, fontSize: 11, color: colors.textMute, lineHeight: 1.4 }}>
                       {s.email && <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.email}</div>}
                       {s.telefono && <div>{s.telefono}</div>}
                       {!s.email && !s.telefono && '—'}
                     </span>
-                    <span style={{ width: 70, textAlign: 'center', fontSize: 13, fontWeight: 700, color: colors.text }}>
+                    <span data-tablet-sm-hide="true" style={{ width: 70, textAlign: 'center', fontSize: 13, fontWeight: 700, color: colors.text }}>
                       {countsRest[s.id] || 0}
                     </span>
-                    <span style={{ width: 110, display: 'flex', gap: 4, alignItems: 'center' }}>
+                    <span data-tablet-hide="true" style={{ width: 110, display: 'flex', gap: 4, alignItems: 'center' }}>
                       <input
                         type="number" min={0}
                         value={limiteVal === null ? '' : limiteVal}
@@ -260,21 +260,21 @@ export default function Socios() {
                         </button>
                       )}
                     </span>
-                    <span style={{ width: 70, textAlign: 'center' }}>
+                    <span data-tablet-sm-hide="true" style={{ width: 70, textAlign: 'center' }}>
                       <Toggle on={!!s.activo} onClick={() => toggleActivo(s)} />
                     </span>
                     <span style={{ width: 100, textAlign: 'center' }}>
                       <Toggle on={!!s.marketplace_activo} onClick={() => toggleMarketplace(s)} />
                     </span>
                     <span style={{ width: 80, textAlign: 'right' }}>
-                      <button onClick={() => setExpandido(isOpen ? null : s.id)} style={{ ...ds.actionBtn, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <button className="admin-action-btn" onClick={() => setExpandido(isOpen ? null : s.id)} style={{ ...ds.actionBtn, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                         {isOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />} {isOpen ? 'Cerrar' : 'Detalle'}
                       </button>
                     </span>
                   </div>
 
                   {isOpen && (
-                    <div style={{ padding: '14px 18px 18px 18px', background: colors.elev2, borderTop: `1px solid ${colors.border}`, display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
+                    <div className="admin-grid-2col-collapse" style={{ padding: '14px 18px 18px 18px', background: colors.elev2, borderTop: `1px solid ${colors.border}`, display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
                       <div>
                         <DetailRow label="Descripción">
                           <span style={{ fontSize: 12.5, color: colors.textDim }}>{s.descripcion || '—'}</span>
@@ -560,7 +560,7 @@ function NuevoSocioModal({ onClose, onSaved }) {
 
   return (
     <div style={ds.modal} onClick={onClose}>
-      <div style={{ ...ds.modalContent, maxWidth: 560 }} onClick={e => e.stopPropagation()}>
+      <div className="admin-modal-content" style={{ ...ds.modalContent, maxWidth: 560 }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
           <Users size={18} color={colors.primary} />
           <h2 style={{ fontSize: 17, fontWeight: 700, color: colors.text, flex: 1, margin: 0 }}>Nuevo socio</h2>
@@ -576,7 +576,7 @@ function NuevoSocioModal({ onClose, onSaved }) {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div className="admin-grid-2col-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div>
               <label style={ds.label}>Nombre *</label>
               <input value={nombre} onChange={e => setNombre(e.target.value)} style={ds.formInput} />
@@ -604,7 +604,7 @@ function NuevoSocioModal({ onClose, onSaved }) {
             )}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div className="admin-grid-2col-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div>
               <label style={ds.label}>Email contacto socio</label>
               <input value={socioEmail} onChange={e => setSocioEmail(e.target.value)} placeholder="(opcional, defaults al email)" style={ds.formInput} />
@@ -620,7 +620,7 @@ function NuevoSocioModal({ onClose, onSaved }) {
             <input value={shipdayApiKey} onChange={e => setShipdayApiKey(e.target.value)} placeholder="(opcional)" style={{ ...ds.formInput, fontFamily: 'monospace', fontSize: 12 }} />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div className="admin-grid-2col-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div>
               <label style={ds.label}>Tarifa base (€)</label>
               <input type="number" step="0.1" value={tarifaBase} onChange={e => setTarifaBase(e.target.value)} style={ds.formInput} />

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { LayoutGrid, Store, User, Users, ClipboardList, MessageCircle, DollarSign, Settings, LogOut, Map, Bell, RotateCcw, Truck, FileText } from 'lucide-react'
+import { LayoutGrid, Store, User, Users, ClipboardList, MessageCircle, DollarSign, Settings, LogOut, Map, Bell, RotateCcw, Truck, FileText, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 const menuItems = [
@@ -18,7 +18,7 @@ const menuItems = [
   { id: 'config', label: 'Configuración', Icon: Settings, group: 'Plataforma' },
 ]
 
-export default function Sidebar({ active, onChange, onLogout, user }) {
+export default function Sidebar({ active, onChange, onLogout, user, mobile = false, onClose }) {
   const [pendientes, setPendientes] = useState(0)
 
   useEffect(() => {
@@ -47,8 +47,20 @@ export default function Sidebar({ active, onChange, onLogout, user }) {
   const userEmail = user?.email || ''
   const userInitial = (userEmail[0] || 'M').toUpperCase()
 
+  // En modo mobile, el sidebar es un drawer overlay con animación, ancho mayor (260px)
+  // y un botón de cerrar.
+  const sidebarStyle = mobile
+    ? {
+        ...styles.sidebar,
+        width: 260,
+        zIndex: 999,
+        boxShadow: '2px 0 20px rgba(15,15,15,0.18)',
+        animation: 'slide-in-left 0.18s ease',
+      }
+    : styles.sidebar
+
   return (
-    <aside style={styles.sidebar}>
+    <aside style={sidebarStyle}>
       {/* Brand */}
       <div style={styles.brand}>
         <div style={styles.logo}>P</div>
@@ -56,7 +68,25 @@ export default function Sidebar({ active, onChange, onLogout, user }) {
           <span style={styles.brandTitle}>Pidoo</span>
           <span style={styles.brandSub}>Super Admin</span>
         </div>
-        <span style={styles.env}>LIVE</span>
+        {mobile ? (
+          <button
+            onClick={onClose}
+            aria-label="Cerrar menú"
+            style={{
+              marginLeft: 'auto',
+              width: 36, height: 36,
+              display: 'grid', placeItems: 'center',
+              borderRadius: 8,
+              background: 'transparent',
+              color: 'var(--c-muted)',
+              cursor: 'pointer',
+            }}
+          >
+            <X size={18} />
+          </button>
+        ) : (
+          <span style={styles.env}>LIVE</span>
+        )}
       </div>
 
       {/* Nav */}
@@ -85,13 +115,15 @@ export default function Sidebar({ active, onChange, onLogout, user }) {
                   }}
                   style={{
                     ...styles.navItem,
+                    padding: mobile ? '12px 12px' : '8px 10px',
+                    fontSize: mobile ? 14 : 13,
                     background: isActive ? 'var(--c-primary-soft)' : 'transparent',
                     color: isActive ? 'var(--c-primary)' : 'var(--c-muted)',
                   }}
                 >
                   {isActive && <span style={styles.activeBar} />}
                   <item.Icon
-                    size={16}
+                    size={mobile ? 18 : 16}
                     strokeWidth={1.8}
                     style={{ color: isActive ? 'var(--c-primary)' : 'var(--c-muted)', flexShrink: 0 }}
                   />

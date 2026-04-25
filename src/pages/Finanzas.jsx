@@ -585,7 +585,7 @@ export default function Finanzas() {
 
       {liqAllModal && (
         <div style={ds.modal} onClick={() => !liqRunning && setLiqAllModal(false)}>
-          <div style={{ ...ds.modalContent, maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+          <div className="admin-modal-content" style={{ ...ds.modalContent, maxWidth: 480 }} onClick={e => e.stopPropagation()}>
             <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--c-text)', marginBottom: 10 }}>Ejecutar liquidación semanal</h2>
             <p style={{ fontSize: 13, color: 'var(--c-muted)', marginBottom: 16, lineHeight: 1.5 }}>
               Se ejecutará <code>liquidacion-semanal</code> para <strong>todos los restaurantes activos con Stripe Connect activa</strong>. Esta acción realizará transferencias Stripe reales y no se puede revertir.
@@ -824,7 +824,7 @@ export default function Finanzas() {
 
       {pagoModal && (
         <div style={ds.modal} onClick={() => !pagoSaving && setPagoModal(null)}>
-          <div style={{ ...ds.modalContent, maxWidth: 440 }} onClick={e => e.stopPropagation()}>
+          <div className="admin-modal-content" style={{ ...ds.modalContent, maxWidth: 440 }} onClick={e => e.stopPropagation()}>
             <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--c-text)', marginBottom: 6 }}>Marcar factura como pagada</h2>
             <p style={{ fontSize: 12, color: 'var(--c-muted)', marginBottom: 16 }}>
               {pagoModal.rider_accounts?.nombre} · {fmtSemana(pagoModal.semana_inicio, pagoModal.semana_fin)} · <strong style={{ color: 'var(--c-text)' }}>{(pagoModal.total_neto || 0).toFixed(2)}€</strong>

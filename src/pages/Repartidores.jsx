@@ -178,11 +178,11 @@ export default function Repartidores() {
       <div style={ds.table}>
         <div style={ds.tableHeader}>
           <span style={{ flex: 1 }}>Nombre</span>
-          <span style={{ width: 130 }}>Contacto</span>
+          <span data-tablet-sm-hide="true" style={{ width: 130 }}>Contacto</span>
           <span style={{ width: 110 }}>Estado</span>
-          <span style={{ width: 110 }}>Shipday</span>
-          <span style={{ width: 110 }}>Debe recibir</span>
-          <span style={{ width: 150 }}>Registrado desde</span>
+          <span data-tablet-hide="true" style={{ width: 110 }}>Shipday</span>
+          <span data-tablet-hide="true" style={{ width: 110 }}>Debe recibir</span>
+          <span data-tablet-hide="true" style={{ width: 150 }}>Registrado desde</span>
           <span style={{ width: 200, textAlign: 'right' }}></span>
         </div>
         {filtered.map(r => {
@@ -192,16 +192,16 @@ export default function Repartidores() {
           const estadoInfo = ESTADOS[r.estado] || ESTADOS.pendiente
           const origen = r.establecimiento_origen_id ? origenes[r.establecimiento_origen_id] : null
           return (
-            <div key={r.id} style={ds.tableRow}>
+            <div key={r.id} className="ds-row-touch" style={ds.tableRow}>
               <span style={{ flex: 1, cursor: 'pointer' }} onClick={() => setDetalle(r)}>
                 <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--c-text)' }}>{r.nombre}</div>
                 {r.email && <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>{r.email}</div>}
               </span>
-              <span style={{ width: 130, fontSize: 12, color: 'var(--c-muted)' }}>{r.telefono || '—'}</span>
+              <span data-tablet-sm-hide="true" style={{ width: 130, fontSize: 12, color: 'var(--c-muted)' }}>{r.telefono || '—'}</span>
               <span style={{ width: 110 }}>
                 <span style={{ ...ds.badge, background: estadoInfo.bg, color: estadoInfo.color }}>{estadoInfo.label}</span>
               </span>
-              <span style={{ width: 110 }}>
+              <span data-tablet-hide="true" style={{ width: 110 }}>
                 {r.estado !== 'activa' ? (
                   <span style={{ fontSize: 11, color: 'var(--c-muted)' }}>—</span>
                 ) : error ? (
@@ -212,28 +212,28 @@ export default function Repartidores() {
                   <span style={{ ...ds.badge, background: 'var(--c-surface2)', color: 'var(--c-muted)' }}>○ Offline</span>
                 )}
               </span>
-              <span style={{ width: 110, fontSize: 12, fontWeight: 700, color: (pendientes[r.id] || 0) > 0 ? '#FF6B2C' : 'var(--c-muted)' }}>
+              <span data-tablet-hide="true" style={{ width: 110, fontSize: 12, fontWeight: 700, color: (pendientes[r.id] || 0) > 0 ? '#FF6B2C' : 'var(--c-muted)' }}>
                 {(pendientes[r.id] || 0).toFixed(2)}€
               </span>
-              <span style={{ width: 150, fontSize: 11, color: 'var(--c-muted)' }}>{origen || '—'}</span>
+              <span data-tablet-hide="true" style={{ width: 150, fontSize: 11, color: 'var(--c-muted)' }}>{origen || '—'}</span>
               <span style={{ width: 200, textAlign: 'right', display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                 {r.estado === 'pendiente' && (
                   <>
-                    <button onClick={() => aprobar(r)} style={{ ...ds.actionBtn, background: 'var(--c-surface2)', color: 'var(--c-success)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <button className="admin-action-btn" onClick={() => aprobar(r)} style={{ ...ds.actionBtn, background: 'var(--c-surface2)', color: 'var(--c-success)', display: 'flex', alignItems: 'center', gap: 4 }}>
                       <Check size={11} /> Aprobar
                     </button>
-                    <button onClick={() => rechazar(r)} style={{ ...ds.actionBtn, background: 'var(--c-danger-soft)', color: 'var(--c-danger)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <button className="admin-action-btn" onClick={() => rechazar(r)} style={{ ...ds.actionBtn, background: 'var(--c-danger-soft)', color: 'var(--c-danger)', display: 'flex', alignItems: 'center', gap: 4 }}>
                       <Ban size={11} /> Rechazar
                     </button>
                   </>
                 )}
                 {r.estado === 'rechazada' && (
-                  <button onClick={() => reactivar(r)} style={{ ...ds.actionBtn, background: 'var(--c-surface2)', color: 'var(--c-success)' }}>Reactivar</button>
+                  <button className="admin-action-btn" onClick={() => reactivar(r)} style={{ ...ds.actionBtn, background: 'var(--c-surface2)', color: 'var(--c-success)' }}>Reactivar</button>
                 )}
                 {r.estado === 'activa' && (
-                  <button onClick={() => setDetalle(r)} style={ds.actionBtn}>Ver</button>
+                  <button className="admin-action-btn" onClick={() => setDetalle(r)} style={ds.actionBtn}>Ver</button>
                 )}
-                <button onClick={() => eliminar(r)} style={{ ...ds.actionBtn, color: 'var(--c-danger)' }}>Eliminar</button>
+                <button className="admin-action-btn" onClick={() => eliminar(r)} style={{ ...ds.actionBtn, color: 'var(--c-danger)' }}>Eliminar</button>
               </span>
             </div>
           )
@@ -302,7 +302,7 @@ function RiderModal({ rider, onClose, onSaved }) {
 
   return (
     <div style={ds.modal} onClick={onClose}>
-      <div style={ds.modalContent} onClick={e => e.stopPropagation()}>
+      <div className="admin-modal-content" style={ds.modalContent} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
           <Truck size={18} color="#FF6B2C" />
           <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--c-text)', flex: 1 }}>{rider ? 'Editar repartidor' : 'Nuevo repartidor'}</h2>
@@ -313,7 +313,7 @@ function RiderModal({ rider, onClose, onSaved }) {
           <div><label style={ds.label}>Nombre</label>
             <input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Ej: Pedro Martín" style={ds.formInput} />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div className="admin-grid-2col-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div><label style={ds.label}>Teléfono</label>
               <input value={telefono} onChange={e => setTelefono(e.target.value)} placeholder="600 123 456" style={ds.formInput} />
             </div>

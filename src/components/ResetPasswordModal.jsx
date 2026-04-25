@@ -109,7 +109,7 @@ export default function ResetPasswordModal({
 
   return (
     <div style={ds.modal} onClick={onClose}>
-      <div style={ds.modalContent} onClick={e => e.stopPropagation()}>
+      <div className="admin-modal-content" style={ds.modalContent} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
           <div style={{
             width: 36, height: 36, borderRadius: 10,
