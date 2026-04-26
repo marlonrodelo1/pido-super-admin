@@ -9,6 +9,7 @@ import ImportUrlModal from '../components/ImportUrlModal'
 import RidersCard from '../components/RidersCard'
 import PlanTiendaCard from '../components/PlanTiendaCard'
 import HorarioEstadoCard from '../components/HorarioEstadoCard'
+import DispatcherPropioCard from '../components/DispatcherPropioCard'
 import ResetPasswordModal from '../components/ResetPasswordModal'
 import EliminarEntidadModal from '../components/EliminarEntidadModal'
 import AddressAutocomplete from '../components/AddressAutocomplete'
@@ -524,6 +525,12 @@ export default function Establecimientos() {
         <RidersCard
           establecimiento={detalle}
           onChanged={() => load()}
+        />
+
+        {/* Dispatcher propio (Pidoo) vs Shipday */}
+        <DispatcherPropioCard
+          establecimiento={detalle}
+          onChanged={async () => { const { data } = await supabase.from('establecimientos').select('*').eq('id', detalle.id).single(); if (data) setDetalle(data); load() }}
         />
 
         {/* Horario y estado */}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { LayoutGrid, Store, User, Users, ClipboardList, MessageCircle, DollarSign, Settings, LogOut, Map, Bell, RotateCcw, FileText, X } from 'lucide-react'
+import { LayoutGrid, Store, User, Users, ClipboardList, MessageCircle, DollarSign, Settings, LogOut, Map, Bell, RotateCcw, FileText, X, Truck } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 const menuItems = [
@@ -13,19 +13,25 @@ const menuItems = [
   { id: 'reembolsos', label: 'Reembolsos', Icon: RotateCcw, group: 'Negocio' },
   { id: 'notificaciones', label: 'Notificaciones', Icon: Bell, group: 'Plataforma' },
   { id: 'soporte', label: 'Soporte', Icon: MessageCircle, group: 'Plataforma' },
+  { id: 'soporte-rider', label: 'Soporte rider', Icon: Truck, group: 'Plataforma' },
   { id: 'landing-riders', label: 'Landing Riders', Icon: FileText, group: 'Plataforma' },
   { id: 'config', label: 'Configuración', Icon: Settings, group: 'Plataforma' },
 ]
 
 export default function Sidebar({ active, onChange, onLogout, user, mobile = false, onClose }) {
   const [pendientes, setPendientes] = useState(0)
+  const [unreadRider, setUnreadRider] = useState(0)
 
   useEffect(() => {
     loadPendientes()
-    const channel = supabase.channel('sidebar-pendientes')
+    loadUnreadRider()
+    const ch1 = supabase.channel('sidebar-pendientes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'rider_accounts' }, loadPendientes)
       .subscribe()
-    return () => supabase.removeChannel(channel)
+    const ch2 = supabase.channel('sidebar-unread-rider')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rider_support_messages' }, loadUnreadRider)
+      .subscribe()
+    return () => { supabase.removeChannel(ch1); supabase.removeChannel(ch2) }
   }, [])
 
   async function loadPendientes() {
@@ -33,6 +39,14 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
       .select('id', { count: 'exact', head: true })
       .eq('estado', 'pendiente')
     setPendientes(count || 0)
+  }
+
+  async function loadUnreadRider() {
+    const { count } = await supabase.from('rider_support_messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('remitente', 'rider')
+      .eq('leido', false)
+    setUnreadRider(count || 0)
   }
 
   // Render grouped nav
@@ -95,7 +109,10 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
             <div style={styles.groupLabel}>{g.name}</div>
             {g.items.map(item => {
               const isActive = active === item.id
-              const showBadge = item.id === 'socios' && pendientes > 0
+              const badgeCount = item.id === 'socios' ? pendientes
+                : item.id === 'soporte-rider' ? unreadRider
+                : 0
+              const showBadge = badgeCount > 0
               return (
                 <button
                   key={item.id}
@@ -130,7 +147,7 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
                   {showBadge && (
                     <span style={styles.badgeLive}>
                       <span style={styles.pulseDot} />
-                      {pendientes}
+                      {badgeCount}
                     </span>
                   )}
                 </button>

@@ -9,6 +9,7 @@ import Establecimientos from './pages/Establecimientos'
 import Usuarios from './pages/Usuarios'
 import Pedidos from './pages/Pedidos'
 import SoporteAdmin from './pages/SoporteAdmin'
+import SoporteRider from './pages/SoporteRider'
 import Finanzas from './pages/Finanzas'
 import Configuracion from './pages/Configuracion'
 import Notificaciones from './pages/Notificaciones'
@@ -186,6 +187,7 @@ function AppContent() {
           {seccion === 'mapa' && <MapaAdmin />}
           {seccion === 'notificaciones' && <Notificaciones />}
           {seccion === 'soporte' && <SoporteAdmin />}
+          {seccion === 'soporte-rider' && <SoporteRider />}
           {seccion === 'finanzas' && <Finanzas />}
           {seccion === 'reembolsos' && <Reembolsos />}
           {seccion === 'repartidores' && <Repartidores />}
