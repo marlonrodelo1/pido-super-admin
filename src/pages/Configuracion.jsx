@@ -300,7 +300,24 @@ export default function Configuracion() {
                 onChange={e => setConfigVal('radio_cobertura_default', e.target.value)} style={{ flex: 1, maxWidth: 400 }} />
               <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-text)', minWidth: 60 }}>{config.radio_cobertura_default ?? 10} km</span>
             </div>
-            <div style={styles.hint}>Radio que se asigna a nuevos establecimientos por defecto</div>
+            <div style={styles.hint}>Radio que se asigna a nuevos establecimientos por defecto (cobertura delivery)</div>
+          </div>
+
+          {/* ==================== RADIO DESCUBRIMIENTO ==================== */}
+          <div style={styles.section}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+              <MapPin size={18} color="#FF6B2C" />
+              <h2 style={styles.sectionTitle}>Radio de descubrimiento (visibilidad)</h2>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <input type="range" min={1} max={100} value={config.radio_descubrimiento_km ?? '15'}
+                onChange={e => setConfigVal('radio_descubrimiento_km', e.target.value)} style={{ flex: 1, maxWidth: 400 }} />
+              <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-text)', minWidth: 60 }}>{config.radio_descubrimiento_km ?? 15} km</span>
+            </div>
+            <div style={styles.hint}>
+              Distancia máxima desde la ubicación del cliente para que un restaurante aparezca en el listado de la app y en el mapa.
+              Si el cliente no comparte ubicación, no se filtra. Cada socio puede definir su propio radio en su marketplace.
+            </div>
           </div>
 
           {/* Botón guardar toda la configuración */}
