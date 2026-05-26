@@ -475,7 +475,7 @@ function SocioDetalle({
               title="Eliminar socio definitivamente"
               style={{
                 ...ds.secondaryBtn,
-                color: '#DC2626',
+                color: '#B5564A',
                 borderColor: 'rgba(220,38,38,0.32)',
                 background: 'rgba(220,38,38,0.06)',
               }}
@@ -541,8 +541,8 @@ function TabResumen({ socio, balance }) {
         </DetailRow>
         <DetailRow label="Color primario">
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: colors.textDim }}>
-            <span style={{ display: 'inline-block', width: 14, height: 14, borderRadius: 3, background: socio.color_primario || '#FF6B2C', border: `1px solid ${colors.border}` }} />
-            <span style={{ fontFamily: 'monospace' }}>{socio.color_primario || '#FF6B2C'}</span>
+            <span style={{ display: 'inline-block', width: 14, height: 14, borderRadius: 3, background: socio.color_primario || '#C5562C', border: `1px solid ${colors.border}` }} />
+            <span style={{ fontFamily: 'monospace' }}>{socio.color_primario || '#C5562C'}</span>
           </span>
         </DetailRow>
         <DetailRow label="Redes">
@@ -1292,7 +1292,7 @@ function EditSocioModal({ socio, onClose, onSaved }) {
   const [email, setEmail] = useState(socio.email || '')
   const [telefono, setTelefono] = useState(socio.telefono || '')
   const [descripcion, setDescripcion] = useState(socio.descripcion || '')
-  const [colorPrimario, setColorPrimario] = useState(socio.color_primario || '#FF6B2C')
+  const [colorPrimario, setColorPrimario] = useState(socio.color_primario || '#C5562C')
   const [tarifaBase, setTarifaBase] = useState(socio.tarifa_base ?? '')
   const [radioKm, setRadioKm] = useState(socio.radio_km ?? '')
   const [limite, setLimite] = useState(socio.limite_restaurantes ?? 5)
@@ -1310,7 +1310,7 @@ function EditSocioModal({ socio, onClose, onSaved }) {
       email: email.trim() || null,
       telefono: telefono.trim() || null,
       descripcion: descripcion.trim() || null,
-      color_primario: colorPrimario || '#FF6B2C',
+      color_primario: colorPrimario || '#C5562C',
       tarifa_base: tarifaBase === '' ? null : Number(tarifaBase),
       radio_km: radioKm === '' ? null : Number(radioKm),
       limite_restaurantes: limite === '' ? null : parseInt(limite, 10),

@@ -272,7 +272,7 @@ export default function AsignarManualModal({ pedido, establecimiento, onClose, o
                     padding: '10px 12px', borderRadius: 8,
                     border: `1px solid ${activo ? colors.primary : 'transparent'}`,
                     background: activo ? colors.primarySoft : 'transparent',
-                    cursor: 'pointer', fontFamily: "'Inter', system-ui, sans-serif",
+                    cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
                   }}
                 >
                   {/* Punto online/offline */}

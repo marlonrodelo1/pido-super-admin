@@ -137,7 +137,7 @@ export default function Reembolsos() {
         {[
           { id: 'pendientes', label: 'Pendientes', color: 'var(--c-warning)' },
           { id: 'procesados', label: 'Procesados', color: 'var(--c-text)' },
-          { id: 'todos', label: 'Todos', color: '#FF6B2C' },
+          { id: 'todos', label: 'Todos', color: '#C5562C' },
         ].map(f => (
           <button key={f.id} onClick={() => setFiltro(f.id)} style={{
             ...ds.filterBtn,
@@ -269,7 +269,7 @@ export default function Reembolsos() {
         marginTop: 20, padding: '14px 18px', borderRadius: 12,
         background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.12)',
       }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: '#FF6B2C', marginBottom: 6 }}>Informacion importante</div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: '#C5562C', marginBottom: 6 }}>Informacion importante</div>
         <ul style={{ fontSize: 12, color: 'var(--c-muted)', lineHeight: 1.8, margin: 0, paddingLeft: 16 }}>
           <li>Los reembolsos se procesan a traves de Stripe y pueden tardar 5-10 dias habiles en reflejarse en la tarjeta del cliente.</li>
           <li>Al procesar un reembolso, se devuelve el importe completo del pedido y se notifica automaticamente al cliente.</li>

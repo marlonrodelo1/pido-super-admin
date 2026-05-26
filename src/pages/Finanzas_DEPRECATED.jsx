@@ -1,3 +1,6 @@
+// ⚠️ DEPRECATED 2026-05-26 — Página del modelo marketplace antiguo (comisiones/balances).
+// Se mantiene solo por referencia. La página activa es SuscripcionesSaaS.jsx.
+
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { ds } from '../lib/darkStyles'
@@ -359,7 +362,7 @@ export default function Finanzas() {
         {tabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
             ...ds.filterBtn,
-            background: tab === t.id ? '#FF6B2C' : 'var(--c-surface2)',
+            background: tab === t.id ? '#C5562C' : 'var(--c-surface2)',
             color: tab === t.id ? '#fff' : 'var(--c-muted)',
             padding: '7px 16px', fontSize: 12,
           }}>{t.label}</button>
@@ -369,7 +372,7 @@ export default function Finanzas() {
       {tab === 'resumen' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
           <StatCard label="Comisiones totales plataforma" value={`${resumen.comisionesTotal.toFixed(2)}EUR`} color='var(--c-text)' />
-          <StatCard label="Pendiente de cobro" value={`${resumen.pendiente.toFixed(2)}EUR`} color="#FF6B2C" />
+          <StatCard label="Pendiente de cobro" value={`${resumen.pendiente.toFixed(2)}EUR`} color="#C5562C" />
         </div>
       )}
 
@@ -445,7 +448,7 @@ export default function Finanzas() {
                         style={{ ...ds.formInput, width: 72, padding: '4px 6px', fontSize: 12 }}
                       />
                       {draft !== undefined && (
-                        <button onClick={() => guardarLimiteDeuda(r.id)} style={{ ...styles.payBtn, color: '#FF6B2C' }}>OK</button>
+                        <button onClick={() => guardarLimiteDeuda(r.id)} style={{ ...styles.payBtn, color: '#C5562C' }}>OK</button>
                       )}
                     </span>
                     <span style={{ width: 100 }}>
@@ -568,7 +571,7 @@ export default function Finanzas() {
                   </span>
                   <span style={{ width: 130, fontSize: 11 }}>
                     {transferId ? (
-                      <a href={`https://dashboard.stripe.com/connect/transfers/${transferId}`} target="_blank" rel="noopener noreferrer" style={{ color: '#FF6B2C', textDecoration: 'none' }} title={transferId}>
+                      <a href={`https://dashboard.stripe.com/connect/transfers/${transferId}`} target="_blank" rel="noopener noreferrer" style={{ color: '#C5562C', textDecoration: 'none' }} title={transferId}>
                         {transferId.slice(0, 14)}…
                       </a>
                     ) : (
@@ -647,7 +650,7 @@ export default function Finanzas() {
           </div>
           {facturas.map(f => (
             <div key={f.id} style={ds.tableRow}>
-              <span style={{ width: 120, fontSize: 11, fontWeight: 700, color: '#FF6B2C' }}>{f.numero_factura || '—'}</span>
+              <span style={{ width: 120, fontSize: 11, fontWeight: 700, color: '#C5562C' }}>{f.numero_factura || '—'}</span>
               <span style={{ flex: 1, fontWeight: 600, fontSize: 12 }}>{f.establecimientos?.nombre || '—'}</span>
               <span style={{ width: 100, fontSize: 10, color: 'var(--c-muted)' }}>{f.semana_inicio?.slice(5)}<br/>{f.semana_fin?.slice(5)}</span>
               <span style={{ width: 50, fontSize: 12 }}>{f.pedidos_entregados}/{f.total_pedidos}</span>
@@ -676,7 +679,7 @@ export default function Finanzas() {
             <span style={{ width: 140 }}>Fecha</span>
           </div>
           {movimientos.map(m => {
-            const tipoColor = { entrada_tarjeta: 'var(--c-text)', pago_restaurante: '#FF6B2C', cobro_comision: '#FF6B2C' }
+            const tipoColor = { entrada_tarjeta: 'var(--c-text)', pago_restaurante: '#C5562C', cobro_comision: '#C5562C' }
             return (
               <div key={m.id} style={ds.tableRow}>
                 <span style={{ width: 140 }}><span style={{ ...ds.badge, background: (tipoColor[m.tipo] || '#6B7280') + '15', color: tipoColor[m.tipo] || '#6B7280' }}>{m.tipo?.replace('_', ' ')}</span></span>
@@ -694,7 +697,7 @@ export default function Finanzas() {
       {tab === 'riders' && (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 20 }}>
-            <StatCard label="Total pendiente" value={`${riderStats.pendiente.toFixed(2)}EUR`} color="#FF6B2C" />
+            <StatCard label="Total pendiente" value={`${riderStats.pendiente.toFixed(2)}EUR`} color="#C5562C" />
             <StatCard label="Pagado este mes" value={`${riderStats.pagadoMes.toFixed(2)}EUR`} color="#4ADE80" />
             <StatCard label="Riders activos" value={riderStats.activos} color='var(--c-text)' />
           </div>
@@ -761,7 +764,7 @@ export default function Finanzas() {
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 20 }}>
             <StatCard label="Suscripciones activas" value={cuotasStats.activas} color="#4ADE80" />
-            <StatCard label="MRR (mensual)" value={`${cuotasStats.mrr.toFixed(2)}EUR`} color="#FF6B2C" />
+            <StatCard label="MRR (mensual)" value={`${cuotasStats.mrr.toFixed(2)}EUR`} color="#C5562C" />
             <StatCard label="Pago fallido" value={cuotasStats.pastDue} color="#F87171" />
             <StatCard label="Churn este mes" value={cuotasStats.churnMes} color='var(--c-text)' />
           </div>
@@ -851,5 +854,5 @@ export default function Finanzas() {
 }
 
 const styles = {
-  payBtn: { padding: '4px 10px', borderRadius: 6, border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: "'Inter', system-ui, -apple-system, sans-serif", background: 'var(--c-surface2)', color: 'var(--c-success)' },
+  payBtn: { padding: '4px 10px', borderRadius: 6, border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", background: 'var(--c-surface2)', color: 'var(--c-success)' },
 }

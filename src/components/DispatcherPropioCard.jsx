@@ -38,7 +38,7 @@ export default function DispatcherPropioCard({ establecimiento, onChanged }) {
   return (
     <div style={{ ...ds.card, marginTop: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-        <Truck size={18} color="#FF6B2C" />
+        <Truck size={18} color="#C5562C" />
         <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)' }}>Despacho de pedidos</h3>
         <span style={{ padding: '3px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: badge.bg, color: badge.color, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
           {badge.label}

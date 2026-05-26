@@ -91,7 +91,7 @@ export default function RidersCard({ establecimiento, onChanged }) {
   return (
     <div style={{ ...ds.card, padding: 20, marginTop: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <Truck size={18} color="#FF6B2C" />
+        <Truck size={18} color="#C5562C" />
         <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', flex: 1 }}>Socios vinculados</h3>
         <button onClick={() => setShowAdd(true)} style={{ ...ds.primaryBtn, display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, padding: '8px 14px' }}>
           <Plus size={12} /> Añadir
@@ -127,7 +127,7 @@ export default function RidersCard({ establecimiento, onChanged }) {
                   background: 'var(--c-surface2)', borderRadius: 10,
                   opacity: r.activa ? 1 : 0.5,
                   border: 'none', cursor: 'pointer', textAlign: 'left', width: '100%',
-                  fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+                  fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif",
                   transition: 'background 0.12s',
                 }}
                 onMouseEnter={e => { e.currentTarget.style.background = 'var(--c-surface3, var(--c-surface2))' }}
@@ -225,7 +225,7 @@ function SocioVinculadoModal({ rider, vinculacion, status, establecimiento, onCl
     <div style={ds.modal} onClick={onClose}>
       <div className="admin-modal-content" style={{ ...ds.modalContent, maxWidth: 480 }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-          <Truck size={18} color="#FF6B2C" />
+          <Truck size={18} color="#C5562C" />
           <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--c-text)', flex: 1 }}>{rider.nombre}</h2>
           <button onClick={onClose} aria-label="Cerrar" style={{ background: 'var(--c-surface2)', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} color='var(--c-text)' /></button>
         </div>
@@ -276,7 +276,7 @@ function SocioVinculadoModal({ rider, vinculacion, status, establecimiento, onCl
         {/* Stats */}
         <div style={{ ...ds.card, padding: 14, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--c-primary-soft)', display: 'grid', placeItems: 'center' }}>
-            <Package size={18} color="#FF6B2C" />
+            <Package size={18} color="#C5562C" />
           </div>
           <div>
             <div style={{ fontSize: 11, color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Pedidos hechos</div>
@@ -386,7 +386,7 @@ function AddRiderModal({ establecimiento, vinculados, onClose, onSaved }) {
     <div style={ds.modal} onClick={onClose}>
       <div className="admin-modal-content" style={ds.modalContent} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-          <Truck size={18} color="#FF6B2C" />
+          <Truck size={18} color="#C5562C" />
           <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--c-text)', flex: 1 }}>Añadir socio</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--c-muted)', cursor: 'pointer', fontSize: 20 }}>×</button>
         </div>
@@ -396,9 +396,9 @@ function AddRiderModal({ establecimiento, vinculados, onClose, onSaved }) {
             <button key={t.id} onClick={() => setTab(t.id)} style={{
               padding: '10px 16px', border: 'none', background: 'transparent',
               fontSize: 13, fontWeight: 700, cursor: 'pointer',
-              color: tab === t.id ? '#FF6B2C' : 'var(--c-muted)',
-              borderBottom: tab === t.id ? '2px solid #FF6B2C' : '2px solid transparent',
-              fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+              color: tab === t.id ? '#C5562C' : 'var(--c-muted)',
+              borderBottom: tab === t.id ? '2px solid #C5562C' : '2px solid transparent',
+              fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif",
             }}>{t.l}</button>
           ))}
         </div>
@@ -418,14 +418,14 @@ function AddRiderModal({ establecimiento, vinculados, onClose, onSaved }) {
                     <button key={r.id} onClick={() => toggle(r.id)} style={{
                       display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
                       borderRadius: 10, cursor: 'pointer',
-                      border: sel ? '1.5px solid #FF6B2C' : '1px solid var(--c-border)',
+                      border: sel ? '1.5px solid #C5562C' : '1px solid var(--c-border)',
                       background: sel ? 'var(--c-primary-soft)' : 'var(--c-surface2)',
-                      fontFamily: "'Inter', system-ui, -apple-system, sans-serif", textAlign: 'left',
+                      fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", textAlign: 'left',
                     }}>
                       <div style={{
                         width: 18, height: 18, borderRadius: 5, flexShrink: 0,
                         border: sel ? 'none' : '1.5px solid var(--c-muted)',
-                        background: sel ? '#FF6B2C' : 'transparent',
+                        background: sel ? '#C5562C' : 'transparent',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}>
                         {sel && <CheckCircle2 size={14} color="#fff" />}
@@ -455,7 +455,7 @@ function AddRiderModal({ establecimiento, vinculados, onClose, onSaved }) {
               background: 'var(--c-primary-soft)',
               border: '1px solid var(--c-primary-border, rgba(255,107,44,0.25))',
             }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#FF6B2C', marginBottom: 6 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#C5562C', marginBottom: 6 }}>
                 Pidoo no crea cuentas de socio desde aquí
               </div>
               <div style={{ fontSize: 12.5, color: 'var(--c-text)', lineHeight: 1.55 }}>

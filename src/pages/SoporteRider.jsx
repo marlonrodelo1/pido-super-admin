@@ -131,7 +131,7 @@ export default function SoporteRider() {
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-        <MessageCircle size={20} color="#FF6B2C" />
+        <MessageCircle size={20} color="#C5562C" />
         <h1 style={{ ...ds.h1 }}>Soporte rider</h1>
         <span style={{ ...ds.muted, fontSize: 12 }}>
           {socios.length} {socios.length === 1 ? 'conversación' : 'conversaciones'}
@@ -159,7 +159,7 @@ export default function SoporteRider() {
                   border: 'none', borderBottom: '1px solid var(--c-border)',
                   cursor: 'pointer', color: 'var(--c-text)',
                   display: 'flex', flexDirection: 'column', gap: 4,
-                  fontFamily: "'Inter', sans-serif",
+                  fontFamily: "'Plus Jakarta Sans', sans-serif",
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ fontSize: 13, fontWeight: 700 }}>

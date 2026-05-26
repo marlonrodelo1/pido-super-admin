@@ -295,7 +295,7 @@ function radioBtn(active) {
     border: `1px solid ${active ? colors.primary : colors.border}`,
     background: active ? colors.primarySoft : colors.surface,
     color: colors.text,
-    fontFamily: "'Inter', system-ui, sans-serif",
+    fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
     textAlign: 'left',
   }
 }

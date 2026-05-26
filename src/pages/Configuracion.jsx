@@ -143,7 +143,7 @@ export default function Configuracion() {
           {/* ==================== TARIFAS DE ENVÍO ==================== */}
           <div style={styles.section}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-              <Truck size={18} color="#FF6B2C" />
+              <Truck size={18} color="#C5562C" />
               <h2 style={styles.sectionTitle}>Tarifas de envío (canal Pido)</h2>
             </div>
             <p style={{ fontSize: 12, color: 'var(--c-muted)', marginBottom: 20, marginTop: -8 }}>
@@ -179,7 +179,7 @@ export default function Configuracion() {
 
             {/* Simulador */}
             <div style={{ background: 'rgba(255,107,44,0.08)', borderRadius: 12, padding: 16, border: '1px solid rgba(255,107,44,0.15)' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#FF6B2C', marginBottom: 10 }}>Vista previa de tarifas</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#C5562C', marginBottom: 10 }}>Vista previa de tarifas</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
                 {[1, 2, 3, 5, 8, 10, 15].map(km => (
                   <div key={km} style={{ background: 'var(--c-surface2)', borderRadius: 8, padding: '8px 14px', textAlign: 'center' }}>
@@ -194,7 +194,7 @@ export default function Configuracion() {
           {/* ==================== COMISIONES ==================== */}
           <div style={styles.section}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-              <DollarSign size={18} color="#FF6B2C" />
+              <DollarSign size={18} color="#C5562C" />
               <h2 style={styles.sectionTitle}>Porcentajes de comisiones</h2>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
@@ -210,7 +210,7 @@ export default function Configuracion() {
           {/* ==================== ALGORITMO DE ASIGNACIÓN Y COMISIONES ==================== */}
           <div style={styles.section}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-              <Zap size={18} color="#FF6B2C" />
+              <Zap size={18} color="#C5562C" />
               <h2 style={styles.sectionTitle}>Algoritmo de asignación y comisiones</h2>
             </div>
             <p style={{ fontSize: 12, color: 'var(--c-muted)', marginBottom: 20, marginTop: -8 }}>
@@ -259,40 +259,22 @@ export default function Configuracion() {
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 16 }}>
-              <div>
-                <label style={ds.label}>Comisión Pidoo (% del subtotal)</label>
-                <input
-                  type="number" min={0} max={50} step="0.5"
-                  value={config.comision_pidoo_pct ?? '10'}
-                  onChange={e => setConfigVal('comision_pidoo_pct', e.target.value)}
-                  style={ds.formInput}
-                />
-                <div style={styles.hint}>Se descuenta al restaurante</div>
-              </div>
-              <div>
-                <label style={ds.label}>Comisión rider (% del subtotal)</label>
-                <input
-                  type="number" min={0} max={50} step="0.5"
-                  value={config.comision_rider_pct ?? '10'}
-                  onChange={e => setConfigVal('comision_rider_pct', e.target.value)}
-                  style={ds.formInput}
-                />
-                <div style={styles.hint}>Además del 100% del envío y 100% de la propina</div>
-              </div>
+            <div style={{
+              background: 'rgba(197,86,44,0.06)',
+              border: '1px solid rgba(197,86,44,0.15)',
+              borderRadius: 12, padding: 14,
+              fontSize: 12, color: 'var(--c-muted)', lineHeight: 1.55,
+            }}>
+              <span style={{ fontWeight: 700, color: '#C5562C' }}>Modelo SaaS:</span>{' '}
+              el restaurante paga 39€/mes y se queda el 100% del subtotal.
+              El rider cobra envío + propina y se factura aparte. No hay porcentajes de comisión por pedido.
             </div>
-
-            {/* Ejemplo visual del split */}
-            <SplitPreview
-              pidooPct={configNum('comision_pidoo_pct', 10)}
-              riderPct={configNum('comision_rider_pct', 10)}
-            />
           </div>
 
           {/* ==================== RADIO DEFAULT ==================== */}
           <div style={styles.section}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-              <MapPin size={18} color="#FF6B2C" />
+              <MapPin size={18} color="#C5562C" />
               <h2 style={styles.sectionTitle}>Radio de cobertura por defecto</h2>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -306,7 +288,7 @@ export default function Configuracion() {
           {/* ==================== RADIO DESCUBRIMIENTO ==================== */}
           <div style={styles.section}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-              <MapPin size={18} color="#FF6B2C" />
+              <MapPin size={18} color="#C5562C" />
               <h2 style={styles.sectionTitle}>Radio de descubrimiento (visibilidad)</h2>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -362,7 +344,7 @@ export default function Configuracion() {
 
         {editLegal ? (
           <div>
-            <button onClick={() => setEditLegal(null)} style={{ background: 'none', border: 'none', color: '#FF6B2C', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Inter', system-ui, -apple-system, sans-serif", marginBottom: 16, padding: 0 }}>← Volver a la lista</button>
+            <button onClick={() => setEditLegal(null)} style={{ background: 'none', border: 'none', color: '#C5562C', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", marginBottom: 16, padding: 0 }}>← Volver a la lista</button>
             <div style={{ marginBottom: 12 }}>
               <label style={ds.label}>Título</label>
               <input value={legalForm.titulo} onChange={e => setLegalForm({ ...legalForm, titulo: e.target.value })} style={ds.formInput} />
@@ -387,7 +369,7 @@ export default function Configuracion() {
                   <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--c-text)' }}>{p.titulo}</div>
                   <div style={{ fontSize: 11, color: 'var(--c-muted)', marginTop: 2 }}>pidoo.es/{p.slug} · Editado: {new Date(p.updated_at).toLocaleDateString('es-ES')}</div>
                 </div>
-                <button onClick={() => { setEditLegal(p); setLegalForm({ titulo: p.titulo, contenido: p.contenido }) }} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#FF6B2C', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>Editar</button>
+                <button onClick={() => { setEditLegal(p); setLegalForm({ titulo: p.titulo, contenido: p.contenido }) }} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#C5562C', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" }}>Editar</button>
               </div>
             ))}
             {paginasLegales.length === 0 && <div style={{ textAlign: 'center', padding: 24, color: 'var(--c-muted)', fontSize: 13 }}>No hay páginas legales configuradas</div>}
@@ -412,7 +394,7 @@ function ToggleRow({ label, value, onChange }) {
       <span style={{ fontSize: 13, color: 'var(--c-text)', fontWeight: 600 }}>{label}</span>
       <span style={{
         width: 38, height: 22, borderRadius: 22, padding: 2,
-        background: value ? '#FF6B2C' : 'var(--c-border-strong)',
+        background: value ? '#C5562C' : 'var(--c-border-strong)',
         transition: 'background 0.2s', display: 'flex', alignItems: 'center',
       }}>
         <span style={{
@@ -421,36 +403,6 @@ function ToggleRow({ label, value, onChange }) {
           transition: 'transform 0.2s',
         }} />
       </span>
-    </div>
-  )
-}
-
-function SplitPreview({ pidooPct, riderPct }) {
-  const subtotal = 20
-  const envio = 3
-  const propina = 0
-  const pidoo = (subtotal * (pidooPct || 0)) / 100
-  const rider = (subtotal * (riderPct || 0)) / 100 + envio + propina
-  const restaurante = subtotal - pidoo - (subtotal * (riderPct || 0)) / 100
-  return (
-    <div style={{ background: 'rgba(255,107,44,0.08)', borderRadius: 12, padding: 16, border: '1px solid rgba(255,107,44,0.15)' }}>
-      <div style={{ fontSize: 12, fontWeight: 700, color: '#FF6B2C', marginBottom: 10 }}>
-        Ejemplo: pedido con subtotal 20€ + envío 3€
-      </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ background: 'var(--c-surface2)', borderRadius: 8, padding: '10px 16px', minWidth: 120 }}>
-          <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>Pidoo</div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--c-text)' }}>€{pidoo.toFixed(2)}</div>
-        </div>
-        <div style={{ background: 'var(--c-surface2)', borderRadius: 8, padding: '10px 16px', minWidth: 140 }}>
-          <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>Rider (+ envío + propina)</div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--c-text)' }}>€{rider.toFixed(2)}</div>
-        </div>
-        <div style={{ background: 'var(--c-surface2)', borderRadius: 8, padding: '10px 16px', minWidth: 120 }}>
-          <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>Restaurante</div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--c-text)' }}>€{restaurante.toFixed(2)}</div>
-        </div>
-      </div>
     </div>
   )
 }

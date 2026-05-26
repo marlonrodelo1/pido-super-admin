@@ -67,7 +67,7 @@ export default function PlanTiendaCard({ establecimiento, onChanged }) {
   return (
     <div style={{ ...ds.card, marginTop: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-        <CreditCard size={18} color="#FF6B2C" />
+        <CreditCard size={18} color="#C5562C" />
         <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)' }}>Plan Tienda Pública</h3>
         <span style={{ padding: '3px 10px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: info.bg, color: info.color, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
           {info.label}

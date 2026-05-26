@@ -120,7 +120,7 @@ export default function HorarioEstadoCard({ establecimiento, onChanged }) {
   return (
     <div style={{ ...ds.card, padding: 20, marginTop: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-        <Clock size={18} color="#FF6B2C" />
+        <Clock size={18} color="#C5562C" />
         <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', flex: 1, minWidth: 160 }}>Horario y estado</h3>
         <span style={{ ...ds.badge, background: estadoBadge.bg, color: estadoBadge.color }}>● {estadoBadge.label}</span>
       </div>

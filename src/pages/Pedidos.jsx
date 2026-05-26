@@ -103,7 +103,7 @@ export default function Pedidos() {
     return true
   })
 
-  const estadoColor = { nuevo: '#FF6B2C', aceptado: '#FF6B2C', preparando: '#FF6B2C', listo: 'var(--c-text-soft)', recogido: 'var(--c-text-soft)', en_camino: '#FF6B2C', entregado: 'var(--c-text)', cancelado: 'var(--c-danger)', fallido: 'var(--c-danger)' }
+  const estadoColor = { nuevo: '#C5562C', aceptado: '#C5562C', preparando: '#C5562C', listo: 'var(--c-text-soft)', recogido: 'var(--c-text-soft)', en_camino: '#C5562C', entregado: 'var(--c-text)', cancelado: 'var(--c-danger)', fallido: 'var(--c-danger)' }
   const estados = ['todos', 'nuevo', 'aceptado', 'preparando', 'listo', 'en_camino', 'entregado', 'cancelado']
 
   if (detalle) {
@@ -123,7 +123,7 @@ export default function Pedidos() {
               <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
                 <span style={{ ...ds.badge, background: (estadoColor[detalle.estado] || '#6B7280') + '15', color: estadoColor[detalle.estado] }}>{detalle.estado}</span>
                 <span style={{ ...ds.badge, background: detalle.metodo_pago === 'tarjeta' ? 'var(--c-info-soft)' : 'var(--c-warning-soft)', color: detalle.metodo_pago === 'tarjeta' ? 'var(--c-info)' : 'var(--c-warning)' }}>{detalle.metodo_pago}</span>
-                <span style={{ ...ds.badge, background: 'var(--c-primary-soft)', color: '#FF6B2C' }}>PIDO</span>
+                <span style={{ ...ds.badge, background: 'var(--c-primary-soft)', color: '#C5562C' }}>PIDO</span>
                 {sinRider && (
                   <span style={{ ...ds.badge, background: colors.dangerSoft, color: colors.danger, border: `1px solid ${colors.danger}` }}>
                     🚨 Sin rider
@@ -190,7 +190,7 @@ export default function Pedidos() {
                   <span style={{ fontWeight: 700 }}>{item.cantidad}x</span> {item.nombre_producto}
                   {item.tamano && <span style={{ color: 'var(--c-muted)' }}> ({item.tamano})</span>}
                   {item.extras?.length > 0 && <div style={{ fontSize: 11, color: 'var(--c-muted)', marginTop: 2 }}>+ {item.extras.join(', ')}</div>}
-                  {item.notas && <div style={{ fontSize: 11, color: '#FF6B2C', marginTop: 2 }}>{item.notas}</div>}
+                  {item.notas && <div style={{ fontSize: 11, color: '#C5562C', marginTop: 2 }}>{item.notas}</div>}
                 </div>
                 <span style={{ fontWeight: 700 }}>{(item.precio_unitario * item.cantidad).toFixed(2)}EUR</span>
               </div>
@@ -289,14 +289,14 @@ export default function Pedidos() {
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         {estados.map(e => (
-          <button key={e} onClick={() => setFiltro(e)} style={{ ...ds.filterBtn, background: filtro === e ? '#FF6B2C' : 'var(--c-surface2)', color: filtro === e ? '#fff' : 'var(--c-muted)' }}>
+          <button key={e} onClick={() => setFiltro(e)} style={{ ...ds.filterBtn, background: filtro === e ? '#C5562C' : 'var(--c-surface2)', color: filtro === e ? '#fff' : 'var(--c-muted)' }}>
             {e === 'todos' ? 'Todos' : e.charAt(0).toUpperCase() + e.slice(1).replace('_', ' ')}
           </button>
         ))}
       </div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
         {['todos', 'tarjeta', 'efectivo'].map(p => (
-          <button key={p} onClick={() => setFiltroPago(p)} style={{ ...ds.filterBtn, background: filtroPago === p ? '#FF6B2C' : 'var(--c-surface2)', color: filtroPago === p ? '#fff' : 'var(--c-muted)' }}>
+          <button key={p} onClick={() => setFiltroPago(p)} style={{ ...ds.filterBtn, background: filtroPago === p ? '#C5562C' : 'var(--c-surface2)', color: filtroPago === p ? '#fff' : 'var(--c-muted)' }}>
             {p.charAt(0).toUpperCase() + p.slice(1)}
           </button>
         ))}
@@ -325,7 +325,7 @@ export default function Pedidos() {
               <span style={{ width: 80, fontSize: 12 }}>{p.total?.toFixed(2)}EUR</span>
               <span style={{ width: 90 }}><span style={{ ...ds.badge, background: (estadoColor[p.estado] || '#6B7280') + '15', color: estadoColor[p.estado] }}>{p.estado}</span></span>
               <span style={{ width: 70 }}><span style={{ ...ds.badge, background: p.metodo_pago === 'tarjeta' ? 'var(--c-info-soft)' : 'var(--c-warning-soft)', color: p.metodo_pago === 'tarjeta' ? 'var(--c-info)' : 'var(--c-warning)' }}>{p.metodo_pago}</span></span>
-              <span data-tablet-sm-hide="true" style={{ width: 70 }}><span style={{ ...ds.badge, background: 'var(--c-primary-soft)', color: '#FF6B2C' }}>PIDO</span></span>
+              <span data-tablet-sm-hide="true" style={{ width: 70 }}><span style={{ ...ds.badge, background: 'var(--c-primary-soft)', color: '#C5562C' }}>PIDO</span></span>
               <span style={{ width: 100 }}>
                 {sinRider ? (
                   <span style={{ ...ds.badge, background: colors.dangerSoft, color: colors.danger, border: `1px solid ${colors.danger}` }}>

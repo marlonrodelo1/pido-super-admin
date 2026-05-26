@@ -65,7 +65,7 @@ export default function ImportUrlModal({ establecimiento, onClose, onComplete })
       <div className="admin-modal-content" style={{ ...ds.modalContent, maxWidth: 540 }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Link2 size={18} color="#FF6B2C" />
+            <Link2 size={18} color="#C5562C" />
             <h2 style={{ fontSize: 17, fontWeight: 800, color: 'var(--c-text)', margin: 0 }}>Importar desde URL</h2>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--c-muted)', cursor: 'pointer', fontSize: 22 }}>×</button>
@@ -115,11 +115,11 @@ export default function ImportUrlModal({ establecimiento, onClose, onComplete })
   if (step === 'analyzing') return (
     <div style={ds.modal}>
       <div className="admin-modal-content" style={{ ...ds.modalContent, maxWidth: 400, textAlign: 'center', padding: 28 }}>
-        <Link2 size={32} color="#FF6B2C" style={{ marginBottom: 10 }} />
+        <Link2 size={32} color="#C5562C" style={{ marginBottom: 10 }} />
         <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', marginBottom: 6 }}>Analizando tienda…</div>
         <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>Descargando catálogo y extras desde el servidor.</div>
         <div style={{ height: 4, borderRadius: 2, background: 'var(--c-surface2)', overflow: 'hidden', marginTop: 18 }}>
-          <div style={{ height: '100%', width: '40%', background: '#FF6B2C', animation: 'slideIn 1.5s ease-in-out infinite' }} />
+          <div style={{ height: '100%', width: '40%', background: '#C5562C', animation: 'slideIn 1.5s ease-in-out infinite' }} />
         </div>
       </div>
     </div>
@@ -131,7 +131,7 @@ export default function ImportUrlModal({ establecimiento, onClose, onComplete })
       <div className="admin-modal-content" style={{ ...ds.modalContent, maxWidth: 640 }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Store size={18} color="#FF6B2C" />
+            <Store size={18} color="#C5562C" />
             <h2 style={{ fontSize: 17, fontWeight: 800, color: 'var(--c-text)', margin: 0 }}>Vista previa</h2>
           </div>
           <button onClick={() => setStep('idle')} style={{ background: 'none', border: 'none', color: 'var(--c-muted)', cursor: 'pointer', fontSize: 22 }}>×</button>
@@ -140,14 +140,14 @@ export default function ImportUrlModal({ establecimiento, onClose, onComplete })
         {preview.shop_name && (
           <div style={{ fontSize: 13, color: 'var(--c-text-soft)', marginBottom: 14 }}>
             Tienda detectada: <strong style={{ color: 'var(--c-text)' }}>{preview.shop_name}</strong>
-            <span style={{ ...ds.badge, background: 'var(--c-primary-soft)', color: '#FF6B2C', marginLeft: 10, textTransform: 'uppercase' }}>
+            <span style={{ ...ds.badge, background: 'var(--c-primary-soft)', color: '#C5562C', marginLeft: 10, textTransform: 'uppercase' }}>
               {preview.plataforma}
             </span>
           </div>
         )}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8, marginBottom: 16 }}>
-          <Stat label="Categorías" value={preview.stats.categorias} color="#FF6B2C" />
+          <Stat label="Categorías" value={preview.stats.categorias} color="#C5562C" />
           <Stat label="Productos" value={preview.stats.productos} color="#4ADE80" />
           <Stat label="Con imagen" value={preview.stats.productos_con_imagen} color="#60A5FA" />
           <Stat label="Grupos extras" value={preview.stats.grupos_extras} color="#C084FC" />
@@ -182,11 +182,11 @@ export default function ImportUrlModal({ establecimiento, onClose, onComplete })
   if (step === 'importing') return (
     <div style={ds.modal}>
       <div className="admin-modal-content" style={{ ...ds.modalContent, maxWidth: 400, textAlign: 'center', padding: 28 }}>
-        <Upload size={32} color="#FF6B2C" style={{ marginBottom: 10 }} />
+        <Upload size={32} color="#C5562C" style={{ marginBottom: 10 }} />
         <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', marginBottom: 6 }}>Importando…</div>
         <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>Creando categorías, productos y extras en la base de datos.</div>
         <div style={{ height: 4, borderRadius: 2, background: 'var(--c-surface2)', overflow: 'hidden', marginTop: 18 }}>
-          <div style={{ height: '100%', width: '40%', background: '#FF6B2C', animation: 'slideIn 1.5s ease-in-out infinite' }} />
+          <div style={{ height: '100%', width: '40%', background: '#C5562C', animation: 'slideIn 1.5s ease-in-out infinite' }} />
         </div>
       </div>
     </div>
@@ -228,7 +228,7 @@ function ResultLine({ label, value }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--c-surface2)', borderRadius: 8 }}>
       <span style={{ fontSize: 12, color: 'var(--c-text-soft)' }}>{label}</span>
-      <span style={{ fontSize: 13, fontWeight: 700, color: '#FF6B2C' }}>{value}</span>
+      <span style={{ fontSize: 13, fontWeight: 700, color: '#C5562C' }}>{value}</span>
     </div>
   )
 }

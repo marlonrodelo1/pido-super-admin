@@ -115,11 +115,11 @@ export default function Notificaciones() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 24 }}>
         <div style={ds.card}>
           <div style={{ fontSize: 11, color: 'var(--c-muted)', fontWeight: 600 }}>Clientes</div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: '#FF6B2C' }}>{stats.clientes}</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: '#C5562C' }}>{stats.clientes}</div>
         </div>
         <div style={ds.card}>
           <div style={{ fontSize: 11, color: 'var(--c-muted)', fontWeight: 600 }}>Restaurantes</div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: '#FF6B2C' }}>{stats.restaurantes}</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: '#C5562C' }}>{stats.restaurantes}</div>
         </div>
       </div>
 
@@ -136,11 +136,11 @@ export default function Notificaciones() {
               return (
                 <button key={d.id} onClick={() => setDestino(d.id)} style={{
                   padding: '12px 10px', borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center',
-                  border: sel ? '2px solid #FF6B2C' : '1px solid var(--c-border-strong)',
+                  border: sel ? '2px solid #C5562C' : '1px solid var(--c-border-strong)',
                   background: sel ? 'var(--c-primary-soft)' : 'var(--c-surface2)',
                 }}>
-                  <d.icon size={18} color={sel ? '#FF6B2C' : 'var(--c-muted)'} style={{ margin: '0 auto 6px', display: 'block' }} />
-                  <div style={{ fontSize: 12, fontWeight: 700, color: sel ? '#FF6B2C' : 'var(--c-text)' }}>{d.label}</div>
+                  <d.icon size={18} color={sel ? '#C5562C' : 'var(--c-muted)'} style={{ margin: '0 auto 6px', display: 'block' }} />
+                  <div style={{ fontSize: 12, fontWeight: 700, color: sel ? '#C5562C' : 'var(--c-text)' }}>{d.label}</div>
                   <div style={{ fontSize: 10, color: 'var(--c-muted)', marginTop: 2 }}>{d.desc}</div>
                 </button>
               )
@@ -165,7 +165,7 @@ export default function Notificaciones() {
           <div style={{ background: 'var(--c-surface2)', borderRadius: 12, padding: 14, marginBottom: 16, border: '1px solid var(--c-border)' }}>
             <div style={{ fontSize: 10, color: 'var(--c-muted)', marginBottom: 8, fontWeight: 600 }}>PREVIEW</div>
             <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: '#FF6B2C', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: '#C5562C', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Bell size={16} color="#fff" />
               </div>
               <div>
@@ -191,9 +191,9 @@ export default function Notificaciones() {
         {/* Botón enviar */}
         <button onClick={enviarNotificacion} disabled={enviando || !titulo.trim() || !mensaje.trim()} style={{
           width: '100%', padding: '14px', borderRadius: 12, border: 'none',
-          background: enviando || !titulo.trim() || !mensaje.trim() ? 'var(--c-surface2)' : '#FF6B2C',
+          background: enviando || !titulo.trim() || !mensaje.trim() ? 'var(--c-surface2)' : '#C5562C',
           color: '#fff', fontSize: 15, fontWeight: 800, cursor: enviando ? 'default' : 'pointer',
-          fontFamily: "'Inter', system-ui, -apple-system, sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
         }}>
           <Send size={16} />
           {enviando ? 'Enviando...' : 'Enviar notificación'}

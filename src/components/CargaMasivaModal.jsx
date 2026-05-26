@@ -120,7 +120,7 @@ export default function CargaMasivaModal({ establecimiento, categorias, onClose,
           <button onClick={onClose} style={{ ...ds.actionBtn, color: 'var(--c-muted)' }}><X size={16} /></button>
         </div>
         <p style={{ fontSize: 12, color: 'var(--c-muted)', marginBottom: 16, lineHeight: 1.6 }}>
-          Sube un archivo CSV con los productos para <strong style={{ color: '#FF6B2C' }}>{establecimiento.nombre}</strong>. Las categorias que no existan se crearan automaticamente.
+          Sube un archivo CSV con los productos para <strong style={{ color: '#C5562C' }}>{establecimiento.nombre}</strong>. Las categorias que no existan se crearan automaticamente.
         </p>
         <div style={{
           padding: '10px 14px', borderRadius: 10, marginBottom: 16,
@@ -141,7 +141,7 @@ export default function CargaMasivaModal({ establecimiento, categorias, onClose,
             background: 'rgba(255,107,44,0.04)',
           }}
         >
-          <FileSpreadsheet size={36} style={{ color: '#FF6B2C', marginBottom: 10 }} />
+          <FileSpreadsheet size={36} style={{ color: '#C5562C', marginBottom: 10 }} />
           <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--c-text)', marginBottom: 6 }}>Arrastra tu CSV aqui</div>
           <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>o haz click para seleccionar (max 1MB)</div>
           <input ref={fileRef} type="file" accept=".csv" hidden onChange={e => handleFile(e.target.files[0])} />
@@ -166,7 +166,7 @@ export default function CargaMasivaModal({ establecimiento, categorias, onClose,
         {/* Summary */}
         <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
           {formato && (
-            <span style={{ ...ds.badge, background: 'var(--c-primary-soft)', color: '#FF6B2C', textTransform: 'uppercase' }}>
+            <span style={{ ...ds.badge, background: 'var(--c-primary-soft)', color: '#C5562C', textTransform: 'uppercase' }}>
               Formato: {formato === 'ubereats' ? 'Uber Eats' : 'Pidoo'}
             </span>
           )}
@@ -189,7 +189,7 @@ export default function CargaMasivaModal({ establecimiento, categorias, onClose,
                 <span key={name} style={{
                   ...ds.badge,
                   background: info.exists ? 'var(--c-success-soft)' : 'var(--c-primary-soft)',
-                  color: info.exists ? 'var(--c-text)' : '#FF6B2C',
+                  color: info.exists ? 'var(--c-text)' : '#C5562C',
                 }}>
                   {info.exists ? '✓' : '+ nueva'} {name}
                 </span>
@@ -211,7 +211,7 @@ export default function CargaMasivaModal({ establecimiento, categorias, onClose,
             <div key={r._rowNum} style={ds.tableRow}>
               <span style={{ width: 36, fontSize: 10, color: 'var(--c-muted)' }}>{r._rowNum}</span>
               <span style={{ flex: 2, fontSize: 12 }}>{r.nombre}</span>
-              <span style={{ width: 70, textAlign: 'right', fontSize: 12, color: '#FF6B2C', fontWeight: 700 }}>{r.precio.toFixed(2)} €</span>
+              <span style={{ width: 70, textAlign: 'right', fontSize: 12, color: '#C5562C', fontWeight: 700 }}>{r.precio.toFixed(2)} €</span>
               <span style={{ flex: 1, fontSize: 11, color: 'var(--c-muted)' }}>{r.categoria || '—'}</span>
               <span style={{ width: 60, textAlign: 'center' }}><CheckCircle size={13} style={{ color: 'var(--c-text)' }} /></span>
             </div>
@@ -247,7 +247,7 @@ export default function CargaMasivaModal({ establecimiento, categorias, onClose,
   if (step === 'uploading') return (
     <div style={ds.modal}>
       <div className="admin-modal-content" style={{ ...ds.modalContent, maxWidth: 400, textAlign: 'center' }}>
-        <FileSpreadsheet size={32} style={{ color: '#FF6B2C', marginBottom: 12 }} />
+        <FileSpreadsheet size={32} style={{ color: '#C5562C', marginBottom: 12 }} />
         <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--c-text)', marginBottom: 8 }}>Subiendo productos...</div>
         <div style={{ fontSize: 12, color: 'var(--c-muted)', marginBottom: 16 }}>
           Procesando {progress.current}/{progress.total}
@@ -255,7 +255,7 @@ export default function CargaMasivaModal({ establecimiento, categorias, onClose,
         {/* Progress bar */}
         <div style={{ height: 6, borderRadius: 3, background: 'var(--c-surface2)', overflow: 'hidden' }}>
           <div style={{
-            height: '100%', borderRadius: 3, background: '#FF6B2C',
+            height: '100%', borderRadius: 3, background: '#C5562C',
             width: progress.total > 0 ? `${(progress.current / progress.total) * 100}%` : '0%',
             transition: 'width 0.3s ease',
           }} />
@@ -281,8 +281,8 @@ export default function CargaMasivaModal({ establecimiento, categorias, onClose,
             </div>
           )}
           {results.catCreated.length > 0 && (
-            <div style={{ ...ds.card, padding: '12px 16px', borderLeft: '3px solid #FF6B2C' }}>
-              <span style={{ fontSize: 13, color: '#FF6B2C', fontWeight: 700 }}>{results.catCreated.length}</span>
+            <div style={{ ...ds.card, padding: '12px 16px', borderLeft: '3px solid #C5562C' }}>
+              <span style={{ fontSize: 13, color: '#C5562C', fontWeight: 700 }}>{results.catCreated.length}</span>
               <span style={{ fontSize: 12, color: 'var(--c-text-soft)', marginLeft: 6 }}>categoria{results.catCreated.length !== 1 ? 's' : ''} nueva{results.catCreated.length !== 1 ? 's' : ''}: </span>
               <span style={{ fontSize: 11, color: 'var(--c-muted)' }}>{results.catCreated.join(', ')}</span>
             </div>

@@ -10,7 +10,7 @@ import Usuarios from './pages/Usuarios'
 import Pedidos from './pages/Pedidos'
 import SoporteAdmin from './pages/SoporteAdmin'
 import SoporteRider from './pages/SoporteRider'
-import Finanzas from './pages/Finanzas'
+import SuscripcionesSaaS from './pages/SuscripcionesSaaS'
 import Configuracion from './pages/Configuracion'
 import Notificaciones from './pages/Notificaciones'
 import MapaAdmin from './pages/MapaAdmin'
@@ -29,7 +29,7 @@ const SECCION_TITULOS = {
   mapa: 'Mapa en vivo',
   notificaciones: 'Notificaciones',
   soporte: 'Soporte',
-  finanzas: 'Finanzas',
+  'suscripciones-saas': 'Suscripciones SaaS',
   reembolsos: 'Reembolsos',
   repartidores: 'Repartidores',
   socios: 'Socios',
@@ -37,7 +37,7 @@ const SECCION_TITULOS = {
   config: 'Configuración',
 }
 
-const FONT = "'Inter', system-ui, -apple-system, sans-serif"
+const FONT = "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif"
 
 function AppContent() {
   const { user, loading, logout } = useAdmin()
@@ -64,7 +64,7 @@ function AppContent() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
             width: 32, height: 32, borderRadius: 9,
-            background: 'linear-gradient(135deg,#FF6B2C,#FF3D00)',
+            background: 'linear-gradient(135deg,#C5562C,#FF3D00)',
             display: 'grid', placeItems: 'center',
             color: '#fff', fontWeight: 900, fontSize: 14,
             boxShadow: '0 0 0 1px rgba(255,107,44,0.35), 0 8px 20px -6px rgba(255,107,44,0.45)',
@@ -106,7 +106,7 @@ function AppContent() {
       <main
         style={{
           flex: 1,
-          marginLeft: isTabletDown ? 0 : 220,
+          marginLeft: isTabletDown ? 0 : 240,
           background: 'var(--c-bg)',
           minHeight: '100vh',
         }}
@@ -145,7 +145,7 @@ function AppContent() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{
                 width: 28, height: 28, borderRadius: 8,
-                background: 'linear-gradient(135deg,#FF6B2C,#FF3D00)',
+                background: 'linear-gradient(135deg,#C5562C,#FF3D00)',
                 display: 'grid', placeItems: 'center',
                 color: '#fff', fontWeight: 900, fontSize: 13,
               }}>P</div>
@@ -188,7 +188,7 @@ function AppContent() {
           {seccion === 'notificaciones' && <Notificaciones />}
           {seccion === 'soporte' && <SoporteAdmin />}
           {seccion === 'soporte-rider' && <SoporteRider />}
-          {seccion === 'finanzas' && <Finanzas />}
+          {seccion === 'suscripciones-saas' && <SuscripcionesSaaS />}
           {seccion === 'reembolsos' && <Reembolsos />}
           {seccion === 'repartidores' && <Repartidores />}
           {seccion === 'socios' && <Socios />}

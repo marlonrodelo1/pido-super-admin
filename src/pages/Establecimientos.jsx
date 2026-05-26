@@ -33,7 +33,7 @@ export default function Establecimientos() {
   const [productos, setProductos] = useState([])
   const [gruposExtras, setGruposExtras] = useState([])
   const [editProd, setEditProd] = useState(null)
-  const [prodForm, setProdForm] = useState({ nombre: '', descripcion: '', precio: '', categoria_id: '', imagen_url: '' })
+  const [prodForm, setProdForm] = useState({ nombre: '', descripcion: '', precio: '', precio_tienda_publica: '', categoria_id: '', imagen_url: '' })
   const [prodExtras, setProdExtras] = useState([])
   const [savingProd, setSavingProd] = useState(false)
   const [resenas, setResenas] = useState([])
@@ -336,22 +336,46 @@ export default function Establecimientos() {
   }
 
   async function abrirEditarProd(p) {
-    setProdForm({ nombre: p.nombre, descripcion: p.descripcion || '', precio: p.precio, categoria_id: p.categoria_id || '', imagen_url: p.imagen_url || '' })
+    setProdForm({ nombre: p.nombre, descripcion: p.descripcion || '', precio: p.precio, precio_tienda_publica: p.precio_tienda_publica ?? '', categoria_id: p.categoria_id || '', imagen_url: p.imagen_url || '' })
     const { data } = await supabase.from('producto_extras').select('grupo_id').eq('producto_id', p.id)
     setProdExtras((data || []).map(d => d.grupo_id))
     setEditProd(p)
   }
 
+  function parsePrecio(raw) {
+    if (raw === '' || raw === null || raw === undefined) return null
+    const n = Number(String(raw).replace(',', '.'))
+    return Number.isFinite(n) ? n : NaN
+  }
+
   async function guardarProd() {
-    if (!prodForm.nombre.trim() || !prodForm.precio) return
+    if (!prodForm.nombre.trim()) { toast('El nombre es obligatorio', 'error'); return }
+    const precio = parsePrecio(prodForm.precio)
+    if (precio === null || Number.isNaN(precio) || precio < 0) {
+      toast('Precio inválido. Usa punto como decimal (ej: 0.50)', 'error'); return
+    }
+    const precioTienda = parsePrecio(prodForm.precio_tienda_publica)
+    if (precioTienda !== null && (Number.isNaN(precioTienda) || precioTienda < 0)) {
+      toast('Precio tienda pública inválido', 'error'); return
+    }
     setSavingProd(true)
-    const data = { nombre: prodForm.nombre.trim(), descripcion: prodForm.descripcion.trim() || null, precio: Number(prodForm.precio), categoria_id: prodForm.categoria_id || null, imagen_url: prodForm.imagen_url || null, establecimiento_id: detalle.id, disponible: true, orden: productos.length }
+    const baseData = {
+      nombre: prodForm.nombre.trim(),
+      descripcion: prodForm.descripcion.trim() || null,
+      precio,
+      precio_tienda_publica: precioTienda,
+      categoria_id: prodForm.categoria_id || null,
+      imagen_url: prodForm.imagen_url || null,
+    }
     let prodId
-    if (editProd) {
-      await supabase.from('productos').update(data).eq('id', editProd.id)
+    if (editProd && editProd !== 'new') {
+      const { error } = await supabase.from('productos').update(baseData).eq('id', editProd.id)
+      if (error) { setSavingProd(false); toast('Error al guardar: ' + error.message, 'error'); return }
       prodId = editProd.id
     } else {
-      const { data: nuevo } = await supabase.from('productos').insert(data).select().single()
+      const insertData = { ...baseData, establecimiento_id: detalle.id, disponible: true, orden: productos.length }
+      const { data: nuevo, error } = await supabase.from('productos').insert(insertData).select().single()
+      if (error) { setSavingProd(false); toast('Error al crear: ' + error.message, 'error'); return }
       prodId = nuevo?.id
     }
     if (prodId) {
@@ -360,8 +384,9 @@ export default function Establecimientos() {
     }
     setSavingProd(false)
     setEditProd(null)
-    setProdForm({ nombre: '', descripcion: '', precio: '', categoria_id: '', imagen_url: '' })
+    setProdForm({ nombre: '', descripcion: '', precio: '', precio_tienda_publica: '', categoria_id: '', imagen_url: '' })
     setProdExtras([])
+    toast('Producto guardado', 'success')
     loadProductos(detalle.id)
   }
 
@@ -449,7 +474,7 @@ export default function Establecimientos() {
                     title="Eliminar restaurante definitivamente"
                     style={{
                       ...ds.secondaryBtn,
-                      color: '#DC2626',
+                      color: '#B5564A',
                       borderColor: 'rgba(220,38,38,0.32)',
                       background: 'rgba(220,38,38,0.06)',
                       display: 'flex', alignItems: 'center', gap: 4,
@@ -558,8 +583,8 @@ export default function Establecimientos() {
                 padding: '6px 8px 6px 12px', borderRadius: 999,
                 border: '1px solid rgba(255,107,44,0.32)',
                 background: 'rgba(255,107,44,0.10)',
-                color: '#FF6B2C', fontSize: 12, fontWeight: 600,
-                fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+                color: '#C5562C', fontSize: 12, fontWeight: 600,
+                fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif",
               }}>
                 {c.emoji} {c.nombre}
                 <button
@@ -567,7 +592,7 @@ export default function Establecimientos() {
                   onClick={() => toggleCatGeneral(c.id)}
                   style={{
                     background: 'transparent', border: 'none', cursor: 'pointer',
-                    color: '#FF6B2C', display: 'inline-flex', alignItems: 'center',
+                    color: '#C5562C', display: 'inline-flex', alignItems: 'center',
                     padding: 2, borderRadius: 999,
                   }}
                 >
@@ -607,7 +632,7 @@ export default function Establecimientos() {
                           width: '100%', padding: '10px 12px', minHeight: 44,
                           background: 'transparent', border: 'none', borderRadius: 6,
                           fontSize: 13, color: 'var(--c-text)', cursor: 'pointer',
-                          fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+                          fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif",
                           textAlign: 'left',
                         }}
                         onMouseEnter={e => e.currentTarget.style.background = 'var(--c-surface2)'}
@@ -725,7 +750,7 @@ export default function Establecimientos() {
                 <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--c-text)' }}>{p.nombre}</div>
                 {p.descripcion && <div style={{ fontSize: 11, color: 'var(--c-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.descripcion}</div>}
               </div>
-              <span style={{ fontWeight: 700, fontSize: 13, color: '#FF6B2C', minWidth: 60, textAlign: 'right' }}>{Number(p.precio).toFixed(2)} €</span>
+              <span style={{ fontWeight: 700, fontSize: 13, color: '#C5562C', minWidth: 60, textAlign: 'right' }}>{Number(p.precio).toFixed(2)} €</span>
               <div style={{ display: 'flex', gap: 4 }}>
                 <button onClick={() => toggleDisponible(p.id, p.disponible)} style={{ ...ds.actionBtn, color: p.disponible ? 'var(--c-text)' : 'var(--c-danger)', fontSize: 10 }} aria-label={p.disponible ? 'Desactivar producto' : 'Activar producto'}>{p.disponible ? 'On' : 'Off'}</button>
                 <button onClick={() => abrirEditarProd(p)} style={{ ...ds.actionBtn, fontSize: 10 }} aria-label="Editar producto">Editar</button>
@@ -840,7 +865,8 @@ export default function Establecimientos() {
               </div>
               <div className="admin-grid-2col-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div style={{ gridColumn: '1/-1' }}><label style={ds.label}>Nombre *</label><input value={prodForm.nombre} onChange={e => setProdForm({ ...prodForm, nombre: e.target.value })} style={ds.formInput} /></div>
-                <div><label style={ds.label}>Precio (€) *</label><input type="number" step="0.01" value={prodForm.precio} onChange={e => setProdForm({ ...prodForm, precio: e.target.value })} style={ds.formInput} /></div>
+                <div><label style={ds.label}>Precio (€) *</label><input type="number" step="0.01" min="0" value={prodForm.precio} onChange={e => setProdForm({ ...prodForm, precio: e.target.value })} style={ds.formInput} /></div>
+                <div><label style={ds.label}>Precio tienda pública (€)</label><input type="number" step="0.01" min="0" placeholder="opcional" value={prodForm.precio_tienda_publica} onChange={e => setProdForm({ ...prodForm, precio_tienda_publica: e.target.value })} style={ds.formInput} /></div>
                 <div><label style={ds.label}>Categoría</label>
                   <select value={prodForm.categoria_id} onChange={e => setProdForm({ ...prodForm, categoria_id: e.target.value })} style={ds.select}>
                     <option value="">Sin categoría</option>
@@ -866,10 +892,10 @@ export default function Establecimientos() {
                       const sel = prodExtras.includes(g.id)
                       return (
                         <button key={g.id} onClick={() => setProdExtras(prev => sel ? prev.filter(id => id !== g.id) : [...prev, g.id])} style={{
-                          padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: "'Inter', system-ui, -apple-system, sans-serif", fontSize: 11, fontWeight: 600,
-                          border: sel ? '2px solid #FF6B2C' : '1px solid var(--c-border-strong)',
+                          padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", fontSize: 11, fontWeight: 600,
+                          border: sel ? '2px solid #C5562C' : '1px solid var(--c-border-strong)',
                           background: sel ? 'var(--c-primary-soft)' : 'var(--c-surface2)',
-                          color: sel ? '#FF6B2C' : 'var(--c-muted)',
+                          color: sel ? '#C5562C' : 'var(--c-muted)',
                         }}>
                           {sel && '✓ '}{g.nombre}
                         </button>
@@ -979,7 +1005,7 @@ export default function Establecimientos() {
         <input placeholder="Buscar..." value={buscar} onChange={e => setBuscar(e.target.value)} style={ds.input} />
         <div style={{ display: 'flex', gap: 4 }}>
           {['todos', ...CATEGORIAS_PADRE].map(t => (
-            <button key={t} onClick={() => setFiltroTipo(t)} style={{ ...ds.filterBtn, background: filtroTipo === t ? '#FF6B2C' : 'var(--c-surface2)', color: filtroTipo === t ? '#fff' : 'var(--c-muted)' }}>
+            <button key={t} onClick={() => setFiltroTipo(t)} style={{ ...ds.filterBtn, background: filtroTipo === t ? '#C5562C' : 'var(--c-surface2)', color: filtroTipo === t ? '#fff' : 'var(--c-muted)' }}>
               {t === 'todos' ? 'Todos' : t === 'comida' ? '🍕 Comida' : t === 'farmacia' ? '💊 Farmacia' : '🛒 Market'}
             </button>
           ))}
@@ -1112,12 +1138,12 @@ export default function Establecimientos() {
                   <div style={{ gridColumn: '1/-1' }}>
                     <label style={ds.label}>Contraseña</label>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', minHeight: 44, borderRadius: 8, border: `1px solid ${duenoForm.modoPwd === 'auto' ? '#FF6B2C' : 'var(--c-border-strong)'}`, background: duenoForm.modoPwd === 'auto' ? 'rgba(255,107,44,0.06)' : 'var(--c-surface2)', cursor: 'pointer', fontSize: 13, color: 'var(--c-text)' }}>
-                        <input type="radio" name="modoPwd" checked={duenoForm.modoPwd === 'auto'} onChange={() => setDuenoForm({ ...duenoForm, modoPwd: 'auto' })} style={{ accentColor: '#FF6B2C' }} />
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', minHeight: 44, borderRadius: 8, border: `1px solid ${duenoForm.modoPwd === 'auto' ? '#C5562C' : 'var(--c-border-strong)'}`, background: duenoForm.modoPwd === 'auto' ? 'rgba(255,107,44,0.06)' : 'var(--c-surface2)', cursor: 'pointer', fontSize: 13, color: 'var(--c-text)' }}>
+                        <input type="radio" name="modoPwd" checked={duenoForm.modoPwd === 'auto'} onChange={() => setDuenoForm({ ...duenoForm, modoPwd: 'auto' })} style={{ accentColor: '#C5562C' }} />
                         Generar contraseña automática (recomendado)
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', minHeight: 44, borderRadius: 8, border: `1px solid ${duenoForm.modoPwd === 'manual' ? '#FF6B2C' : 'var(--c-border-strong)'}`, background: duenoForm.modoPwd === 'manual' ? 'rgba(255,107,44,0.06)' : 'var(--c-surface2)', cursor: 'pointer', fontSize: 13, color: 'var(--c-text)' }}>
-                        <input type="radio" name="modoPwd" checked={duenoForm.modoPwd === 'manual'} onChange={() => setDuenoForm({ ...duenoForm, modoPwd: 'manual', password: duenoForm.password || generarPasswordAleatoria(12) })} style={{ accentColor: '#FF6B2C' }} />
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', minHeight: 44, borderRadius: 8, border: `1px solid ${duenoForm.modoPwd === 'manual' ? '#C5562C' : 'var(--c-border-strong)'}`, background: duenoForm.modoPwd === 'manual' ? 'rgba(255,107,44,0.06)' : 'var(--c-surface2)', cursor: 'pointer', fontSize: 13, color: 'var(--c-text)' }}>
+                        <input type="radio" name="modoPwd" checked={duenoForm.modoPwd === 'manual'} onChange={() => setDuenoForm({ ...duenoForm, modoPwd: 'manual', password: duenoForm.password || generarPasswordAleatoria(12) })} style={{ accentColor: '#C5562C' }} />
                         Establecer contraseña manual
                       </label>
                       {duenoForm.modoPwd === 'manual' && (
@@ -1208,7 +1234,7 @@ export default function Establecimientos() {
 
                 <button onClick={compartirCredenciales} style={{
                   width: '100%', minHeight: 52, padding: '12px 16px',
-                  background: '#FF6B2C', color: '#fff', border: 'none', borderRadius: 12,
+                  background: '#C5562C', color: '#fff', border: 'none', borderRadius: 12,
                   fontSize: 15, fontWeight: 700, cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                   marginBottom: 10,

@@ -313,7 +313,7 @@ export default function AddressAutocomplete({
                   fontFamily: 'inherit',
                 }}
               >
-                <MapPin size={14} style={{ color: '#FF6B2C', marginTop: 3, flexShrink: 0 }} />
+                <MapPin size={14} style={{ color: '#C5562C', marginTop: 3, flexShrink: 0 }} />
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {main}

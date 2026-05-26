@@ -17,7 +17,7 @@ export class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ minHeight: '100vh', background: 'var(--c-bg)', color: 'var(--c-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
+        <div style={{ minHeight: '100vh', background: 'var(--c-bg)', color: 'var(--c-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" }}>
           <div style={{ textAlign: 'center', padding: 32, maxWidth: 360 }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
             <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>Algo salio mal</h2>
@@ -31,7 +31,7 @@ export class ErrorBoundary extends Component {
             </p>
             <button onClick={() => window.location.reload()} style={{
               padding: '14px 32px', borderRadius: 14, border: 'none',
-              background: '#FF6B2C', color: '#fff', fontSize: 15, fontWeight: 700,
+              background: '#C5562C', color: '#fff', fontSize: 15, fontWeight: 700,
               cursor: 'pointer', fontFamily: 'inherit',
             }}>
               Recargar

@@ -119,7 +119,7 @@ export default function SoporteAdmin() {
                   <div key={m.id} style={{ display: 'flex', justifyContent: m.de === 'soporte' ? 'flex-end' : 'flex-start', marginBottom: 8 }}>
                     <div style={{
                       maxWidth: '70%', padding: '10px 14px', borderRadius: 14, fontSize: 13,
-                      background: m.de === 'soporte' ? '#FF6B2C' : 'var(--c-surface2)',
+                      background: m.de === 'soporte' ? '#C5562C' : 'var(--c-surface2)',
                       color: m.de === 'soporte' ? '#fff' : 'var(--c-text)',
                       borderBottomRightRadius: m.de === 'soporte' ? 4 : 14,
                       borderBottomLeftRadius: m.de === 'soporte' ? 14 : 4,
@@ -151,11 +151,11 @@ export default function SoporteAdmin() {
 
 const styles = {
   lista: { width: 300, background: 'var(--c-surface2)', borderRadius: 14, overflow: 'auto', border: '1px solid var(--c-border)' },
-  convItem: { width: '100%', padding: '14px 16px', border: 'none', cursor: 'pointer', fontFamily: "'Inter', system-ui, -apple-system, sans-serif", textAlign: 'left', borderBottom: '1px solid var(--c-border)', display: 'block' },
-  unread: { width: 18, height: 18, borderRadius: 9, background: '#FF6B2C', color: '#fff', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  convItem: { width: '100%', padding: '14px 16px', border: 'none', cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", textAlign: 'left', borderBottom: '1px solid var(--c-border)', display: 'block' },
+  unread: { width: 18, height: 18, borderRadius: 9, background: '#C5562C', color: '#fff', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' },
   chat: { flex: 1, background: 'var(--c-surface2)', borderRadius: 14, display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid var(--c-border)' },
   chatHeader: { padding: '14px 20px', borderBottom: '1px solid var(--c-border)', display: 'flex', alignItems: 'center', gap: 10 },
   chatMessages: { flex: 1, padding: 20, overflow: 'auto' },
   chatInput: { padding: '12px 16px', borderTop: '1px solid var(--c-border)', display: 'flex', gap: 8 },
-  input: { flex: 1, padding: '10px 14px', borderRadius: 10, border: '1px solid var(--c-border-strong)', fontSize: 13, fontFamily: "'Inter', system-ui, -apple-system, sans-serif", outline: 'none', background: 'var(--c-surface2)', color: 'var(--c-text)' },
+  input: { flex: 1, padding: '10px 14px', borderRadius: 10, border: '1px solid var(--c-border-strong)', fontSize: 13, fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", outline: 'none', background: 'var(--c-surface2)', color: 'var(--c-text)' },
 }

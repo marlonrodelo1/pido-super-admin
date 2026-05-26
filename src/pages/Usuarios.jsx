@@ -58,7 +58,7 @@ export default function Usuarios() {
     return (u.nombre || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q) || (u.telefono || '').includes(q)
   })
 
-  const estadoColor = { entregado: 'var(--c-text)', cancelado: 'var(--c-danger)', fallido: 'var(--c-danger)', nuevo: '#FF6B2C', aceptado: '#FF6B2C', preparando: '#FF6B2C', listo: 'var(--c-text-soft)', en_camino: '#FF6B2C', recogido: '#FF6B2C' }
+  const estadoColor = { entregado: 'var(--c-text)', cancelado: 'var(--c-danger)', fallido: 'var(--c-danger)', nuevo: '#C5562C', aceptado: '#C5562C', preparando: '#C5562C', listo: 'var(--c-text-soft)', en_camino: '#C5562C', recogido: '#C5562C' }
 
   // Total gastado por el usuario
   const totalGastado = pedidosUsuario.filter(p => p.estado === 'entregado').reduce((s, p) => s + (p.total || 0), 0)
@@ -72,7 +72,7 @@ export default function Usuarios() {
 
         <div style={ds.card}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-            <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'var(--c-primary-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 800, color: '#FF6B2C', overflow: 'hidden' }}>
+            <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'var(--c-primary-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 800, color: '#C5562C', overflow: 'hidden' }}>
               {detalle.avatar_url ? <img src={detalle.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (detalle.nombre?.[0] || 'U').toUpperCase()}
             </div>
             <div style={{ flex: 1 }}>
@@ -91,7 +91,7 @@ export default function Usuarios() {
                       title="Eliminar usuario definitivamente"
                       style={{
                         ...ds.secondaryBtn,
-                        color: '#DC2626',
+                        color: '#B5564A',
                         borderColor: 'rgba(220,38,38,0.32)',
                         background: 'rgba(220,38,38,0.06)',
                         display: 'flex', alignItems: 'center', gap: 4,
@@ -138,7 +138,7 @@ export default function Usuarios() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 20 }}>
                 <div style={{ background: 'var(--c-surface2)', borderRadius: 10, padding: 14 }}>
                   <div style={{ fontSize: 10, color: 'var(--c-muted)', fontWeight: 600, marginBottom: 4 }}>Total gastado</div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: '#FF6B2C' }}>{totalGastado.toFixed(2)} €</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: '#C5562C' }}>{totalGastado.toFixed(2)} €</div>
                 </div>
                 <div style={{ background: 'var(--c-surface2)', borderRadius: 10, padding: 14 }}>
                   <div style={{ fontSize: 10, color: 'var(--c-muted)', fontWeight: 600, marginBottom: 4 }}>Pedidos</div>
@@ -236,7 +236,7 @@ export default function Usuarios() {
         {filtrados.map(u => (
           <div key={u.id} className="ds-row-touch" style={ds.tableRow}>
             <span style={{ width: 44 }}>
-              <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--c-primary-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#FF6B2C', overflow: 'hidden' }}>
+              <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--c-primary-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#C5562C', overflow: 'hidden' }}>
                 {u.avatar_url ? <img src={u.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (u.nombre?.[0] || 'U').toUpperCase()}
               </div>
             </span>

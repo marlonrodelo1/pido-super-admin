@@ -159,13 +159,13 @@ export default function Repartidores() {
         {tabs.map(t => (
           <button key={t.id} onClick={() => setFiltroEstado(t.id)} style={{
             ...ds.filterBtn, padding: '7px 14px', fontSize: 12,
-            background: filtroEstado === t.id ? '#FF6B2C' : 'var(--c-surface2)',
+            background: filtroEstado === t.id ? '#C5562C' : 'var(--c-surface2)',
             color: filtroEstado === t.id ? '#fff' : 'var(--c-muted)',
             display: 'flex', alignItems: 'center', gap: 6,
           }}>
             {t.l}
             {t.id === 'pendiente' && contadores.pendiente > 0 && filtroEstado !== 'pendiente' && (
-              <span style={{ width: 8, height: 8, borderRadius: 4, background: '#FF6B2C' }} />
+              <span style={{ width: 8, height: 8, borderRadius: 4, background: '#C5562C' }} />
             )}
           </button>
         ))}
@@ -212,7 +212,7 @@ export default function Repartidores() {
                   <span style={{ ...ds.badge, background: 'var(--c-surface2)', color: 'var(--c-muted)' }}>○ Offline</span>
                 )}
               </span>
-              <span data-tablet-hide="true" style={{ width: 110, fontSize: 12, fontWeight: 700, color: (pendientes[r.id] || 0) > 0 ? '#FF6B2C' : 'var(--c-muted)' }}>
+              <span data-tablet-hide="true" style={{ width: 110, fontSize: 12, fontWeight: 700, color: (pendientes[r.id] || 0) > 0 ? '#C5562C' : 'var(--c-muted)' }}>
                 {(pendientes[r.id] || 0).toFixed(2)}€
               </span>
               <span data-tablet-hide="true" style={{ width: 150, fontSize: 11, color: 'var(--c-muted)' }}>{origen || '—'}</span>
@@ -304,7 +304,7 @@ function RiderModal({ rider, onClose, onSaved }) {
     <div style={ds.modal} onClick={onClose}>
       <div className="admin-modal-content" style={ds.modalContent} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-          <Truck size={18} color="#FF6B2C" />
+          <Truck size={18} color="#C5562C" />
           <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--c-text)', flex: 1 }}>{rider ? 'Editar repartidor' : 'Nuevo repartidor'}</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--c-muted)', cursor: 'pointer', fontSize: 20 }}>×</button>
         </div>
@@ -396,7 +396,7 @@ function RiderDetalle({ rider, onBack, onSaved, origenNombre }) {
             width: 48, height: 48, borderRadius: 12, background: 'var(--c-primary-soft)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <Truck size={22} color="#FF6B2C" />
+            <Truck size={22} color="#C5562C" />
           </div>
           <div style={{ flex: 1 }}>
             <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-text)' }}>{rider.nombre}</h2>
