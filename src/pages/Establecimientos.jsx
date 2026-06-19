@@ -33,7 +33,7 @@ export default function Establecimientos() {
   const [productos, setProductos] = useState([])
   const [gruposExtras, setGruposExtras] = useState([])
   const [editProd, setEditProd] = useState(null)
-  const [prodForm, setProdForm] = useState({ nombre: '', descripcion: '', precio: '', precio_tienda_publica: '', categoria_id: '', imagen_url: '' })
+  const [prodForm, setProdForm] = useState({ nombre: '', descripcion: '', precio: '', categoria_id: '', imagen_url: '' })
   const [prodExtras, setProdExtras] = useState([])
   const [savingProd, setSavingProd] = useState(false)
   const [resenas, setResenas] = useState([])
@@ -336,7 +336,7 @@ export default function Establecimientos() {
   }
 
   async function abrirEditarProd(p) {
-    setProdForm({ nombre: p.nombre, descripcion: p.descripcion || '', precio: p.precio, precio_tienda_publica: p.precio_tienda_publica ?? '', categoria_id: p.categoria_id || '', imagen_url: p.imagen_url || '' })
+    setProdForm({ nombre: p.nombre, descripcion: p.descripcion || '', precio: p.precio, categoria_id: p.categoria_id || '', imagen_url: p.imagen_url || '' })
     const { data } = await supabase.from('producto_extras').select('grupo_id').eq('producto_id', p.id)
     setProdExtras((data || []).map(d => d.grupo_id))
     setEditProd(p)
@@ -354,16 +354,11 @@ export default function Establecimientos() {
     if (precio === null || Number.isNaN(precio) || precio < 0) {
       toast('Precio inválido. Usa punto como decimal (ej: 0.50)', 'error'); return
     }
-    const precioTienda = parsePrecio(prodForm.precio_tienda_publica)
-    if (precioTienda !== null && (Number.isNaN(precioTienda) || precioTienda < 0)) {
-      toast('Precio tienda pública inválido', 'error'); return
-    }
     setSavingProd(true)
     const baseData = {
       nombre: prodForm.nombre.trim(),
       descripcion: prodForm.descripcion.trim() || null,
       precio,
-      precio_tienda_publica: precioTienda,
       categoria_id: prodForm.categoria_id || null,
       imagen_url: prodForm.imagen_url || null,
     }
@@ -384,7 +379,7 @@ export default function Establecimientos() {
     }
     setSavingProd(false)
     setEditProd(null)
-    setProdForm({ nombre: '', descripcion: '', precio: '', precio_tienda_publica: '', categoria_id: '', imagen_url: '' })
+    setProdForm({ nombre: '', descripcion: '', precio: '', categoria_id: '', imagen_url: '' })
     setProdExtras([])
     toast('Producto guardado', 'success')
     loadProductos(detalle.id)
@@ -866,7 +861,6 @@ export default function Establecimientos() {
               <div className="admin-grid-2col-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div style={{ gridColumn: '1/-1' }}><label style={ds.label}>Nombre *</label><input value={prodForm.nombre} onChange={e => setProdForm({ ...prodForm, nombre: e.target.value })} style={ds.formInput} /></div>
                 <div><label style={ds.label}>Precio (€) *</label><input type="number" step="0.01" min="0" value={prodForm.precio} onChange={e => setProdForm({ ...prodForm, precio: e.target.value })} style={ds.formInput} /></div>
-                <div><label style={ds.label}>Precio tienda pública (€)</label><input type="number" step="0.01" min="0" placeholder="opcional" value={prodForm.precio_tienda_publica} onChange={e => setProdForm({ ...prodForm, precio_tienda_publica: e.target.value })} style={ds.formInput} /></div>
                 <div><label style={ds.label}>Categoría</label>
                   <select value={prodForm.categoria_id} onChange={e => setProdForm({ ...prodForm, categoria_id: e.target.value })} style={ds.select}>
                     <option value="">Sin categoría</option>
