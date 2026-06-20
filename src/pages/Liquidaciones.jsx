@@ -15,6 +15,7 @@ const ESTADOS = {
   pagada: { label: 'Pagada', color: '#6F8460', bg: 'rgba(139,157,122,0.18)' },
   sin_movimiento: { label: 'Sin movimiento', color: '#8A8174', bg: 'rgba(138,129,116,0.15)' },
   fallida: { label: 'Fallida', color: '#B5564A', bg: 'rgba(181,86,74,0.15)' },
+  arrastrada: { label: 'Arrastrada', color: '#7B8FA8', bg: 'rgba(123,143,168,0.15)' },
 }
 
 export default function Liquidaciones() {
@@ -45,8 +46,8 @@ export default function Liquidaciones() {
 
   const filtradas = periodo === 'todos' ? rows : rows.filter(r => `${r.periodo_inicio}|${r.periodo_fin}` === periodo)
 
-  const totPidoPaga = filtradas.filter(r => r.direccion === 'pido_paga' && r.estado === 'pendiente').reduce((s, r) => s + Number(r.transfer_restaurante || 0), 0)
-  const totRestPaga = filtradas.filter(r => r.direccion === 'restaurante_paga' && r.estado === 'pendiente').reduce((s, r) => s + Math.abs(Number(r.transfer_restaurante || 0)), 0)
+  const totPidoPaga = filtradas.filter(r => r.direccion === 'pido_paga' && r.estado === 'pendiente').reduce((s, r) => s + Number(r.neto_a_pagar || 0), 0)
+  const totRestPaga = filtradas.filter(r => r.direccion === 'restaurante_paga' && r.estado === 'pendiente').reduce((s, r) => s + Math.abs(Number(r.neto_a_pagar || 0)), 0)
   const totComision = filtradas.reduce((s, r) => s + Number(r.comision_pido || 0), 0)
 
   async function marcarPagada(row) {
@@ -73,11 +74,11 @@ export default function Liquidaciones() {
   }
 
   function exportarCSV() {
-    const cols = ['Restaurante', 'Periodo inicio', 'Periodo fin', 'Pedidos', 'Subtotal', 'Comision Pido', 'Efectivo', 'Tarjeta', 'Envios', 'Propinas', 'Transfer', 'Direccion', 'Estado']
+    const cols = ['Restaurante', 'Periodo inicio', 'Periodo fin', 'Pedidos', 'Subtotal', 'Comision Pido', 'Efectivo', 'Tarjeta', 'Envios', 'Propinas', 'Transfer semana', 'Arrastre', 'Neto a pagar', 'Direccion', 'Estado']
     const lines = filtradas.map(r => [
       r.establecimientos?.nombre || '', r.periodo_inicio, r.periodo_fin, r.pedidos_count,
       r.subtotal_total, r.comision_pido, r.efectivo_total, r.tarjeta_total, r.envios_total, r.propinas_total,
-      r.transfer_restaurante, r.direccion, r.estado,
+      r.transfer_restaurante, r.saldo_arrastre, r.neto_a_pagar, r.direccion, r.estado,
     ].map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))
     const csv = '﻿' + [cols.join(','), ...lines].join('\n')
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
@@ -163,11 +164,15 @@ export default function Liquidaciones() {
             </div>
             {filtradas.map(r => {
               const est = ESTADOS[r.estado] || ESTADOS.pendiente
-              const t = Number(r.transfer_restaurante || 0)
-              const liqTxt = r.direccion === 'sin_movimiento' ? '—'
-                : r.direccion === 'pido_paga' ? `Pido paga ${euro(t)}`
-                : `Restaurante debe ${euro(Math.abs(t))}`
-              const liqColor = r.direccion === 'pido_paga' ? '#6F8460' : r.direccion === 'restaurante_paga' ? 'var(--c-primary)' : 'var(--c-muted)'
+              const neto = Number(r.neto_a_pagar || 0)
+              const arr = Number(r.saldo_arrastre || 0)
+              const liqTxt = r.estado === 'arrastrada' ? '↳ incluida en la siguiente'
+                : r.direccion === 'sin_movimiento' ? '—'
+                : r.direccion === 'pido_paga' ? `Pido paga ${euro(neto)}`
+                : `Restaurante debe ${euro(Math.abs(neto))}`
+              const liqColor = r.estado === 'arrastrada' ? 'var(--c-muted)'
+                : r.direccion === 'pido_paga' ? '#6F8460'
+                : r.direccion === 'restaurante_paga' ? 'var(--c-primary)' : 'var(--c-muted)'
               return (
                 <div key={r.id} style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid var(--c-border)', fontSize: 13, color: 'var(--c-text)' }}>
                   <div style={{ flex: '2 1 160px', minWidth: 0 }}>
@@ -178,7 +183,12 @@ export default function Liquidaciones() {
                   <div style={{ flex: '1 1 100px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{euro(r.subtotal_total)}</div>
                   <div style={{ flex: '1 1 100px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{euro(r.comision_pido)}</div>
                   <div style={{ flex: '1 1 100px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: 'var(--c-muted)' }}>{euro(r.efectivo_total)}</div>
-                  <div style={{ flex: '1.4 1 150px', textAlign: 'right', fontWeight: 700, color: liqColor, fontVariantNumeric: 'tabular-nums' }}>{liqTxt}</div>
+                  <div style={{ flex: '1.4 1 150px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                    <div style={{ fontWeight: 700, color: liqColor }}>{liqTxt}</div>
+                    {r.estado === 'pendiente' && Math.abs(arr) >= 0.005 && (
+                      <div style={{ fontSize: 10, color: 'var(--c-muted)', marginTop: 2 }}>incl. arrastre {euro(arr)}</div>
+                    )}
+                  </div>
                   <div style={{ flex: '1.2 1 130px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8 }}>
                     <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 999, color: est.color, background: est.bg, whiteSpace: 'nowrap' }}>{est.label}</span>
                     {r.estado === 'pendiente' && (
