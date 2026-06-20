@@ -15,6 +15,7 @@ import Configuracion from './pages/Configuracion'
 import Notificaciones from './pages/Notificaciones'
 import MapaAdmin from './pages/MapaAdmin'
 import Reembolsos from './pages/Reembolsos'
+import Liquidaciones from './pages/Liquidaciones'
 import Repartidores from './pages/Repartidores'
 import Socios from './pages/Socios'
 import LandingRiders from './pages/LandingRiders'
@@ -31,6 +32,7 @@ const SECCION_TITULOS = {
   soporte: 'Soporte',
   'suscripciones-saas': 'Suscripciones SaaS',
   reembolsos: 'Reembolsos',
+  liquidaciones: 'Liquidaciones',
   repartidores: 'Repartidores',
   socios: 'Socios',
   'landing-riders': 'Landing Riders',
@@ -190,6 +192,7 @@ function AppContent() {
           {seccion === 'soporte-rider' && <SoporteRider />}
           {seccion === 'suscripciones-saas' && <SuscripcionesSaaS />}
           {seccion === 'reembolsos' && <Reembolsos />}
+          {seccion === 'liquidaciones' && <Liquidaciones />}
           {seccion === 'repartidores' && <Repartidores />}
           {seccion === 'socios' && <Socios />}
           {seccion === 'landing-riders' && <LandingRiders />}

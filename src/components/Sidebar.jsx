@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   BarChart3, CreditCard, Store, Users, User, ClipboardList, Map,
-  MessageCircle, Settings, LogOut, X, Truck, Bell, RotateCcw, FileText,
+  MessageCircle, Settings, LogOut, X, Truck, Bell, RotateCcw, FileText, Receipt,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { colors } from '../lib/darkStyles'
@@ -17,6 +17,7 @@ const menuItems = [
   { id: 'pedidos',            label: 'Pedidos',            Icon: ClipboardList },
   { id: 'mapa',               label: 'Mapa en vivo',       Icon: Map },
   { id: 'reembolsos',         label: 'Reembolsos',         Icon: RotateCcw },
+  { id: 'liquidaciones',      label: 'Liquidaciones',      Icon: Receipt },
   { id: 'notificaciones',     label: 'Notificaciones',     Icon: Bell },
   { id: 'soporte',            label: 'Soporte',            Icon: MessageCircle },
   { id: 'soporte-rider',      label: 'Soporte rider',      Icon: Truck },
