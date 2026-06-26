@@ -1022,7 +1022,14 @@ export default function Establecimientos() {
                 {e.logo_url ? <img src={e.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🍽️'}
               </div>
             </span>
-            <span style={{ flex: 1, fontWeight: 700, fontSize: 13, cursor: 'pointer', color: 'var(--c-text)' }} onClick={() => { setDetalle(e); loadCategorias(e.id); loadEstCats(e.id); loadProductos(e.id); loadResenas(e.id) }}>{e.nombre}</span>
+            <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }} onClick={() => { setDetalle(e); loadCategorias(e.id); loadEstCats(e.id); loadProductos(e.id); loadResenas(e.id) }}>
+              <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--c-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.nombre}</span>
+              {e.captador_socio_id && e.estado === 'pendiente_verificacion' && (
+                <span style={{ ...ds.badge, flexShrink: 0, background: 'rgba(245,158,11,0.14)', color: '#B45309', whiteSpace: 'nowrap' }}>
+                  {e.alta_confirmada_at ? '🟠 Socio · verificar' : '⏳ Socio · sin confirmar'}
+                </span>
+              )}
+            </span>
             <span data-tablet-sm-hide="true" style={{ width: 100 }}>
               <span style={{ ...ds.badge, background: 'var(--c-surface2)', color: 'var(--c-text-soft)' }}>
                 {e.categoria_padre === 'comida' ? '🍕' : e.categoria_padre === 'farmacia' ? '💊' : '🛒'} {e.categoria_padre}
