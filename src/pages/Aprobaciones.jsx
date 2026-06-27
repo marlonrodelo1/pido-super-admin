@@ -141,9 +141,10 @@ export default function Aprobaciones() {
     const ok = await confirmar(`¿Verificar y activar "${e.nombre}"? Pasará a estar público.`)
     if (!ok) return
     setRowBusy(e.id, true)
+    // estado='activo' (verificación) + activo=true (la tienda pública filtra por activo)
     const { error } = await supabase
       .from('establecimientos')
-      .update({ estado: 'activo' })
+      .update({ estado: 'activo', activo: true })
       .eq('id', e.id)
     setRowBusy(e.id, false)
     if (error) return toast(error.message, 'error')
