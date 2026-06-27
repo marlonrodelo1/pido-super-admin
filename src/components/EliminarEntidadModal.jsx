@@ -66,14 +66,13 @@ export default function EliminarEntidadModal({ tipo, entidad, onClose, onDeleted
           resenas: resenas.count || 0,
         })
       } else if (tipo === 'establecimiento') {
-        const [activos, pasados, productos, categorias, vinc, balPend, multi] = await Promise.all([
+        const [activos, pasados, productos, categorias, vinc, liqPend] = await Promise.all([
           supabase.from('pedidos').select('id', { count: 'exact', head: true }).eq('establecimiento_id', entidad.id).in('estado', ESTADOS_ACTIVOS),
           supabase.from('pedidos').select('id', { count: 'exact', head: true }).eq('establecimiento_id', entidad.id).not('estado', 'in', `(${ESTADOS_ACTIVOS.map(e => `"${e}"`).join(',')})`),
           supabase.from('productos').select('id', { count: 'exact', head: true }).eq('establecimiento_id', entidad.id),
           supabase.from('categorias').select('id', { count: 'exact', head: true }).eq('establecimiento_id', entidad.id),
           supabase.from('socio_establecimiento').select('id', { count: 'exact', head: true }).eq('establecimiento_id', entidad.id),
-          supabase.from('balances_restaurante').select('id', { count: 'exact', head: true }).eq('establecimiento_id', entidad.id),
-          Promise.resolve({ data: entidad?.stripe_subscription_multirider_id ? [{ id: 'sub' }] : [] }),
+          supabase.from('liquidaciones_semanales').select('id', { count: 'exact', head: true }).eq('establecimiento_id', entidad.id).eq('estado', 'pendiente'),
         ])
         setPreview({
           pedidos_activos: activos.count || 0,
@@ -81,8 +80,7 @@ export default function EliminarEntidadModal({ tipo, entidad, onClose, onDeleted
           productos: productos.count || 0,
           categorias: categorias.count || 0,
           socios_vinculados: vinc.count || 0,
-          balances: balPend.count || 0,
-          tiene_subscription: !!entidad?.stripe_subscription_multirider_id,
+          liquidaciones_pendientes: liqPend.count || 0,
           dueno_email: entidad?.email || null,
           tiene_dueno: !!entidad?.user_id,
         })
@@ -90,22 +88,19 @@ export default function EliminarEntidadModal({ tipo, entidad, onClose, onDeleted
         // Riders del socio
         const { data: ridersData } = await supabase.from('rider_accounts').select('id').eq('socio_id', entidad.id)
         const riderIds = (ridersData || []).map(r => r.id)
-        const [activosSocio, activosRiders, pasados, vinc, balPend] = await Promise.all([
+        const [activosSocio, activosRiders, pasados, vinc] = await Promise.all([
           supabase.from('pedidos').select('id', { count: 'exact', head: true }).eq('socio_id', entidad.id).in('estado', ESTADOS_ACTIVOS),
           riderIds.length
             ? supabase.from('pedidos').select('id', { count: 'exact', head: true }).in('rider_account_id', riderIds).in('estado', ESTADOS_ACTIVOS)
             : Promise.resolve({ count: 0 }),
           supabase.from('pedidos').select('id', { count: 'exact', head: true }).eq('socio_id', entidad.id),
           supabase.from('socio_establecimiento').select('id', { count: 'exact', head: true }).eq('socio_id', entidad.id),
-          supabase.from('balances_socio').select('id', { count: 'exact', head: true }).eq('socio_id', entidad.id).eq('estado', 'pendiente'),
         ])
         setPreview({
           pedidos_activos: (activosSocio.count || 0) + (activosRiders.count || 0),
           pedidos_pasados: pasados.count || 0,
           riders: riderIds.length,
           vinculaciones: vinc.count || 0,
-          balances_pendientes: balPend.count || 0,
-          tiene_subscription: !!(entidad?.stripe_subscription_multirider_id || entidad?.stripe_customer_id),
           tiene_user: !!entidad?.user_id,
         })
       }
@@ -166,7 +161,7 @@ export default function EliminarEntidadModal({ tipo, entidad, onClose, onDeleted
     && !!preview
     && !preview?.error
     && (preview?.pedidos_activos || 0) === 0
-    && (tipo !== 'socio' || (preview?.balances_pendientes || 0) === 0)
+    && (tipo !== 'establecimiento' || (preview?.liquidaciones_pendientes || 0) === 0)
     && confirmText.trim().toLowerCase() === (expected || '').trim().toLowerCase()
     && (expected || '').trim().length > 0
 
@@ -235,24 +230,10 @@ export default function EliminarEntidadModal({ tipo, entidad, onClose, onDeleted
             </div>
           )}
 
-          {tipo === 'socio' && !loadingPreview && preview && (preview.balances_pendientes || 0) > 0 && (
+          {tipo === 'establecimiento' && !loadingPreview && preview && (preview.liquidaciones_pendientes || 0) > 0 && (
             <div style={avisoStyle('danger')}>
               <AlertTriangle size={14} />
-              <span><b>Bloqueado:</b> el socio tiene {preview.balances_pendientes} balance(s) pendiente(s). Liquida o marca pagado antes.</span>
-            </div>
-          )}
-
-          {tipo === 'socio' && !loadingPreview && preview?.tiene_subscription && (
-            <div style={avisoStyle('warning')}>
-              <AlertTriangle size={14} />
-              <span>Este socio tiene una suscripción Stripe activa. Se cancelará inmediatamente al eliminar.</span>
-            </div>
-          )}
-
-          {tipo === 'establecimiento' && !loadingPreview && preview?.tiene_subscription && (
-            <div style={avisoStyle('warning')}>
-              <AlertTriangle size={14} />
-              <span>Este restaurante tiene la suscripción multi-rider activa. Se cancelará al eliminar.</span>
+              <span><b>Bloqueado:</b> el restaurante tiene {preview.liquidaciones_pendientes} liquidación(es) semanal(es) pendiente(s). Liquídalas o márcalas pagadas antes de eliminar.</span>
             </div>
           )}
 
@@ -356,8 +337,8 @@ function ListaEstablecimiento({ p }) {
       {p.productos > 0 && <li>{p.productos} producto(s) — se borrarán.</li>}
       {p.categorias > 0 && <li>{p.categorias} categoría(s) — se borrarán.</li>}
       {p.socios_vinculados > 0 && <li>{p.socios_vinculados} socio(s) vinculado(s) — se desvincularán.</li>}
-      {p.balances > 0 && <li>{p.balances} balance(s) histórico(s) — se borrarán.</li>}
-      <li>Configuración de delivery, riders vinculados, suscripciones, mensajes — se borrarán.</li>
+      {p.liquidaciones_pendientes > 0 && <li style={{ color: colors.danger }}>{p.liquidaciones_pendientes} liquidación(es) pendiente(s) — resuélvelas antes de borrar.</li>}
+      <li>Configuración de delivery, riders vinculados, mensajes — se borrarán.</li>
     </>
   )
 }

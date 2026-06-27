@@ -10,13 +10,13 @@ import Usuarios from './pages/Usuarios'
 import Pedidos from './pages/Pedidos'
 import SoporteAdmin from './pages/SoporteAdmin'
 import SoporteRider from './pages/SoporteRider'
-import SuscripcionesSaaS from './pages/SuscripcionesSaaS'
+import Aprobaciones from './pages/Aprobaciones'
+import SaludSistema from './pages/SaludSistema'
 import Configuracion from './pages/Configuracion'
 import Notificaciones from './pages/Notificaciones'
 import MapaAdmin from './pages/MapaAdmin'
 import Reembolsos from './pages/Reembolsos'
 import Liquidaciones from './pages/Liquidaciones'
-import Repartidores from './pages/Repartidores'
 import Socios from './pages/Socios'
 import LandingRiders from './pages/LandingRiders'
 import { useMediaQuery, BP } from './lib/useMediaQuery'
@@ -24,18 +24,19 @@ import './index.css'
 
 const SECCION_TITULOS = {
   dashboard: 'Dashboard',
+  aprobaciones: 'Aprobaciones',
   establecimientos: 'Establecimientos',
   usuarios: 'Usuarios',
   pedidos: 'Pedidos',
   mapa: 'Mapa en vivo',
   notificaciones: 'Notificaciones',
   soporte: 'Soporte',
-  'suscripciones-saas': 'Suscripciones SaaS',
+  'soporte-rider': 'Soporte rider',
   reembolsos: 'Reembolsos',
   liquidaciones: 'Liquidaciones',
-  repartidores: 'Repartidores',
   socios: 'Socios',
   'landing-riders': 'Landing Riders',
+  salud: 'Salud del sistema',
   config: 'Configuración',
 }
 
@@ -183,6 +184,7 @@ function AppContent() {
           style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 32px 48px' }}
         >
           {seccion === 'dashboard' && <Dashboard />}
+          {seccion === 'aprobaciones' && <Aprobaciones />}
           {seccion === 'establecimientos' && <Establecimientos />}
           {seccion === 'usuarios' && <Usuarios />}
           {seccion === 'pedidos' && <Pedidos />}
@@ -190,12 +192,11 @@ function AppContent() {
           {seccion === 'notificaciones' && <Notificaciones />}
           {seccion === 'soporte' && <SoporteAdmin />}
           {seccion === 'soporte-rider' && <SoporteRider />}
-          {seccion === 'suscripciones-saas' && <SuscripcionesSaaS />}
           {seccion === 'reembolsos' && <Reembolsos />}
           {seccion === 'liquidaciones' && <Liquidaciones />}
-          {seccion === 'repartidores' && <Repartidores />}
           {seccion === 'socios' && <Socios />}
           {seccion === 'landing-riders' && <LandingRiders />}
+          {seccion === 'salud' && <SaludSistema />}
           {seccion === 'config' && <Configuracion />}
         </div>
       </main>

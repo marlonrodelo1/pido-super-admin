@@ -24,7 +24,7 @@ import EliminarEntidadModal from '../components/EliminarEntidadModal'
 // listamos como "rider en su red".
 //
 // Fuente principal de pedidos del socio: `pedidos.socio_id`.
-// Fuente de balances: `balances_socio` por socio_id.
+// Ganancias del socio: cálculo en vivo desde pedidos entregados (envío + 10% subtotal + propina).
 // ──────────────────────────────────────────────────────────────────────────────
 
 const ESTADOS_VINC = ['pendiente', 'activa', 'rechazada']
@@ -113,12 +113,25 @@ export default function Socios() {
   }
 
   async function loadBalances() {
-    const { data } = await supabase.from('balances_socio')
-      .select('*')
-      .order('periodo_fin', { ascending: false })
-    const lastMap = {}
-    ;(data || []).forEach(b => { if (!lastMap[b.socio_id]) lastMap[b.socio_id] = b })
-    setBalances(lastMap)
+    // La deuda al socio NO está materializada en ninguna tabla; se calcula en vivo
+    // desde los pedidos entregados de cada socio (envío + 10% subtotal + propina).
+    const lunes = new Date()
+    lunes.setHours(0, 0, 0, 0)
+    lunes.setDate(lunes.getDate() - ((lunes.getDay() + 6) % 7)) // lunes de esta semana
+    const { data } = await supabase.from('pedidos')
+      .select('socio_id, coste_envio, subtotal, propina, created_at')
+      .eq('estado', 'entregado')
+      .not('socio_id', 'is', null)
+    const map = {}
+    ;(data || []).forEach(p => {
+      const ganado = (Number(p.coste_envio) || 0) + (Number(p.subtotal) || 0) * 0.10 + (Number(p.propina) || 0)
+      const e = map[p.socio_id] || { ganado_total: 0, ganado_semana: 0, pedidos_count: 0 }
+      e.ganado_total += ganado
+      e.pedidos_count += 1
+      if (new Date(p.created_at) >= lunes) e.ganado_semana += ganado
+      map[p.socio_id] = e
+    })
+    setBalances(map)
   }
 
   // Determina los rider_accounts (carriers) de un socio:
@@ -314,7 +327,7 @@ export default function Socios() {
           <span style={{ width: 90, textAlign: 'center' }}>Riders</span>
           <span data-tablet-sm-hide="true" style={{ width: 90, textAlign: 'center' }}>Online</span>
           <span data-tablet-sm-hide="true" style={{ width: 90, textAlign: 'center' }}>Rests.</span>
-          <span data-tablet-hide="true" style={{ width: 110, textAlign: 'right' }}>Pendiente</span>
+          <span data-tablet-hide="true" style={{ width: 110, textAlign: 'right' }}>Esta semana</span>
           <span style={{ width: 60, textAlign: 'right' }}></span>
         </div>
 
@@ -332,7 +345,7 @@ export default function Socios() {
           const ridersOnline = ridersActivos.filter(r => riderStatus[r.id]?.is_online).length
           const hasMarketplace = s.marketplace_activo && s.slug
           const bal = balances[s.id]
-          const pendiente = bal?.estado === 'pendiente' ? Number(bal.total_pagar_socio || 0) : 0
+          const ganadoSemana = bal?.ganado_semana || 0
 
           return (
             <div
@@ -356,12 +369,6 @@ export default function Socios() {
                     {hasMarketplace && (
                       <span title="Marketplace público abierto" style={{ width: 6, height: 6, borderRadius: '50%', background: colors.success }} />
                     )}
-                    {s.facturacion_multirider_activa && s.multirider_estado === 'impago' && (
-                      <span title="Suscripción multi-rider impagada" style={{ ...ds.badge, padding: '1px 6px', fontSize: 9, background: 'rgba(220,38,38,0.15)', color: '#dc2626', borderColor: 'rgba(220,38,38,0.4)' }}>IMPAGO 39€</span>
-                    )}
-                    {s.facturacion_multirider_activa && s.multirider_estado !== 'impago' && (
-                      <span title="Plan multi-rider activo (39€/mes)" style={{ ...ds.badge, padding: '1px 6px', fontSize: 9, background: 'rgba(234,88,12,0.12)', color: '#ea580c', borderColor: 'rgba(234,88,12,0.3)' }}>39€/MES</span>
-                    )}
                   </div>
                   <div style={{ fontSize: 11, color: colors.textMute, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {s.email || s.telefono || '—'}
@@ -380,8 +387,8 @@ export default function Socios() {
               <span data-tablet-sm-hide="true" style={{ width: 90, textAlign: 'center', fontSize: 13, fontWeight: 700, color: colors.text }}>
                 {countsRest[s.id] || 0}
               </span>
-              <span data-tablet-hide="true" style={{ width: 110, textAlign: 'right', fontSize: 12.5, fontWeight: 700, color: pendiente > 0 ? colors.warning : colors.textMute }}>
-                {pendiente > 0 ? `${pendiente.toFixed(2)} €` : '—'}
+              <span data-tablet-hide="true" style={{ width: 110, textAlign: 'right', fontSize: 12.5, fontWeight: 700, color: ganadoSemana > 0 ? colors.text : colors.textMute }} title="Ganado esta semana (envío + 10% + propina)">
+                {ganadoSemana > 0 ? `${ganadoSemana.toFixed(2)} €` : '—'}
               </span>
               <span style={{ width: 60, textAlign: 'right' }}>
                 <ChevronRight size={16} color={colors.textMute} />
@@ -492,9 +499,9 @@ function SocioDetalle({
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 16, fontSize: 12, color: colors.textMute }}>
             <span><b style={{ color: colors.text }}>{vinculaciones.filter(v => v.estado === 'activa').length}</b> rests. activos</span>
             <span><b style={{ color: colors.text }}>{ridersActivos.length}</b> riders activos</span>
-            {balance?.estado === 'pendiente' && (
+            {(balance?.ganado_semana || 0) > 0 && (
               <span style={{ color: colors.warning, fontWeight: 700 }}>
-                {Number(balance.total_pagar_socio || 0).toFixed(2)} € pendiente
+                {Number(balance.ganado_semana).toFixed(2)} € esta semana
               </span>
             )}
           </div>
@@ -572,21 +579,19 @@ function TabResumen({ socio, balance }) {
       <div>
         <div style={{ ...ds.card, padding: 16, marginBottom: 14 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: colors.textMute, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-            Último balance
+            Ganancias del socio
           </div>
           {balance ? (
             <div style={{ fontSize: 12.5, color: colors.textDim, lineHeight: 1.7 }}>
-              <div><b style={{ color: colors.text }}>Periodo:</b> {fmtDate(balance.periodo_inicio)} → {fmtDate(balance.periodo_fin)}</div>
-              <div><b style={{ color: colors.text }}>Estado:</b> {balance.estado || '—'}</div>
-              <div><b style={{ color: colors.text }}>Total a pagar:</b> {Number(balance.total_pagar_socio || 0).toFixed(2)} €</div>
+              <div><b style={{ color: colors.text }}>Esta semana:</b> {Number(balance.ganado_semana || 0).toFixed(2)} €</div>
+              <div><b style={{ color: colors.text }}>Total entregado:</b> {Number(balance.ganado_total || 0).toFixed(2)} €</div>
               <div style={{ fontSize: 11.5, color: colors.textMute, marginTop: 6 }}>
-                Tarjeta: {Number(balance.envios_tarjeta || 0).toFixed(2)} €<br />
-                Comisiones: {Number(balance.comisiones_tarjeta || 0).toFixed(2)} €<br />
-                Propinas: {Number(balance.propinas_tarjeta || 0).toFixed(2)} €
+                {balance.pedidos_count || 0} pedidos entregados<br />
+                envío + 10% subtotal + propina
               </div>
             </div>
           ) : (
-            <div style={{ fontSize: 12, color: colors.textMute }}>Sin balances aún.</div>
+            <div style={{ fontSize: 12, color: colors.textMute }}>Sin pedidos entregados aún.</div>
           )}
         </div>
         <div style={{ ...ds.card, padding: 16 }}>
@@ -608,9 +613,8 @@ function TabResumen({ socio, balance }) {
 // ──────────────────────────────────────────────────────────────────────────────
 // Tab: Riders
 // ──────────────────────────────────────────────────────────────────────────────
-function TabRiders({ socio, riders, riderStatus, onReload }) {
+function TabRiders({ socio, riders, riderStatus }) {
   const [pedidosCount, setPedidosCount] = useState({}) // rider_account_id -> count entregados
-  const [syncing, setSyncing] = useState(false)
 
   useEffect(() => {
     if (riders.length === 0) return
@@ -626,85 +630,18 @@ function TabRiders({ socio, riders, riderStatus, onReload }) {
     })()
   }, [riders.map(r => r.id).join(',')])
 
-  async function sincronizar() {
-    if (syncing) return
-    if (!socio.shipday_api_key) {
-      toast('El socio no tiene shipday_api_key configurada', 'error')
-      return
-    }
-    setSyncing(true)
-    try {
-      const { data, error } = await supabase.functions.invoke('sync-socio-carriers', {
-        body: { socio_id: socio.id },
-      })
-      if (error) {
-        toast('Error sincronizando: ' + error.message, 'error')
-      } else if (data?.success) {
-        toast(
-          `Sincronizado: ${data.n_activos} carrier${data.n_activos === 1 ? '' : 's'} ` +
-          `(${data.n_nuevos} nuevo${data.n_nuevos === 1 ? '' : 's'}, ` +
-          `${data.n_marcados_inactivos} marcado${data.n_marcados_inactivos === 1 ? '' : 's'} inactivo${data.n_marcados_inactivos === 1 ? '' : 's'})`
-        )
-        onReload?.()
-      } else {
-        toast('Respuesta inesperada de Shipday', 'error')
-      }
-    } catch (e) {
-      toast('Error: ' + (e?.message || 'desconocido'), 'error')
-    } finally {
-      setSyncing(false)
-    }
-  }
-
   const ridersActivos = riders.filter(r => r.activa !== false && r.estado === 'activa')
-  const multiRider = ridersActivos.length >= 2
-  const single = ridersActivos.length === 1
-  const sinRiders = riders.length === 0
 
-  // Header común con botón sincronizar
-  const SyncHeader = (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: colors.text }}>
-          Carriers en la cuenta Shipday del socio
-        </div>
-        <div style={{ fontSize: 11.5, color: colors.textMute, marginTop: 2 }}>
-          {socio.shipday_api_key
-            ? <>API key: <code style={{ fontSize: 11 }}>{socio.shipday_api_key.slice(0, 10)}…</code></>
-            : <span style={{ color: colors.danger }}>Sin shipday_api_key configurada</span>}
-        </div>
-      </div>
-      <button
-        onClick={sincronizar}
-        disabled={syncing || !socio.shipday_api_key}
-        style={{
-          ...ds.primaryBtn,
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-          opacity: (syncing || !socio.shipday_api_key) ? 0.6 : 1,
-          cursor: (syncing || !socio.shipday_api_key) ? 'not-allowed' : 'pointer',
-        }}
-        title="Lee los carriers en Shipday y los sincroniza con la base de datos">
-        <RefreshCw size={14} className={syncing ? 'socio-spin' : ''} />
-        {syncing ? 'Sincronizando…' : 'Sincronizar carriers'}
-        <style>{`@keyframes socio-spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } } .socio-spin { animation: socio-spin 1s linear infinite; }`}</style>
-      </button>
-    </div>
-  )
-
-  if (sinRiders) {
+  if (riders.length === 0) {
     return (
       <div>
-        {SyncHeader}
         <div style={{ ...ds.card, padding: 32, textAlign: 'center' }}>
           <Truck size={32} color={colors.textMute} style={{ marginBottom: 10 }} />
           <div style={{ fontSize: 14, fontWeight: 600, color: colors.text, marginBottom: 4 }}>
-            Sin carriers sincronizados
+            Este socio no tiene riders
           </div>
           <div style={{ fontSize: 12.5, color: colors.textMute, lineHeight: 1.5, maxWidth: 520, margin: '0 auto' }}>
-            Pulsa <b>Sincronizar carriers</b> para leer los carriers que el socio tiene en su cuenta Shipday.
-            {!socio.shipday_api_key && (
-              <> Antes hay que configurar la <code>shipday_api_key</code> del socio en la pestaña Configuración.</>
-            )}
+            Los riders se dan de alta desde la app del socio. Cuando el socio (o su equipo) se registre como repartidor, aparecerá aquí.
           </div>
         </div>
         <ExplicacionRiders />
@@ -714,34 +651,16 @@ function TabRiders({ socio, riders, riderStatus, onReload }) {
 
   return (
     <div>
-      {SyncHeader}
-
-      {multiRider && (
-        <div style={{
-          ...ds.card, padding: 14, marginBottom: 14,
-          borderColor: 'rgba(234,88,12,0.45)',
-          background: 'rgba(234,88,12,0.10)',
-        }}>
-          <div style={{ fontSize: 11.5, fontWeight: 700, color: '#ea580c', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
-            ⚠ Plan multi-rider
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: colors.text }}>
+            Riders del socio
           </div>
-          <div style={{ fontSize: 12.5, color: colors.textDim, lineHeight: 1.5 }}>
-            Este socio tiene <b>{ridersActivos.length} riders activos</b> en Shipday.
-            Plan multi-rider: <b>39 €/mes</b> (gestión de facturación pendiente de implementar).
+          <div style={{ fontSize: 11.5, color: colors.textMute, marginTop: 2 }}>
+            {ridersActivos.length} activo{ridersActivos.length === 1 ? '' : 's'} · {riders.length} en total
           </div>
         </div>
-      )}
-
-      {single && (
-        <div style={{ ...ds.card, padding: 16, marginBottom: 14, borderColor: colors.primaryBorder, background: colors.primarySoft }}>
-          <div style={{ fontSize: 11.5, fontWeight: 700, color: colors.primary, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
-            El socio reparte personalmente
-          </div>
-          <div style={{ fontSize: 12.5, color: colors.textDim }}>
-            Solo hay 1 carrier en su cuenta Shipday. Si añade más de 1, se aplica la tarifa multi-rider de 39 €/mes.
-          </div>
-        </div>
-      )}
+      </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
         {riders.map(r => {
@@ -771,11 +690,6 @@ function TabRiders({ socio, riders, riderStatus, onReload }) {
                   <div style={{ fontSize: 11, color: colors.textMute, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {r.email || r.telefono || '—'}
                   </div>
-                  {r.shipday_carrier_id && (
-                    <div style={{ fontSize: 10, color: colors.textFaint, fontFamily: 'monospace', marginTop: 2 }}>
-                      carrier #{r.shipday_carrier_id}
-                    </div>
-                  )}
                 </div>
                 <span style={{ ...ds.badge, ...estadoStyle }}>{r.activa === false ? 'inactivo' : r.estado}</span>
               </div>
@@ -793,16 +707,6 @@ function TabRiders({ socio, riders, riderStatus, onReload }) {
                   </div>
                 )}
                 <div>Pedidos entregados: <b style={{ color: colors.text }}>{pedidosCount[r.id] || 0}</b></div>
-                {r._matchBy === 'establecimiento_origen' && (
-                  <div style={{ fontSize: 10.5, color: colors.warning, marginTop: 4 }}>
-                    ⚠ Vinculado por restaurante origen (legacy)
-                  </div>
-                )}
-                {r._matchBy === 'api_key' && !r.shipday_carrier_id && (
-                  <div style={{ fontSize: 10.5, color: colors.warning, marginTop: 4 }}>
-                    ⚠ Sin carrier_id — sincroniza para asociarlo a Shipday
-                  </div>
-                )}
               </div>
             </div>
           )
@@ -818,12 +722,12 @@ function ExplicacionRiders() {
   return (
     <div style={{ ...ds.card, padding: 14, marginTop: 14, background: 'transparent' }}>
       <div style={{ fontSize: 12, fontWeight: 700, color: colors.text, marginBottom: 6 }}>
-        Cómo gestionar los riders del socio
+        Cómo funcionan los riders del socio
       </div>
       <div style={{ fontSize: 12, color: colors.textMute, lineHeight: 1.55 }}>
-        Estos son los carriers dentro de la cuenta Shipday del socio. Para añadir más riders, el socio debe
-        crearlos desde su propio panel de Shipday — aparecerán aquí al pulsar <b>Sincronizar carriers</b>.
-        Pidoo no crea ni gestiona cuentas Shipday adicionales: <b>1 socio = 1 cuenta Shipday = 1 API key</b>.
+        El reparto lo gestiona el dispatcher propio de Pidoo. Cada rider se registra desde la app del socio
+        y aparece aquí con su estado online/offline en vivo. Pidoo asigna automáticamente cada pedido
+        delivery al rider disponible más cercano.
       </div>
     </div>
   )
@@ -1019,76 +923,71 @@ function TabPedidos({ socio, riders }) {
 // Tab: Finanzas / Balances
 // ──────────────────────────────────────────────────────────────────────────────
 function TabFinanzas({ socio }) {
-  const [balances, setBalances] = useState([])
+  const [pedidos, setPedidos] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     ;(async () => {
       setLoading(true)
-      const { data } = await supabase.from('balances_socio')
-        .select('*')
+      const { data } = await supabase.from('pedidos')
+        .select('id, codigo, coste_envio, subtotal, propina, total, created_at')
         .eq('socio_id', socio.id)
-        .order('periodo_fin', { ascending: false })
-      setBalances(data || [])
+        .eq('estado', 'entregado')
+        .order('created_at', { ascending: false })
+      setPedidos(data || [])
       setLoading(false)
     })()
   }, [socio.id])
 
+  const ganadoDe = (p) => (Number(p.coste_envio) || 0) + (Number(p.subtotal) || 0) * 0.10 + (Number(p.propina) || 0)
+
   const stats = useMemo(() => {
     const ahora = new Date()
     const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1)
-    const inicioAno = new Date(ahora.getFullYear(), 0, 1)
-    const mes = balances.filter(b => new Date(b.periodo_fin) >= inicioMes).reduce((acc, b) => acc + Number(b.total_pagar_socio || 0), 0)
-    const pendiente = balances.filter(b => b.estado === 'pendiente').reduce((acc, b) => acc + Number(b.total_pagar_socio || 0), 0)
-    const ano = balances.filter(b => new Date(b.periodo_fin) >= inicioAno && b.estado === 'pagado').reduce((acc, b) => acc + Number(b.total_pagar_socio || 0), 0)
-    return { mes, pendiente, ano }
-  }, [balances])
+    const lunes = new Date(); lunes.setHours(0, 0, 0, 0)
+    lunes.setDate(lunes.getDate() - ((lunes.getDay() + 6) % 7))
+    let semana = 0, mes = 0, total = 0
+    pedidos.forEach(p => {
+      const g = ganadoDe(p)
+      total += g
+      if (new Date(p.created_at) >= inicioMes) mes += g
+      if (new Date(p.created_at) >= lunes) semana += g
+    })
+    return { semana, mes, total }
+  }, [pedidos])
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 16 }}>
-        <StatCard label="Facturado este mes" value={`${stats.mes.toFixed(2)} €`} />
-        <StatCard label="Pendiente de pago" value={`${stats.pendiente.toFixed(2)} €`} warning={stats.pendiente > 0} />
-        <StatCard label="Pagado este año" value={`${stats.ano.toFixed(2)} €`} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 8 }}>
+        <StatCard label="Esta semana" value={`${stats.semana.toFixed(2)} €`} warning={stats.semana > 0} />
+        <StatCard label="Este mes" value={`${stats.mes.toFixed(2)} €`} />
+        <StatCard label="Total entregado" value={`${stats.total.toFixed(2)} €`} />
+      </div>
+      <div style={{ fontSize: 11.5, color: colors.textMute, marginBottom: 16 }}>
+        Cálculo en vivo: por cada pedido entregado el socio cobra envío + 10% del subtotal + propina. La liquidación se paga los lunes.
       </div>
 
       <div style={ds.table}>
         <div style={ds.tableHeader}>
-          <span style={{ flex: 1 }}>Periodo</span>
-          <span data-tablet-hide="true" style={{ width: 130 }}>Total a pagar</span>
-          <span data-tablet-sm-hide="true" style={{ width: 110 }}>Comisiones</span>
-          <span data-tablet-sm-hide="true" style={{ width: 110 }}>Envíos</span>
-          <span style={{ width: 100 }}>Estado</span>
-          <span data-tablet-hide="true" style={{ width: 110 }}>Pagado</span>
-          <span style={{ width: 80, textAlign: 'right' }}></span>
+          <span style={{ width: 110 }}>Código</span>
+          <span style={{ flex: 1 }}>Fecha</span>
+          <span data-tablet-sm-hide="true" style={{ width: 90, textAlign: 'right' }}>Envío</span>
+          <span data-tablet-sm-hide="true" style={{ width: 90, textAlign: 'right' }}>Subtotal</span>
+          <span data-tablet-hide="true" style={{ width: 90, textAlign: 'right' }}>Propina</span>
+          <span style={{ width: 100, textAlign: 'right' }}>Ganado</span>
         </div>
         {loading && <div style={{ padding: 24, textAlign: 'center', color: colors.textMute, fontSize: 13 }}>Cargando…</div>}
-        {!loading && balances.length === 0 && (
-          <div style={{ padding: 24, textAlign: 'center', color: colors.textMute, fontSize: 13 }}>Sin balances aún.</div>
+        {!loading && pedidos.length === 0 && (
+          <div style={{ padding: 24, textAlign: 'center', color: colors.textMute, fontSize: 13 }}>Sin pedidos entregados aún.</div>
         )}
-        {balances.map(b => (
-          <div key={b.id} style={ds.tableRow}>
-            <span style={{ flex: 1, fontSize: 12.5, color: colors.text }}>{fmtDate(b.periodo_inicio)} → {fmtDate(b.periodo_fin)}</span>
-            <span data-tablet-hide="true" style={{ width: 130, fontSize: 13, fontWeight: 700, color: colors.text }}>
-              {Number(b.total_pagar_socio || 0).toFixed(2)} €
-            </span>
-            <span data-tablet-sm-hide="true" style={{ width: 110, fontSize: 12, color: colors.textMute }}>
-              {Number(b.comisiones_tarjeta || 0).toFixed(2)} €
-            </span>
-            <span data-tablet-sm-hide="true" style={{ width: 110, fontSize: 12, color: colors.textMute }}>
-              {Number(b.envios_tarjeta || 0).toFixed(2)} €
-            </span>
-            <span style={{ width: 100 }}>
-              <EstadoBadge estado={b.estado} />
-            </span>
-            <span data-tablet-hide="true" style={{ width: 110, fontSize: 11.5, color: colors.textMute }}>{fmtDate(b.pagado_at)}</span>
-            <span style={{ width: 80, textAlign: 'right' }}>
-              {b.pdf_url && (
-                <a href={b.pdf_url} target="_blank" rel="noopener noreferrer" style={{ ...ds.actionBtn, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  <FileText size={11} /> PDF
-                </a>
-              )}
-            </span>
+        {pedidos.map(p => (
+          <div key={p.id} style={ds.tableRow}>
+            <span style={{ width: 110, fontFamily: 'monospace', fontSize: 12, fontWeight: 700, color: colors.text }}>{p.codigo}</span>
+            <span style={{ flex: 1, fontSize: 12, color: colors.textMute }}>{new Date(p.created_at).toLocaleDateString('es-ES')}</span>
+            <span data-tablet-sm-hide="true" style={{ width: 90, textAlign: 'right', fontSize: 12, color: colors.textMute }}>{(Number(p.coste_envio) || 0).toFixed(2)} €</span>
+            <span data-tablet-sm-hide="true" style={{ width: 90, textAlign: 'right', fontSize: 12, color: colors.textMute }}>{(Number(p.subtotal) || 0).toFixed(2)} €</span>
+            <span data-tablet-hide="true" style={{ width: 90, textAlign: 'right', fontSize: 12, color: colors.textMute }}>{(Number(p.propina) || 0).toFixed(2)} €</span>
+            <span style={{ width: 100, textAlign: 'right', fontSize: 13, fontWeight: 700, color: colors.text }}>{ganadoDe(p).toFixed(2)} €</span>
           </div>
         ))}
       </div>
@@ -1119,7 +1018,7 @@ function TabConfig({ socio, riders, riderStatus }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }} className="admin-grid-2col-collapse">
       <div style={{ ...ds.card, padding: 18 }}>
-        <h3 style={ds.h2}>Shipday del socio</h3>
+        <h3 style={ds.h2}>Datos de reparto del socio</h3>
         <DetailRow label="API key">
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             <span style={{ fontSize: 12, fontFamily: 'monospace', color: colors.textDim, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1146,9 +1045,6 @@ function TabConfig({ socio, riders, riderStatus }) {
           <span style={{ fontSize: 12, color: colors.textDim }}>{ultimaSync ? fmtRelative(ultimaSync) : 'Sin datos'}</span>
         </DetailRow>
       </div>
-
-      <SuscripcionMultiriderCard socio={socio} />
-
 
       <div style={{ ...ds.card, padding: 18 }}>
         <h3 style={ds.h2}>Datos fiscales</h3>
@@ -1582,168 +1478,4 @@ function NuevoSocioModal({ onClose, onSaved }) {
   )
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Suscripción multi-rider (39 €/mes) — UI superadmin
-// ──────────────────────────────────────────────────────────────────────────────
-function SuscripcionMultiriderCard({ socio }) {
-  const [busy, setBusy] = useState(false)
-
-  const fmtFecha = (iso) => {
-    if (!iso) return '—'
-    try { return new Date(iso).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) }
-    catch { return '—' }
-  }
-
-  const callFn = async (slug, body) => {
-    const { data: { session } } = await supabase.auth.getSession()
-    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${slug}`
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session?.access_token || ''}`,
-        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-      },
-      body: JSON.stringify(body || {}),
-    })
-    const j = await res.json().catch(() => ({}))
-    if (!res.ok) throw new Error(j.error || 'Error')
-    return j
-  }
-
-  const forzarSync = async () => {
-    setBusy(true)
-    try {
-      await callFn('check-socio-riders-count', { socio_id: socio.id })
-      toast('Sync de carriers completado')
-      // Refrescar la página entera no es ideal — recomendamos al usuario refrescar
-      window.location.reload()
-    } catch (e) {
-      toast(e.message || 'Error al sincronizar', 'error')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const cancelarSub = async () => {
-    if (!await confirmar('¿Cancelar la suscripción multi-rider al final del periodo en curso?')) return
-    setBusy(true)
-    try {
-      const r = await callFn('gestionar-facturacion-socio-multirider', { socio_id: socio.id, accion: 'cancelar' })
-      toast(`Cancelación programada${r.ends_at ? ` — termina ${fmtFecha(r.ends_at)}` : ''}`)
-    } catch (e) {
-      toast(e.message || 'Error al cancelar', 'error')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const marcarPagado = async () => {
-    if (!await confirmar('Marcar como pagado manualmente. ¿Continuar?')) return
-    setBusy(true)
-    try {
-      await supabase.from('socios').update({
-        multirider_estado: 'al_dia',
-        marketplace_activo: true,
-      }).eq('id', socio.id)
-      toast('Marcado como al día')
-      window.location.reload()
-    } catch (e) {
-      toast(e.message || 'Error', 'error')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const n = socio.n_riders_actual ?? 1
-  const activa = !!socio.facturacion_multirider_activa
-  const subId = socio.stripe_subscription_multirider_id
-  const estado = socio.multirider_estado || 'al_dia'
-  const ultimoCheck = socio.multirider_ultimo_check
-  const proximoPago = socio.multirider_proximo_pago
-
-  let estadoLabel = '—'
-  let estadoColor = colors.textDim
-  let estadoBg = colors.elev2
-  if (!activa && n <= 1) {
-    estadoLabel = 'No aplica (1 rider)'
-    estadoColor = colors.textMute
-  } else if (!activa && n >= 2) {
-    estadoLabel = 'Pendiente de activar'
-    estadoColor = '#ea580c'
-    estadoBg = 'rgba(234,88,12,0.12)'
-  } else if (activa && estado === 'al_dia') {
-    estadoLabel = 'Activa · Al día'
-    estadoColor = '#16a34a'
-    estadoBg = 'rgba(22,163,74,0.12)'
-  } else if (activa && (estado === 'reintento1' || estado === 'reintento2')) {
-    estadoLabel = `Activa · Reintento ${estado === 'reintento2' ? '2/3' : '1/3'}`
-    estadoColor = '#ea580c'
-    estadoBg = 'rgba(234,88,12,0.14)'
-  } else if (activa && estado === 'impago') {
-    estadoLabel = 'Impago · Marketplace desactivado'
-    estadoColor = '#dc2626'
-    estadoBg = 'rgba(220,38,38,0.14)'
-  }
-
-  return (
-    <div style={{ ...ds.card, padding: 18 }}>
-      <h3 style={ds.h2}>Suscripción multi-rider</h3>
-      <div style={{ fontSize: 12.5, color: colors.textMute, lineHeight: 1.6, marginBottom: 12 }}>
-        Plan 39 €/mes cuando el socio tiene 2+ riders activos en Shipday.
-      </div>
-
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '10px 12px', background: estadoBg, borderRadius: 8,
-        border: `1px solid ${colors.border}`, marginBottom: 12,
-      }}>
-        <span style={{ fontSize: 12.5, fontWeight: 600, color: estadoColor }}>{estadoLabel}</span>
-        <span style={{ fontSize: 11.5, color: colors.textDim }}>
-          {n} rider{n === 1 ? '' : 's'} activo{n === 1 ? '' : 's'}
-        </span>
-      </div>
-
-      <div style={{ display: 'grid', gap: 8, fontSize: 12, marginBottom: 12 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', color: colors.textDim }}>
-          <span>Subscription ID</span>
-          <span style={{ fontFamily: 'monospace', fontSize: 11 }}>{subId || '—'}</span>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', color: colors.textDim }}>
-          <span>Próximo cargo</span>
-          <span>{fmtFecha(proximoPago)}</span>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', color: colors.textDim }}>
-          <span>Último sync carriers</span>
-          <span>{ultimoCheck ? fmtRelative(ultimoCheck) : 'Sin datos'}</span>
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-        <button onClick={forzarSync} disabled={busy} style={{ ...ds.secondaryBtn, opacity: busy ? 0.5 : 1 }}>
-          🔄 Forzar sync de carriers
-        </button>
-        {activa && (
-          <button onClick={cancelarSub} disabled={busy} style={{ ...ds.secondaryBtn, opacity: busy ? 0.5 : 1 }}>
-            Cancelar al periodo
-          </button>
-        )}
-        {estado === 'impago' && (
-          <button
-            onClick={marcarPagado}
-            disabled={busy}
-            style={{
-              ...ds.primaryBtn,
-              background: '#dc2626',
-              borderColor: '#dc2626',
-              opacity: busy ? 0.5 : 1,
-            }}
-          >
-            Marcar como pagado manualmente
-          </button>
-        )}
-      </div>
-    </div>
-  )
-}
 

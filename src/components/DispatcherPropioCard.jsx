@@ -16,8 +16,8 @@ export default function DispatcherPropioCard({ establecimiento, onChanged }) {
     const nuevo = !activo
     const ok = await confirmar(
       nuevo
-        ? `¿Activar dispatcher propio en "${establecimiento.nombre}"?\n\nLos pedidos delivery se asignarán a los socios/riders Pidoo (app móvil) en vez de Shipday. Asegúrate de que tiene riders vinculados.`
-        : `¿Desactivar dispatcher propio en "${establecimiento.nombre}"?\n\nVolverá a usar Shipday para todos los pedidos.`
+        ? `¿Activar dispatcher propio en "${establecimiento.nombre}"?\n\nLos pedidos delivery se asignarán automáticamente a los socios/riders Pidoo (app móvil). Asegúrate de que tiene riders vinculados.`
+        : `¿Desactivar dispatcher propio en "${establecimiento.nombre}"?\n\nLos pedidos delivery dejarán de asignarse automáticamente a socios/riders.`
     )
     if (!ok) return
     setToggling(true)
@@ -33,7 +33,7 @@ export default function DispatcherPropioCard({ establecimiento, onChanged }) {
 
   const badge = activo
     ? { label: 'Pidoo', bg: 'var(--c-success-soft)', color: 'var(--c-success)' }
-    : { label: 'Shipday', bg: 'var(--c-surface2)', color: 'var(--c-text-soft)' }
+    : { label: 'Manual', bg: 'var(--c-surface2)', color: 'var(--c-text-soft)' }
 
   return (
     <div style={{ ...ds.card, marginTop: 20 }}>
@@ -47,13 +47,13 @@ export default function DispatcherPropioCard({ establecimiento, onChanged }) {
 
       <div style={{ fontSize: 12, color: 'var(--c-muted)', marginBottom: 12, lineHeight: 1.5 }}>
         {activo
-          ? 'Los pedidos delivery se reparten con socios/riders Pidoo (app móvil propia). Shipday queda desactivado para este restaurante.'
-          : 'Los pedidos delivery se reparten con Shipday. Activa para usar el sistema propio de socios/riders Pidoo.'}
+          ? 'Los pedidos delivery se asignan automáticamente a los socios/riders Pidoo (app móvil propia).'
+          : 'La asignación automática a socios/riders está desactivada para este restaurante. Actívala para que el dispatcher reparta sus pedidos.'}
       </div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <button onClick={toggle} disabled={toggling} style={ds.secondaryBtn}>
-          {toggling ? '...' : activo ? 'Volver a Shipday' : 'Activar dispatcher Pidoo'}
+          {toggling ? '...' : activo ? 'Desactivar' : 'Activar dispatcher Pidoo'}
         </button>
       </div>
     </div>

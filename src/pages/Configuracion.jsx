@@ -242,7 +242,7 @@ export default function Configuracion() {
                   <option value="on_accept">Al aceptar el pedido</option>
                   <option value="on_ready">Cuando esté listo para recoger</option>
                 </select>
-                <div style={styles.hint}>Momento en que se crea la orden Shipday al rider</div>
+                <div style={styles.hint}>Momento en que se asigna la orden de reparto al rider</div>
               </div>
             </div>
 
@@ -265,9 +265,9 @@ export default function Configuracion() {
               borderRadius: 12, padding: 14,
               fontSize: 12, color: 'var(--c-muted)', lineHeight: 1.55,
             }}>
-              <span style={{ fontWeight: 700, color: '#C5562C' }}>Modelo SaaS:</span>{' '}
-              el restaurante paga 39€/mes y se queda el 100% del subtotal.
-              El rider cobra envío + propina y se factura aparte. No hay porcentajes de comisión por pedido.
+              <span style={{ fontWeight: 700, color: '#C5562C' }}>Modelo Pidoo:</span>{' '}
+              Pidoo cobra el <strong>10% del subtotal</strong> de cada pedido. El restaurante se queda el 80% del subtotal.
+              El socio/rider cobra el envío + 10% del subtotal + el 100% de la propina. El alta son 150€ únicos en efectivo (fuera de plataforma). <strong>No hay cuota mensual.</strong>
             </div>
           </div>
 

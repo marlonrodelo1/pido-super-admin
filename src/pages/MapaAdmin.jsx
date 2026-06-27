@@ -56,7 +56,7 @@ export default function MapaAdmin() {
         </div>
         <div style={ds.card}>
           <div style={{ fontSize: 11, ...ds.muted, fontWeight: 600 }}>Riders</div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--c-muted)', paddingTop: 6 }}>Gestionados vía Shipday</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--c-muted)', paddingTop: 6 }}>Gestionados por socios Pidoo</div>
         </div>
       </div>
 

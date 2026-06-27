@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { ds } from '../lib/darkStyles'
+import { toast } from '../App'
 import { Save, X, KeyRound, Trash2 } from 'lucide-react'
 import ResetPasswordModal from '../components/ResetPasswordModal'
 import EliminarEntidadModal from '../components/EliminarEntidadModal'
@@ -20,7 +21,7 @@ export default function Usuarios() {
   useEffect(() => { load() }, [])
 
   async function load() {
-    const { data } = await supabase.from('usuarios').select('*').order('created_at', { ascending: false })
+    const { data } = await supabase.from('usuarios').select('*').is('eliminado_at', null).order('created_at', { ascending: false })
     setItems(data || [])
   }
 
@@ -48,6 +49,8 @@ export default function Usuarios() {
       setEditando(false)
       setGuardado(true)
       setTimeout(() => setGuardado(false), 2000)
+    } else {
+      toast('Error al guardar: ' + error.message, 'error')
     }
     setSaving(false)
   }

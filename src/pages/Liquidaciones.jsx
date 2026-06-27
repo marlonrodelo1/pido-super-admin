@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { RefreshCw, Download, Check } from 'lucide-react'
+import { RefreshCw, Download, Check, AlertTriangle, Link2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { toast, confirmar } from '../App'
 
@@ -28,7 +28,7 @@ export default function Liquidaciones() {
     setLoading(true)
     const { data, error } = await supabase
       .from('liquidaciones_semanales')
-      .select('*, establecimientos(nombre, logo_url)')
+      .select('*, establecimientos(id, nombre, logo_url, stripe_connect_status, stripe_connect_account_id)')
       .order('periodo_inicio', { ascending: false })
       .order('subtotal_total', { ascending: false })
     if (error) toast('Error cargando liquidaciones: ' + error.message, 'error')
@@ -49,6 +49,29 @@ export default function Liquidaciones() {
   const totPidoPaga = filtradas.filter(r => r.direccion === 'pido_paga' && r.estado === 'pendiente').reduce((s, r) => s + Number(r.neto_a_pagar || 0), 0)
   const totRestPaga = filtradas.filter(r => r.direccion === 'restaurante_paga' && r.estado === 'pendiente').reduce((s, r) => s + Math.abs(Number(r.neto_a_pagar || 0)), 0)
   const totComision = filtradas.reduce((s, r) => s + Number(r.comision_pido || 0), 0)
+
+  // Stripe Connect: el pago automático al restaurante (dirección pido_paga) solo
+  // corre si el establecimiento tiene Connect activo. Si no, hay que avisar.
+  const connectActiva = (r) => ['active', 'activa'].includes(r.establecimientos?.stripe_connect_status)
+  const sinConnect = useMemo(
+    () => filtradas.filter(r => r.direccion === 'pido_paga' && r.estado === 'pendiente' && !connectActiva(r)),
+    [filtradas]
+  )
+
+  async function reenviarOnboarding(row) {
+    const estId = row.establecimientos?.id
+    if (!estId) return toast('Sin establecimiento asociado', 'error')
+    try {
+      const { data, error } = await supabase.functions.invoke('stripe-connect-onboarding', { body: { establecimiento_id: estId } })
+      if (error) throw new Error(error.message)
+      if (!data?.url) throw new Error(data?.error || 'Sin URL de onboarding')
+      try { await navigator.clipboard.writeText(data.url) } catch {}
+      window.open(data.url, '_blank', 'noopener')
+      toast('Enlace de onboarding generado y copiado — envíaselo al restaurante', 'success')
+    } catch (e) {
+      toast('No se pudo generar el enlace: ' + e.message, 'error')
+    }
+  }
 
   async function marcarPagada(row) {
     const ok = await confirmar(`¿Marcar como pagada la liquidación de ${row.establecimientos?.nombre || 'este restaurante'} (${periodoLabel(row.periodo_inicio, row.periodo_fin)})?`)
@@ -132,6 +155,14 @@ export default function Liquidaciones() {
         </div>
       </div>
 
+      {/* Aviso Stripe Connect no activo */}
+      {sinConnect.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', borderRadius: 10, background: 'rgba(181,86,74,0.12)', border: '1px solid rgba(181,86,74,0.4)', color: '#B5564A', fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
+          <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
+          <span><b>{sinConnect.length} restaurante(s)</b> con liquidación pendiente a su favor NO tienen Stripe Connect activo. El pago automático no se ejecutará hasta que completen el onboarding. Genera el enlace en cada fila marcada y envíaselo.</span>
+        </div>
+      )}
+
       {/* Filtro periodo */}
       <div style={{ marginBottom: 14 }}>
         <select value={periodo} onChange={e => setPeriodo(e.target.value)} style={{
@@ -178,6 +209,14 @@ export default function Liquidaciones() {
                   <div style={{ flex: '2 1 160px', minWidth: 0 }}>
                     <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.establecimientos?.nombre || '—'}</div>
                     <div style={{ fontSize: 11, color: 'var(--c-muted)', marginTop: 2 }}>{periodoLabel(r.periodo_inicio, r.periodo_fin)}</div>
+                    {r.direccion === 'pido_paga' && r.estado === 'pendiente' && !connectActiva(r) && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 999, color: '#B5564A', background: 'rgba(181,86,74,0.15)' }}>Connect no activo</span>
+                        <button onClick={() => reenviarOnboarding(r)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10.5, fontWeight: 600, padding: '2px 7px', borderRadius: 6, border: '1px solid var(--c-border)', background: 'var(--c-surface)', color: 'var(--c-text)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                          <Link2 size={11} /> Enlace onboarding
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <div style={{ flex: '1 1 90px', textAlign: 'right' }}>{r.pedidos_count}</div>
                   <div style={{ flex: '1 1 100px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{euro(r.subtotal_total)}</div>

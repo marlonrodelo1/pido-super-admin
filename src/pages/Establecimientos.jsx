@@ -7,9 +7,9 @@ import { toast, confirmar } from '../App'
 import CargaMasivaModal from '../components/CargaMasivaModal'
 import ImportUrlModal from '../components/ImportUrlModal'
 import RidersCard from '../components/RidersCard'
-import PlanTiendaCard from '../components/PlanTiendaCard'
 import HorarioEstadoCard from '../components/HorarioEstadoCard'
 import DispatcherPropioCard from '../components/DispatcherPropioCard'
+// PlanTiendaCard eliminado: el plan SaaS 39€/mes está muerto. El alta/plan se gestiona en AltaPlanCard (abajo).
 import ResetPasswordModal from '../components/ResetPasswordModal'
 import EliminarEntidadModal from '../components/EliminarEntidadModal'
 import AddressAutocomplete from '../components/AddressAutocomplete'
@@ -107,7 +107,8 @@ export default function Establecimientos() {
   }
 
   async function toggleActivo(id, activo) {
-    await supabase.from('establecimientos').update({ activo: !activo }).eq('id', id)
+    const { error } = await supabase.from('establecimientos').update({ activo: !activo }).eq('id', id)
+    if (error) return toast('Error: ' + error.message, 'error')
     load()
   }
 
@@ -559,8 +560,8 @@ export default function Establecimientos() {
           onChanged={async () => { const { data } = await supabase.from('establecimientos').select('*').eq('id', detalle.id).single(); if (data) setDetalle(data); load() }}
         />
 
-        {/* Plan Tienda Pública */}
-        <PlanTiendaCard
+        {/* Alta y plan (modelo 10% por pedido — sin cuota) */}
+        <AltaPlanCard
           establecimiento={detalle}
           onChanged={async () => { await load(); const { data } = await supabase.from('establecimientos').select('*').eq('id', detalle.id).single(); if (data) setDetalle(data) }}
         />
@@ -1263,6 +1264,96 @@ export default function Establecimientos() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Alta y plan del restaurante (modelo 10% por pedido — sin cuota mensual)
+// Sustituye a PlanTiendaCard (suscripción 39€ muerta). plan_pro = flag gratis.
+// ──────────────────────────────────────────────────────────────────────────────
+function AltaToggle({ on, busy, onClick }) {
+  return (
+    <button onClick={onClick} disabled={busy} aria-pressed={on} style={{
+      width: 46, height: 26, borderRadius: 999, border: 'none',
+      cursor: busy ? 'not-allowed' : 'pointer', flexShrink: 0,
+      background: on ? '#C5562C' : 'var(--c-surface2)', position: 'relative',
+      opacity: busy ? 0.6 : 1, transition: 'background 0.15s',
+    }}>
+      <span style={{
+        position: 'absolute', top: 3, left: on ? 23 : 3, width: 20, height: 20,
+        borderRadius: '50%', background: '#fff', transition: 'left 0.15s',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+      }} />
+    </button>
+  )
+}
+
+function AltaPlanCard({ establecimiento, onChanged }) {
+  const [busy, setBusy] = useState(false)
+  const e = establecimiento || {}
+  const planPro = !!e.plan_pro
+  const altaCobrada = !!e.alta_150_cobrada
+  const rowStyle = {
+    display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+    borderRadius: 10, border: '1px solid var(--c-border)', background: 'var(--c-surface)',
+  }
+
+  async function togglePlanPro() {
+    setBusy(true)
+    const nuevo = !planPro
+    const { error } = await supabase.from('establecimientos')
+      .update({ plan_pro: nuevo, plan_pro_activado_en: nuevo ? new Date().toISOString() : null })
+      .eq('id', e.id)
+    setBusy(false)
+    if (error) return toast('Error: ' + error.message, 'error')
+    toast(nuevo ? 'Tienda publica activada (gratis)' : 'Tienda publica desactivada')
+    onChanged?.()
+  }
+
+  async function toggleAlta() {
+    const nuevo = !altaCobrada
+    if (nuevo && !(await confirmar('Marcar el alta de 150 EUR como cobrada en efectivo?'))) return
+    setBusy(true)
+    const { error } = await supabase.from('establecimientos')
+      .update({ alta_150_cobrada: nuevo, alta_150_cobrada_at: nuevo ? new Date().toISOString() : null })
+      .eq('id', e.id)
+    setBusy(false)
+    if (error) return toast('Error: ' + error.message, 'error')
+    toast(nuevo ? 'Alta de 150 EUR registrada' : 'Alta marcada como no cobrada')
+    onChanged?.()
+  }
+
+  return (
+    <div style={{ ...ds.card, marginTop: 20 }}>
+      <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', marginBottom: 4 }}>Alta y plan</h3>
+      <div style={{ fontSize: 12, color: 'var(--c-muted)', marginBottom: 14, lineHeight: 1.5 }}>
+        Pidoo cobra el 10% por pedido. El alta son 150 EUR unicos en efectivo (fuera de plataforma). Sin cuota mensual.
+      </div>
+
+      <div style={rowStyle}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>
+            Tienda publica {e.slug ? `(pidoo.es/${e.slug})` : ''}
+          </div>
+          <div style={{ fontSize: 11.5, color: 'var(--c-muted)', marginTop: 2 }}>
+            Gratis. Activa la pagina publica del restaurante y sus precios de tienda.
+          </div>
+        </div>
+        <AltaToggle on={planPro} busy={busy} onClick={togglePlanPro} />
+      </div>
+
+      <div style={{ ...rowStyle, marginTop: 10 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>Alta de 150 EUR (efectivo)</div>
+          <div style={{ fontSize: 11.5, color: 'var(--c-muted)', marginTop: 2 }}>
+            {altaCobrada && e.alta_150_cobrada_at
+              ? `Cobrada el ${new Date(e.alta_150_cobrada_at).toLocaleDateString('es-ES')}`
+              : 'Pendiente de cobrar'}
+          </div>
+        </div>
+        <AltaToggle on={altaCobrada} busy={busy} onClick={toggleAlta} />
+      </div>
     </div>
   )
 }

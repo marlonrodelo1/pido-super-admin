@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import {
-  BarChart3, CreditCard, Store, Users, User, ClipboardList, Map,
+  BarChart3, Store, Users, User, ClipboardList, Map,
   MessageCircle, Settings, LogOut, X, Truck, Bell, RotateCcw, FileText, Receipt,
+  Inbox, Activity,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { colors } from '../lib/darkStyles'
@@ -10,7 +11,7 @@ import { colors } from '../lib/darkStyles'
 // Mantenemos los ítems extra que la web ya tenía (mapa, soporte rider, landing, etc.)
 const menuItems = [
   { id: 'dashboard',          label: 'Dashboard',          Icon: BarChart3 },
-  { id: 'suscripciones-saas', label: 'Suscripciones SaaS', Icon: CreditCard, badge: 'NUEVO' },
+  { id: 'aprobaciones',       label: 'Aprobaciones',       Icon: Inbox },
   { id: 'establecimientos',   label: 'Establecimientos',   Icon: Store },
   { id: 'socios',             label: 'Socios',             Icon: Users },
   { id: 'usuarios',           label: 'Usuarios',           Icon: User },
@@ -22,6 +23,7 @@ const menuItems = [
   { id: 'soporte',            label: 'Soporte',            Icon: MessageCircle },
   { id: 'soporte-rider',      label: 'Soporte rider',      Icon: Truck },
   { id: 'landing-riders',     label: 'Landing Riders',     Icon: FileText },
+  { id: 'salud',              label: 'Salud del sistema',  Icon: Activity },
   { id: 'config',             label: 'Configuración',      Icon: Settings },
 ]
 
@@ -149,7 +151,7 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
         {menuItems.map(item => {
           const isActive = active === item.id
           const dynamicBadge =
-            item.id === 'socios' ? pendientes :
+            item.id === 'aprobaciones' ? pendientes :
             item.id === 'soporte-rider' ? unreadRider :
             0
 
