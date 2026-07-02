@@ -1311,6 +1311,18 @@ function AltaPlanCard({ establecimiento, onChanged }) {
     onChanged?.()
   }
 
+  async function toggleDestacado() {
+    setBusy(true)
+    const nuevo = !e.destacado
+    const { error } = await supabase.from('establecimientos')
+      .update({ destacado: nuevo })
+      .eq('id', e.id)
+    setBusy(false)
+    if (error) return toast('Error: ' + error.message, 'error')
+    toast(nuevo ? 'Destacado en la Home de pidoo.es' : 'Quitado de destacados')
+    onChanged?.()
+  }
+
   async function toggleAlta() {
     const nuevo = !altaCobrada
     if (nuevo && !(await confirmar('Marcar el alta de 150 EUR como cobrada en efectivo?'))) return
@@ -1341,6 +1353,16 @@ function AltaPlanCard({ establecimiento, onChanged }) {
           </div>
         </div>
         <AltaToggle on={planPro} busy={busy} onClick={togglePlanPro} />
+      </div>
+
+      <div style={{ ...rowStyle, marginTop: 10 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>Destacado en la Home</div>
+          <div style={{ fontSize: 11.5, color: 'var(--c-muted)', marginTop: 2 }}>
+            Sale en el carrusel "Destacados" de pidoo.es, por delante de los automaticos por rating.
+          </div>
+        </div>
+        <AltaToggle on={!!e.destacado} busy={busy} onClick={toggleDestacado} />
       </div>
 
       <div style={{ ...rowStyle, marginTop: 10 }}>
