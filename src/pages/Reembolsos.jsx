@@ -53,11 +53,19 @@ export default function Reembolsos() {
 
     setProcesando(pedidoId)
     try {
+      // La edge (v12+) exige el JWT del superadmin (auth.getUser + check rol).
+      // Con el anon key devolvía 401 invalid_auth y el botón quedaba roto.
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        toast('Sesión caducada. Vuelve a iniciar sesión.', 'error')
+        setProcesando(null)
+        return
+      }
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/crear_reembolso_stripe`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${session.access_token}`,
           'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
         },
         body: JSON.stringify({ pedido_id: pedidoId }),
