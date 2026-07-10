@@ -17,6 +17,7 @@ import Notificaciones from './pages/Notificaciones'
 import MapaAdmin from './pages/MapaAdmin'
 import Reembolsos from './pages/Reembolsos'
 import Liquidaciones from './pages/Liquidaciones'
+import Cargos from './pages/Cargos'
 import Socios from './pages/Socios'
 import LandingRiders from './pages/LandingRiders'
 import { useMediaQuery, BP } from './lib/useMediaQuery'
@@ -34,6 +35,7 @@ const SECCION_TITULOS = {
   'soporte-rider': 'Soporte rider',
   reembolsos: 'Reembolsos',
   liquidaciones: 'Liquidaciones',
+  cargos: 'Cargos',
   socios: 'Socios',
   'landing-riders': 'Landing Riders',
   salud: 'Salud del sistema',
@@ -194,6 +196,7 @@ function AppContent() {
           {seccion === 'soporte-rider' && <SoporteRider />}
           {seccion === 'reembolsos' && <Reembolsos />}
           {seccion === 'liquidaciones' && <Liquidaciones />}
+          {seccion === 'cargos' && <Cargos />}
           {seccion === 'socios' && <Socios />}
           {seccion === 'landing-riders' && <LandingRiders />}
           {seccion === 'salud' && <SaludSistema />}
