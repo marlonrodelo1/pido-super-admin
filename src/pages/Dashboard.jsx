@@ -75,7 +75,7 @@ export default function Dashboard() {
   }
 
   const canalLabel = (o) => {
-    const map = { tienda_publica: 'Tienda', pido: 'App', app: 'App', marketplace_socio: 'Socio', socio: 'Socio' }
+    const map = { tienda_publica: 'Tienda', pido: 'App', app: 'App', marketplace_socio: 'Socio', socio: 'Socio', telefonico: 'Teléfono' }
     return map[o] || (o ? o.charAt(0).toUpperCase() + o.slice(1) : '—')
   }
 
