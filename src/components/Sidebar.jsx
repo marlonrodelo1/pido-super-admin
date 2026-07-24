@@ -2,16 +2,20 @@ import { useEffect, useState } from 'react'
 import {
   BarChart3, Store, Users, User, ClipboardList, Map,
   MessageCircle, Settings, LogOut, X, Truck, Bell, RotateCcw, FileText, Receipt,
-  Inbox, Activity, Scale,
+  Activity, Scale,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { colors } from '../lib/darkStyles'
 
 // Bundle s6-admin → AdminSidebar: nav plana (sin grupos), dark ink, badge NUEVO terracotta.
 // Mantenemos los ítems extra que la web ya tenía (mapa, soporte rider, landing, etc.)
+//
+// 24 jul 2026: se elimina la página "Aprobaciones". Todo lo que hacía se puede hacer ya en la
+// ficha del establecimiento (vinculaciones y tarifas en "Socios vinculados", verificar el alta
+// en "Horario y estado"); su cola de riders llevaba muerta desde que se retiró Shipday.
+// Lo único que aportaba de verdad era AVISAR, así que ese contador vive ahora aquí.
 const menuItems = [
   { id: 'dashboard',          label: 'Dashboard',          Icon: BarChart3 },
-  { id: 'aprobaciones',       label: 'Aprobaciones',       Icon: Inbox },
   { id: 'establecimientos',   label: 'Establecimientos',   Icon: Store },
   { id: 'socios',             label: 'Socios',             Icon: Users },
   { id: 'usuarios',           label: 'Usuarios',           Icon: User },
@@ -36,7 +40,8 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
     loadPendientes()
     loadUnreadRider()
     const ch1 = supabase.channel('sidebar-pendientes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'rider_accounts' }, loadPendientes)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'socio_establecimiento' }, loadPendientes)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'establecimientos' }, loadPendientes)
       .subscribe()
     const ch2 = supabase.channel('sidebar-unread-rider')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'rider_support_messages' }, loadUnreadRider)
@@ -44,11 +49,19 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
     return () => { supabase.removeChannel(ch1); supabase.removeChannel(ch2) }
   }, [])
 
+  // Lo que espera decisión del superadmin, agregado sobre "Establecimientos" (donde se resuelve):
+  // solicitudes de vinculación, propuestas de tarifa (¡estas se aplican solas al vencer!) y
+  // altas de restaurante sin verificar (invisibles en la app del cliente hasta que se activan).
   async function loadPendientes() {
-    const { count } = await supabase.from('rider_accounts')
-      .select('id', { count: 'exact', head: true })
-      .eq('estado', 'pendiente')
-    setPendientes(count || 0)
+    const [vinc, tarifas, altas] = await Promise.all([
+      supabase.from('socio_establecimiento').select('id', { count: 'exact', head: true })
+        .in('estado', ['pendiente', 'solicitada']),
+      supabase.from('socio_establecimiento').select('id', { count: 'exact', head: true })
+        .not('tarifa_pendiente', 'is', null),
+      supabase.from('establecimientos').select('id', { count: 'exact', head: true })
+        .eq('estado', 'pendiente_verificacion'),
+    ])
+    setPendientes((vinc.count || 0) + (tarifas.count || 0) + (altas.count || 0))
   }
 
   async function loadUnreadRider() {
@@ -152,7 +165,7 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
         {menuItems.map(item => {
           const isActive = active === item.id
           const dynamicBadge =
-            item.id === 'aprobaciones' ? pendientes :
+            item.id === 'establecimientos' ? pendientes :
             item.id === 'soporte-rider' ? unreadRider :
             0
 

@@ -8,7 +8,6 @@ import CargaMasivaModal from '../components/CargaMasivaModal'
 import ImportUrlModal from '../components/ImportUrlModal'
 import RidersCard from '../components/RidersCard'
 import HorarioEstadoCard from '../components/HorarioEstadoCard'
-import DispatcherPropioCard from '../components/DispatcherPropioCard'
 // PlanTiendaCard eliminado: el plan SaaS 39€/mes está muerto. El alta/plan se gestiona en AltaPlanCard (abajo).
 import ResetPasswordModal from '../components/ResetPasswordModal'
 import EliminarEntidadModal from '../components/EliminarEntidadModal'
@@ -18,8 +17,10 @@ const CATEGORIAS_PADRE = ['comida', 'farmacia', 'marketplace']
 
 export default function Establecimientos() {
   const [items, setItems] = useState([])
+  const [pendientes, setPendientes] = useState({}) // establecimiento_id -> { vinc, tarifas }
   const [buscar, setBuscar] = useState('')
   const [filtroTipo, setFiltroTipo] = useState('todos')
+  const [soloPendientes, setSoloPendientes] = useState(false)
   const [detalle, setDetalle] = useState(null)
   const [editando, setEditando] = useState(false)
   const [showCrear, setShowCrear] = useState(false)
@@ -89,6 +90,22 @@ export default function Establecimientos() {
   async function load() {
     const { data } = await supabase.from('establecimientos').select('*').order('created_at', { ascending: false })
     setItems(data || [])
+    loadPendientes()
+  }
+
+  // Sustituye a la página "Aprobaciones" (eliminada el 24 jul 2026): en vez de una bandeja
+  // aparte, cada restaurante enseña en la lista lo que tiene esperando decisión, y se resuelve
+  // dentro de su ficha. Sin esto no habría forma de saber DÓNDE mirar sin abrirlos todos.
+  async function loadPendientes() {
+    const { data } = await supabase.from('socio_establecimiento')
+      .select('establecimiento_id, estado, tarifa_pendiente')
+    const mapa = {}
+    for (const v of data || []) {
+      const m = mapa[v.establecimiento_id] || (mapa[v.establecimiento_id] = { vinc: 0, tarifas: 0 })
+      if (v.estado === 'pendiente' || v.estado === 'solicitada') m.vinc++
+      if (v.tarifa_pendiente) m.tarifas++
+    }
+    setPendientes(mapa)
   }
 
   async function loadCatsGenerales() {
@@ -404,7 +421,16 @@ export default function Establecimientos() {
     setProdForm(prev => ({ ...prev, imagen_url: url }))
   }
 
+  // Cuántas decisiones esperan en un restaurante: solicitudes de vinculación + propuestas de
+  // tarifa + su propia alta sin verificar.
+  const contarPendientes = (e) => {
+    const p = pendientes[e.id] || { vinc: 0, tarifas: 0 }
+    return p.vinc + p.tarifas + (e.estado === 'pendiente_verificacion' ? 1 : 0)
+  }
+  const totalPendientes = items.reduce((n, e) => n + contarPendientes(e), 0)
+
   const filtrados = items.filter(e => {
+    if (soloPendientes && contarPendientes(e) === 0) return false
     if (filtroTipo !== 'todos' && e.categoria_padre !== filtroTipo) return false
     if (buscar && !e.nombre.toLowerCase().includes(buscar.toLowerCase())) return false
     return true
@@ -546,12 +572,6 @@ export default function Establecimientos() {
         <RidersCard
           establecimiento={detalle}
           onChanged={() => load()}
-        />
-
-        {/* Dispatcher propio (Pidoo) vs Shipday */}
-        <DispatcherPropioCard
-          establecimiento={detalle}
-          onChanged={async () => { const { data } = await supabase.from('establecimientos').select('*').eq('id', detalle.id).single(); if (data) setDetalle(data); load() }}
         />
 
         {/* Horario y estado */}
@@ -998,49 +1018,102 @@ export default function Establecimientos() {
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
         <input placeholder="Buscar..." value={buscar} onChange={e => setBuscar(e.target.value)} style={ds.input} />
-        <div style={{ display: 'flex', gap: 4 }}>
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
           {['todos', ...CATEGORIAS_PADRE].map(t => (
             <button key={t} onClick={() => setFiltroTipo(t)} style={{ ...ds.filterBtn, background: filtroTipo === t ? '#C5562C' : 'var(--c-surface2)', color: filtroTipo === t ? '#fff' : 'var(--c-muted)' }}>
               {t === 'todos' ? 'Todos' : t === 'comida' ? '🍕 Comida' : t === 'farmacia' ? '💊 Farmacia' : '🛒 Market'}
             </button>
           ))}
         </div>
+        {totalPendientes > 0 && (
+          <button
+            onClick={() => setSoloPendientes(v => !v)}
+            title="Solicitudes de vinculación, propuestas de tarifa y altas sin verificar"
+            style={{
+              ...ds.filterBtn,
+              background: soloPendientes ? '#C5562C' : 'var(--c-warning-soft)',
+              color: soloPendientes ? '#fff' : '#B45309',
+              borderColor: soloPendientes ? '#C5562C' : 'rgba(201,149,81,0.5)',
+              fontWeight: 700,
+            }}
+          >
+            {totalPendientes} pendiente{totalPendientes === 1 ? '' : 's'} de decisión
+          </button>
+        )}
       </div>
 
       <div style={ds.table}>
         <div style={ds.tableHeader}>
-          <span style={{ width: 44 }}></span>
-          <span style={{ flex: 1 }}>Nombre</span>
-          <span data-tablet-sm-hide="true" style={{ width: 100 }}>Categoría</span>
-          <span data-tablet-hide="true" style={{ width: 60 }}>Rating</span>
-          <span style={{ width: 80 }}>Estado</span>
-          <span style={{ width: 120 }}>Acciones</span>
+          <span style={{ width: 44, flexShrink: 0 }}></span>
+          <span style={{ flex: '2 1 200px', minWidth: 0 }}>Nombre</span>
+          <span data-tablet-sm-hide="true" style={{ flex: '1 1 120px', minWidth: 0 }}>Categoría</span>
+          <span style={{ flex: '1 1 120px', minWidth: 0 }}>Reparto</span>
+          <span data-tablet-hide="true" style={{ width: 64, flexShrink: 0 }}>Rating</span>
+          <span style={{ flex: '1 1 120px', minWidth: 0 }}>Estado</span>
+          <span style={{ width: 132, flexShrink: 0 }}>Acciones</span>
         </div>
         {filtrados.map(e => (
           <div key={e.id} className="ds-row-touch" style={ds.tableRow}>
-            <span style={{ width: 44 }}>
+            <span style={{ width: 44, flexShrink: 0 }}>
               <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--c-surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, overflow: 'hidden' }}>
                 {e.logo_url ? <img src={e.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🍽️'}
               </div>
             </span>
-            <span style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }} onClick={() => { setDetalle(e); loadCategorias(e.id); loadEstCats(e.id); loadProductos(e.id); loadResenas(e.id) }}>
-              <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--c-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.nombre}</span>
-              {e.captador_socio_id && e.estado === 'pendiente_verificacion' && (
-                <span style={{ ...ds.badge, flexShrink: 0, background: 'rgba(245,158,11,0.14)', color: '#B45309', whiteSpace: 'nowrap' }}>
-                  {e.alta_confirmada_at ? '🟠 Socio · verificar' : '⏳ Socio · sin confirmar'}
-                </span>
+            <span style={{ flex: '2 1 200px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2, cursor: 'pointer' }} onClick={() => { setDetalle(e); loadCategorias(e.id); loadEstCats(e.id); loadProductos(e.id); loadResenas(e.id) }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--c-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.nombre}</span>
+                {e.captador_socio_id && e.estado === 'pendiente_verificacion' && (
+                  <span style={{ ...ds.badge, flexShrink: 0, background: 'rgba(245,158,11,0.14)', color: '#B45309', whiteSpace: 'nowrap' }}>
+                    {e.alta_confirmada_at ? '🟠 Socio · verificar' : '⏳ Socio · sin confirmar'}
+                  </span>
+                )}
+                {(() => {
+                  const p = pendientes[e.id]
+                  if (!p || (p.vinc + p.tarifas) === 0) return null
+                  const partes = []
+                  if (p.vinc) partes.push(`${p.vinc} vinculación${p.vinc === 1 ? '' : 'es'}`)
+                  if (p.tarifas) partes.push(`${p.tarifas} tarifa${p.tarifas === 1 ? '' : 's'}`)
+                  return (
+                    <span
+                      title={`Esperando tu decisión: ${partes.join(' y ')}`}
+                      style={{ ...ds.badge, flexShrink: 0, background: 'var(--c-warning-soft)', color: '#B45309', border: '1px solid rgba(201,149,81,0.5)', whiteSpace: 'nowrap' }}
+                    >
+                      {p.vinc + p.tarifas} pendiente{p.vinc + p.tarifas === 1 ? '' : 's'}
+                    </span>
+                  )
+                })()}
+              </span>
+              {e.direccion && (
+                <span style={{ fontSize: 11.5, color: 'var(--c-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.direccion}</span>
               )}
             </span>
-            <span data-tablet-sm-hide="true" style={{ width: 100 }}>
+            <span data-tablet-sm-hide="true" style={{ flex: '1 1 120px', minWidth: 0 }}>
               <span style={{ ...ds.badge, background: 'var(--c-surface2)', color: 'var(--c-text-soft)' }}>
                 {e.categoria_padre === 'comida' ? '🍕' : e.categoria_padre === 'farmacia' ? '💊' : '🛒'} {e.categoria_padre}
               </span>
             </span>
-            <span data-tablet-hide="true" style={{ width: 60, fontSize: 12, color: 'var(--c-text)' }}>{e.rating?.toFixed(1)}</span>
-            <span style={{ width: 80 }}>
-              <span style={{ ...ds.badge, background: e.activo ? 'var(--c-surface2)' : 'var(--c-danger-soft)', color: e.activo ? 'var(--c-text)' : 'var(--c-danger)' }}>{e.activo ? 'Activo' : 'Inactivo'}</span>
+            <span style={{ flex: '1 1 120px', minWidth: 0 }}>
+              <span
+                title={e.tiene_delivery ? 'Tiene socios/riders vinculados y activos' : 'Sin socios vinculados: solo puede vender para recoger'}
+                style={{ ...ds.badge, background: e.tiene_delivery ? 'var(--c-success-soft)' : 'var(--c-surface2)', color: e.tiene_delivery ? 'var(--c-success)' : 'var(--c-muted)' }}
+              >
+                {e.tiene_delivery ? 'Reparto' : 'Solo recogida'}
+              </span>
             </span>
-            <span style={{ width: 120, display: 'flex', gap: 6 }}>
+            <span data-tablet-hide="true" style={{ width: 64, flexShrink: 0, fontSize: 12, color: 'var(--c-text)' }}>{e.rating?.toFixed(1)}</span>
+            <span style={{ flex: '1 1 120px', minWidth: 0 }}>
+              {e.estado !== 'activo' ? (
+                <span
+                  title="Sin verificar: no aparece en la app aunque esté abierto"
+                  style={{ ...ds.badge, background: 'var(--c-warning-soft)', color: '#B45309' }}
+                >Sin verificar</span>
+              ) : (
+                <span style={{ ...ds.badge, background: e.activo ? 'var(--c-success-soft)' : 'var(--c-danger-soft)', color: e.activo ? 'var(--c-success)' : 'var(--c-danger)' }}>
+                  {e.activo ? 'Abierto' : 'Cerrado'}
+                </span>
+              )}
+            </span>
+            <span style={{ width: 132, flexShrink: 0, display: 'flex', gap: 6 }}>
               <button className="admin-action-btn" onClick={() => { setDetalle(e); loadCategorias(e.id); loadEstCats(e.id); loadProductos(e.id); loadResenas(e.id) }} style={ds.actionBtn}>Editar</button>
               <button className="admin-action-btn" onClick={() => toggleActivo(e.id, e.activo)} style={{ ...ds.actionBtn, color: e.activo ? 'var(--c-danger)' : 'var(--c-text)' }}>
                 {e.activo ? 'Off' : 'On'}

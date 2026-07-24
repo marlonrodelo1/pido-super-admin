@@ -10,7 +10,6 @@ import Usuarios from './pages/Usuarios'
 import Pedidos from './pages/Pedidos'
 import SoporteAdmin from './pages/SoporteAdmin'
 import SoporteRider from './pages/SoporteRider'
-import Aprobaciones from './pages/Aprobaciones'
 import SaludSistema from './pages/SaludSistema'
 import Configuracion from './pages/Configuracion'
 import Notificaciones from './pages/Notificaciones'
@@ -25,7 +24,6 @@ import './index.css'
 
 const SECCION_TITULOS = {
   dashboard: 'Dashboard',
-  aprobaciones: 'Aprobaciones',
   establecimientos: 'Establecimientos',
   usuarios: 'Usuarios',
   pedidos: 'Pedidos',
@@ -111,6 +109,9 @@ function AppContent() {
       <main
         style={{
           flex: 1,
+          // minWidth:0 — sin esto, un flex item no baja de su min-content y las
+          // tablas anchas empujan el layout (scroll horizontal en tablet).
+          minWidth: 0,
           marginLeft: isTabletDown ? 0 : 240,
           background: 'var(--c-bg)',
           minHeight: '100vh',
@@ -183,10 +184,9 @@ function AppContent() {
 
         <div
           className={`admin-main-container ${isTabletDown ? 'admin-main-with-topbar' : ''}`}
-          style={{ maxWidth: 1280, margin: '0 auto', padding: '24px 32px 48px' }}
+          style={{ maxWidth: 1600, margin: '0 auto', padding: '24px 28px 48px' }}
         >
           {seccion === 'dashboard' && <Dashboard />}
-          {seccion === 'aprobaciones' && <Aprobaciones />}
           {seccion === 'establecimientos' && <Establecimientos />}
           {seccion === 'usuarios' && <Usuarios />}
           {seccion === 'pedidos' && <Pedidos />}

@@ -42,7 +42,7 @@ export default function Pedidos() {
   }, [])
 
   async function load() {
-    const { data } = await supabase.from('pedidos').select('*').order('created_at', { ascending: false }).limit(200)
+    const { data } = await supabase.from('pedidos').select('*, establecimientos(nombre)').order('created_at', { ascending: false }).limit(200)
     setItems(data || [])
   }
 
@@ -304,14 +304,15 @@ export default function Pedidos() {
 
       <div style={ds.table}>
         <div style={ds.tableHeader}>
-          <span style={{ width: 80 }}>Codigo</span>
-          <span style={{ width: 80 }}>Total</span>
-          <span style={{ width: 90 }}>Estado</span>
-          <span style={{ width: 70 }}>Pago</span>
-          <span data-tablet-sm-hide="true" style={{ width: 70 }}>Canal</span>
-          <span style={{ width: 100 }}>Alerta</span>
-          <span style={{ flex: 1 }}>Fecha</span>
-          <span style={{ width: 130 }}></span>
+          <span style={{ width: 80, flexShrink: 0 }}>Codigo</span>
+          <span style={{ flex: '2 1 90px', minWidth: 0 }}>Restaurante</span>
+          <span style={{ width: 84, flexShrink: 0 }}>Total</span>
+          <span style={{ flex: '1 1 96px', minWidth: 0 }}>Estado</span>
+          <span style={{ width: 84, flexShrink: 0 }}>Pago</span>
+          <span data-tablet-sm-hide="true" style={{ flex: '1 1 76px', minWidth: 0 }}>Origen</span>
+          <span style={{ flex: '1 1 76px', minWidth: 0 }}>Alerta</span>
+          <span data-tablet-sm-hide="true" style={{ width: 120, flexShrink: 0 }}>Fecha</span>
+          <span style={{ width: 140, flexShrink: 0 }}></span>
         </div>
         {filtrados.map(p => {
           const sinRider = p.shipday_status === 'no_rider'
@@ -321,12 +322,19 @@ export default function Pedidos() {
             && p.estado !== 'cancelado'
           return (
             <div key={p.id} className="ds-row-touch" style={ds.tableRow}>
-              <span style={{ width: 80, fontWeight: 700, fontSize: 12 }}>{p.codigo}</span>
-              <span style={{ width: 80, fontSize: 12 }}>{p.total?.toFixed(2)}EUR</span>
-              <span style={{ width: 90 }}><span style={{ ...ds.badge, background: (estadoColor[p.estado] || '#6B7280') + '15', color: estadoColor[p.estado] }}>{p.estado}</span></span>
-              <span style={{ width: 70 }}><span style={{ ...ds.badge, background: p.metodo_pago === 'tarjeta' ? 'var(--c-info-soft)' : 'var(--c-warning-soft)', color: p.metodo_pago === 'tarjeta' ? 'var(--c-info)' : 'var(--c-warning)' }}>{p.metodo_pago}</span></span>
-              <span data-tablet-sm-hide="true" style={{ width: 70 }}><span style={{ ...ds.badge, background: 'var(--c-primary-soft)', color: '#C5562C' }}>PIDO</span></span>
-              <span style={{ width: 100 }}>
+              <span style={{ width: 80, flexShrink: 0, fontWeight: 700, fontSize: 12 }}>{p.codigo}</span>
+              <span style={{ flex: '2 1 90px', minWidth: 0, fontSize: 12.5, color: 'var(--c-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {p.establecimientos?.nombre || '—'}
+              </span>
+              <span style={{ width: 84, flexShrink: 0, fontSize: 12 }}>{p.total?.toFixed(2)}EUR</span>
+              <span style={{ flex: '1 1 96px', minWidth: 0 }}><span style={{ ...ds.badge, background: (estadoColor[p.estado] || '#6B7280') + '15', color: estadoColor[p.estado] }}>{p.estado}</span></span>
+              <span style={{ width: 84, flexShrink: 0 }}><span style={{ ...ds.badge, background: p.metodo_pago === 'tarjeta' ? 'var(--c-info-soft)' : 'var(--c-warning-soft)', color: p.metodo_pago === 'tarjeta' ? 'var(--c-info)' : 'var(--c-warning)' }}>{p.metodo_pago}</span></span>
+              <span data-tablet-sm-hide="true" style={{ flex: '1 1 76px', minWidth: 0 }}>
+                <span style={{ ...ds.badge, background: 'var(--c-primary-soft)', color: '#C5562C' }}>
+                  {p.origen_pedido === 'telefonico' ? 'Teléfono' : p.origen_pedido === 'marketplace_socio' ? 'Socio' : 'App'}
+                </span>
+              </span>
+              <span style={{ flex: '1 1 76px', minWidth: 0 }}>
                 {sinRider ? (
                   <span style={{ ...ds.badge, background: colors.dangerSoft, color: colors.danger, border: `1px solid ${colors.danger}` }}>
                     🚨 Sin rider
@@ -337,8 +345,8 @@ export default function Pedidos() {
                   </span>
                 ) : null}
               </span>
-              <span style={{ flex: 1, fontSize: 11, color: 'var(--c-muted)' }}>{new Date(p.created_at).toLocaleString('es-ES')}</span>
-              <span style={{ width: 130, display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+              <span data-tablet-sm-hide="true" style={{ width: 120, flexShrink: 0, fontSize: 11, color: 'var(--c-muted)' }}>{new Date(p.created_at).toLocaleString('es-ES')}</span>
+              <span style={{ width: 140, flexShrink: 0, display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                 {puedeAsignar && (sinRider || atascado) && (
                   <button
                     className="admin-action-btn"

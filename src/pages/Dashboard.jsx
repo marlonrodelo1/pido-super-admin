@@ -146,31 +146,33 @@ export default function Dashboard() {
       <h2 style={ds.h2}>Pedidos recientes</h2>
       <div style={ds.table}>
         <div style={ds.tableHeader}>
-          <span style={{ width: 100 }}>Código</span>
-          <span style={{ width: 80 }}>Total</span>
-          <span style={{ width: 90 }}>Estado</span>
-          <span data-tablet-sm-hide="true" style={{ width: 80 }}>Pago</span>
-          <span data-tablet-hide="true" style={{ width: 70 }}>Canal</span>
-          <span style={{ flex: 1 }}>Fecha</span>
+          <span style={{ width: 100, flexShrink: 0 }}>Código</span>
+          <span style={{ width: 80, flexShrink: 0 }}>Total</span>
+          <span style={{ flex: '1 1 96px', minWidth: 0 }}>Estado</span>
+          <span data-tablet-sm-hide="true" style={{ flex: '1 1 84px', minWidth: 0 }}>Pago</span>
+          <span data-tablet-hide="true" style={{ flex: '1 1 84px', minWidth: 0 }}>Origen</span>
+          <span style={{ flex: '1 1 140px', minWidth: 0 }}>Fecha</span>
         </div>
         {recientes.map(p => {
           const chip = estadoChip(p.estado)
           return (
             <div key={p.id} className="ds-row-touch" style={ds.tableRow}>
-              <span style={{ width: 100, fontWeight: 700, fontSize: 12, color: colors.ink, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>{p.codigo}</span>
-              <span style={{ width: 80, fontSize: 12.5, fontWeight: 700, color: colors.ink }}>{p.total?.toFixed(2)}€</span>
-              <span style={{ width: 90 }}>
+              <span style={{ width: 100, flexShrink: 0, fontWeight: 700, fontSize: 12, color: colors.ink, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>{p.codigo}</span>
+              <span style={{ width: 80, flexShrink: 0, fontSize: 12.5, fontWeight: 700, color: colors.ink }}>{p.total?.toFixed(2)}€</span>
+              <span style={{ flex: '1 1 96px', minWidth: 0 }}>
                 <span style={{ ...ds.badge, background: chip.bg, color: chip.color }}>{p.estado}</span>
               </span>
-              <span data-tablet-sm-hide="true" style={{ width: 80 }}>
+              <span data-tablet-sm-hide="true" style={{ flex: '1 1 84px', minWidth: 0 }}>
                 <span style={{ ...ds.badge, background: p.metodo_pago === 'tarjeta' ? colors.infoSoft : colors.warningSoft, color: p.metodo_pago === 'tarjeta' ? colors.info : colors.warning }}>
                   {p.metodo_pago === 'tarjeta' ? 'Tarjeta' : 'Efectivo'}
                 </span>
               </span>
-              <span data-tablet-hide="true" style={{ width: 70 }}>
-                <span style={{ ...ds.badge, background: colors.terracottaSoft, color: colors.terracotta2 }}>PIDO</span>
+              <span data-tablet-hide="true" style={{ flex: '1 1 84px', minWidth: 0 }}>
+                <span style={{ ...ds.badge, background: colors.terracottaSoft, color: colors.terracotta2 }}>
+                  {p.origen_pedido === 'telefonico' ? 'Teléfono' : p.origen_pedido === 'marketplace_socio' ? 'Socio' : 'App'}
+                </span>
               </span>
-              <span style={{ flex: 1, fontSize: 11.5, color: colors.textMute }}>{new Date(p.created_at).toLocaleString('es-ES')}</span>
+              <span style={{ flex: '1 1 140px', minWidth: 0, fontSize: 11.5, color: colors.textMute }}>{new Date(p.created_at).toLocaleString('es-ES')}</span>
             </div>
           )
         })}
