@@ -99,8 +99,18 @@ export default function RidersCard({ establecimiento, onChanged }) {
     if (!establecimiento?.id) return
     const ch = supabase.channel(`socios-rest-${establecimiento.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'socio_establecimiento', filter: `establecimiento_id=eq.${establecimiento.id}` }, load)
+      // El estado "en línea" NO vive aquí, vive en `socios` (en_servicio + last_location_at).
+      // Sin esta segunda suscripción la tarjeta se quedaba congelada con la foto del
+      // momento en que se abrió la página: un socio se conectaba y el super-admin
+      // seguía diciendo "Ninguno en línea" mientras el panel del restaurante y la app
+      // del cliente ya lo daban por disponible (30 jul 2026).
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'socios' }, load)
       .subscribe()
-    return () => { supabase.removeChannel(ch) }
+    // Además, la frescura del GPS (12 min) caduca sola con el paso del tiempo y eso no
+    // genera ningún evento: sin este repaso periódico, un socio que apaga el móvil
+    // seguiría saliendo "en línea" indefinidamente.
+    const t = setInterval(load, 60000)
+    return () => { supabase.removeChannel(ch); clearInterval(t) }
   }, [establecimiento?.id, load])
 
   const esPendiente = v => v.estado === 'pendiente' || v.estado === 'solicitada'
