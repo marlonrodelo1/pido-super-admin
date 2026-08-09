@@ -34,7 +34,7 @@ export default function Establecimientos() {
   const [productos, setProductos] = useState([])
   const [gruposExtras, setGruposExtras] = useState([])
   const [editProd, setEditProd] = useState(null)
-  const [prodForm, setProdForm] = useState({ nombre: '', descripcion: '', precio: '', categoria_id: '', imagen_url: '' })
+  const [prodForm, setProdForm] = useState({ nombre: '', descripcion: '', precio: '', precio_local: '', categoria_id: '', imagen_url: '' })
   const [prodExtras, setProdExtras] = useState([])
   const [savingProd, setSavingProd] = useState(false)
   const [resenas, setResenas] = useState([])
@@ -354,7 +354,7 @@ export default function Establecimientos() {
   }
 
   async function abrirEditarProd(p) {
-    setProdForm({ nombre: p.nombre, descripcion: p.descripcion || '', precio: p.precio, categoria_id: p.categoria_id || '', imagen_url: p.imagen_url || '' })
+    setProdForm({ nombre: p.nombre, descripcion: p.descripcion || '', precio: p.precio, precio_local: p.precio_local ?? '', categoria_id: p.categoria_id || '', imagen_url: p.imagen_url || '' })
     const { data } = await supabase.from('producto_extras').select('grupo_id').eq('producto_id', p.id)
     setProdExtras((data || []).map(d => d.grupo_id))
     setEditProd(p)
@@ -372,11 +372,17 @@ export default function Establecimientos() {
     if (precio === null || Number.isNaN(precio) || precio < 0) {
       toast('Precio inválido. Usa punto como decimal (ej: 0.50)', 'error'); return
     }
+    // Precio de la carta del local (QR de mesa). Vacio = null = usa el normal.
+    const precioLocal = parsePrecio(prodForm.precio_local)
+    if (precioLocal !== null && (Number.isNaN(precioLocal) || precioLocal < 0)) {
+      toast('Precio de local invalido. Dejalo vacio si es el mismo.', 'error'); return
+    }
     setSavingProd(true)
     const baseData = {
       nombre: prodForm.nombre.trim(),
       descripcion: prodForm.descripcion.trim() || null,
       precio,
+      precio_local: precioLocal,
       categoria_id: prodForm.categoria_id || null,
       imagen_url: prodForm.imagen_url || null,
     }
@@ -397,7 +403,7 @@ export default function Establecimientos() {
     }
     setSavingProd(false)
     setEditProd(null)
-    setProdForm({ nombre: '', descripcion: '', precio: '', categoria_id: '', imagen_url: '' })
+    setProdForm({ nombre: '', descripcion: '', precio: '', precio_local: '', categoria_id: '', imagen_url: '' })
     setProdExtras([])
     toast('Producto guardado', 'success')
     loadProductos(detalle.id)
@@ -717,7 +723,7 @@ export default function Establecimientos() {
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               <button onClick={() => setShowImportUrl(true)} style={{ ...ds.secondaryBtn, fontSize: 11, padding: '0 12px', height: 30, display: 'flex', alignItems: 'center', gap: 4 }}>🔗 Importar URL</button>
               <button onClick={() => setShowCargaMasiva(true)} style={{ ...ds.secondaryBtn, fontSize: 11, padding: '0 12px', height: 30, display: 'flex', alignItems: 'center', gap: 4 }}><Upload size={12} /> Carga masiva</button>
-              <button onClick={() => { setEditProd('new'); setProdForm({ nombre: '', descripcion: '', precio: '', categoria_id: selectedCartCatId || '', imagen_url: '' }); setProdExtras([]) }} style={{ ...ds.primaryBtn, fontSize: 11, padding: '0 12px', height: 30 }}>+ Producto</button>
+              <button onClick={() => { setEditProd('new'); setProdForm({ nombre: '', descripcion: '', precio: '', precio_local: '', categoria_id: selectedCartCatId || '', imagen_url: '' }); setProdExtras([]) }} style={{ ...ds.primaryBtn, fontSize: 11, padding: '0 12px', height: 30 }}>+ Producto</button>
             </div>
           </div>
 
@@ -882,6 +888,12 @@ export default function Establecimientos() {
               <div className="admin-grid-2col-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div style={{ gridColumn: '1/-1' }}><label style={ds.label}>Nombre *</label><input value={prodForm.nombre} onChange={e => setProdForm({ ...prodForm, nombre: e.target.value })} style={ds.formInput} /></div>
                 <div><label style={ds.label}>Precio (€) *</label><input type="number" step="0.01" min="0" value={prodForm.precio} onChange={e => setProdForm({ ...prodForm, precio: e.target.value })} style={ds.formInput} /></div>
+                {detalle?.carta_local_activa && (
+                  <div>
+                    <label style={ds.label}>Precio en el local (€)</label>
+                    <input type="number" step="0.01" min="0" placeholder="El mismo" value={prodForm.precio_local} onChange={e => setProdForm({ ...prodForm, precio_local: e.target.value })} style={ds.formInput} />
+                  </div>
+                )}
                 <div><label style={ds.label}>Categoría</label>
                   <select value={prodForm.categoria_id} onChange={e => setProdForm({ ...prodForm, categoria_id: e.target.value })} style={ds.select}>
                     <option value="">Sin categoría</option>
@@ -1396,6 +1408,22 @@ function AltaPlanCard({ establecimiento, onChanged }) {
     onChanged?.()
   }
 
+  // Carta del local (QR de mesa). Solo la puede activar el super-admin: el
+  // trigger guard_establecimientos_protected_fields la congela para el dueño,
+  // porque es la palanca con la que podría empujar su volumen fuera de Pidoo.
+  async function toggleCartaLocal() {
+    const nuevo = !e.carta_local_activa
+    if (nuevo && !e.slug) return toast('Primero ponle un slug al restaurante', 'error')
+    setBusy(true)
+    const { error } = await supabase.from('establecimientos')
+      .update({ carta_local_activa: nuevo })
+      .eq('id', e.id)
+    setBusy(false)
+    if (error) return toast('Error: ' + error.message, 'error')
+    toast(nuevo ? 'Carta del local activada' : 'Carta del local desactivada')
+    onChanged?.()
+  }
+
   async function toggleAlta() {
     const nuevo = !altaCobrada
     if (nuevo && !(await confirmar('Marcar el alta de 150 EUR como cobrada en efectivo?'))) return
@@ -1426,6 +1454,19 @@ function AltaPlanCard({ establecimiento, onChanged }) {
           </div>
         </div>
         <AltaToggle on={planPro} busy={busy} onClick={togglePlanPro} />
+      </div>
+
+      <div style={{ ...rowStyle, marginTop: 10 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>
+            Carta del local {e.slug ? `(pidoo.es/${e.slug}/carta)` : ''}
+          </div>
+          <div style={{ fontSize: 11.5, color: 'var(--c-muted)', marginTop: 2 }}>
+            QR de mesa con precios propios del local. Solo carta: desde ahi no se puede pedir ni pagar,
+            asi que no afecta a la comision ni a la liquidacion.
+          </div>
+        </div>
+        <AltaToggle on={!!e.carta_local_activa} busy={busy} onClick={toggleCartaLocal} />
       </div>
 
       <div style={{ ...rowStyle, marginTop: 10 }}>
