@@ -134,6 +134,7 @@ export default function Establecimientos() {
     return {
       nombre: est?.nombre || '', tipo: est?.tipo || 'restaurante', categoria_padre: est?.categoria_padre || 'comida',
       email: est?.email || '', telefono: est?.telefono || '', direccion: est?.direccion || '',
+      instagram_usuario: est?.instagram_usuario || '', tiktok_usuario: est?.tiktok_usuario || '',
       radio_cobertura_km: est?.radio_cobertura_km || 5, descripcion: est?.descripcion || '',
       banner_url: est?.banner_url || '', logo_url: est?.logo_url || '',
       latitud: est?.latitud ?? null, longitud: est?.longitud ?? null,
@@ -546,6 +547,11 @@ export default function Establecimientos() {
               </select></div>
               <div><label style={ds.label}>Email</label><input value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} style={ds.formInput} /></div>
               <div><label style={ds.label}>Teléfono</label><input value={form.telefono} onChange={e => setForm({ ...form, telefono: e.target.value })} style={ds.formInput} /></div>
+              {/* Pidoo Creadores obliga al cliente a etiquetar al restaurante:
+                  sin el @ exacto, el texto que se le da para pegar no lleva la
+                  mención. El servidor normaliza arroba, URL y mayúsculas. */}
+              <div><label style={ds.label}>Instagram</label><input value={form.instagram_usuario || ''} placeholder="@tunegocio" onChange={e => setForm({ ...form, instagram_usuario: e.target.value })} style={ds.formInput} /></div>
+              <div><label style={ds.label}>TikTok</label><input value={form.tiktok_usuario || ''} placeholder="@tunegocio" onChange={e => setForm({ ...form, tiktok_usuario: e.target.value })} style={ds.formInput} /></div>
               <div style={{ gridColumn: '1/-1' }}>
                 <label style={ds.label}>Dirección</label>
                 <AddressAutocomplete

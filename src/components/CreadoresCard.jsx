@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Video } from 'lucide-react'
+import { Video, Plus, Trash2, Pencil } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { ds, colors } from '../lib/darkStyles'
 import { toast, confirmar } from '../App'
@@ -15,8 +15,32 @@ import { toast, confirmar } from '../App'
 // Va por RPC y no por UPDATE directo porque `creadores_activar_programa` además
 // siembra una escalera por defecto: sin eso, el dueño abre su pantalla el día del
 // despliegue y se encuentra un editor vacío.
+//
+// La escalera la edita normalmente el RESTAURANTE desde su panel — él la paga y
+// él la decide. Este editor es la red de seguridad: montársela por teléfono el
+// día del alta, o arreglarle un disparate sin entrar por SQL. Va por
+// `creadores_guardar_escalera`, el mismo RPC que usa su panel, así que las
+// reglas son idénticas y el nivel lo ordena el servidor por visualizaciones.
+//
+// Aquí NO se ofrece "producto gratis": exige elegir un plato de su carta y esa
+// pantalla ya existe en su panel. Con eso este editor no necesita cargar la
+// carta entera de cada restaurante.
 
 const fmtEur = (n) => `${Number(n || 0).toFixed(2).replace('.', ',')} €`
+
+const TIPOS_ADMIN = [
+  { id: 'descuento_fijo', label: '€ fijos' },
+  { id: 'porcentaje',     label: '% del pedido' },
+  { id: 'envio_gratis',   label: 'Envío gratis' },
+]
+
+// Lo que el premio le cuesta al restaurante. El servidor tiene la última
+// palabra (`creadores_coste_minimo`, PD131) y su mensaje dice la cifra exacta.
+const costeSugerido = (tipo, valor) => {
+  if (tipo === 'descuento_fijo') return Number(valor) || 0
+  if (tipo === 'envio_gratis') return 2.5
+  return 5
+}
 
 export default function CreadoresCard({ establecimiento }) {
   const [cfg, setCfg] = useState(null)
@@ -24,6 +48,8 @@ export default function CreadoresCard({ establecimiento }) {
   const [stats, setStats] = useState({ participaciones: 0, cupones: 0 })
   const [busy, setBusy] = useState(false)
   const [cargando, setCargando] = useState(true)
+  const [edit, setEdit] = useState(null)      // filas en edición, null = solo lectura
+  const [topeInput, setTopeInput] = useState('')
 
   const estId = establecimiento?.id
 
@@ -31,7 +57,7 @@ export default function CreadoresCard({ establecimiento }) {
     if (!estId) return
     const [c, e, p, cu] = await Promise.all([
       supabase.from('creadores_config').select('*').eq('establecimiento_id', estId).maybeSingle(),
-      supabase.from('escalera_premios').select('nivel, views_necesarias, tipo_premio, valor, descripcion, coste_estimado, activo')
+      supabase.from('escalera_premios').select('nivel, views_necesarias, tipo_premio, valor, producto_id, descripcion, coste_estimado, activo')
         .eq('establecimiento_id', estId).order('nivel'),
       supabase.from('participaciones_creador').select('id', { count: 'exact', head: true }).eq('establecimiento_id', estId),
       supabase.from('cupones_creador').select('id', { count: 'exact', head: true }).eq('establecimiento_id', estId),
@@ -39,6 +65,7 @@ export default function CreadoresCard({ establecimiento }) {
     setCfg(c.data || null)
     setEscalones(e.data || [])
     setStats({ participaciones: p.count || 0, cupones: cu.count || 0 })
+    setTopeInput(c.data?.tope_mensual_euros != null ? String(c.data.tope_mensual_euros) : '')
     setCargando(false)
   }, [estId])
 
@@ -61,6 +88,42 @@ export default function CreadoresCard({ establecimiento }) {
     toast(nuevo
       ? (data?.escalones_sembrados ? 'Programa activado con escalera por defecto' : 'Programa activado')
       : 'Programa desactivado')
+    load()
+  }
+
+  async function guardarEscalera() {
+    const filas = edit.map(f => ({
+      views_necesarias: Number(f.views_necesarias),
+      tipo_premio: f.tipo_premio,
+      valor: (f.tipo_premio === 'descuento_fijo' || f.tipo_premio === 'porcentaje') ? Number(f.valor) : null,
+      producto_id: f.producto_id || null,
+      descripcion: (f.descripcion || '').trim(),
+      coste_estimado: Number(f.coste_estimado),
+      activo: f.activo !== false,
+    }))
+    setBusy(true)
+    const { error } = await supabase.rpc('creadores_guardar_escalera', {
+      p_establecimiento_id: estId,
+      p_escalones: filas,
+    })
+    setBusy(false)
+    if (error) return toast(error.message, 'error')
+    toast('Escalera guardada')
+    setEdit(null)
+    load()
+  }
+
+  async function guardarTope() {
+    const v = topeInput.trim() === '' ? null : Number(topeInput.replace(',', '.'))
+    if (v !== null && (!Number.isFinite(v) || v <= 0 || v > 5000)) {
+      return toast('El tope tiene que estar entre 0,01 y 5.000 €', 'error')
+    }
+    setBusy(true)
+    const { error } = await supabase.from('creadores_config')
+      .update({ tope_mensual_euros: v }).eq('establecimiento_id', estId)
+    setBusy(false)
+    if (error) return toast(error.message, 'error')
+    toast(v === null ? 'Tope quitado' : `Tope puesto en ${fmtEur(v)} al mes`)
     load()
   }
 
@@ -121,11 +184,27 @@ export default function CreadoresCard({ establecimiento }) {
         </div>
       )}
 
-      {activo && escalones.length > 0 && (
+      {/* ── Escalera de premios ── */}
+      {activo && !edit && (
         <div style={{ marginTop: 12 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
-            Escalera
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <div style={{ flex: 1, fontSize: 11, fontWeight: 700, color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Escalera
+            </div>
+            <button onClick={() => setEdit(escalones.map(e => ({ ...e })))} style={{
+              ...ds.secondaryBtn, padding: '4px 9px', fontSize: 11,
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+            }}>
+              <Pencil size={11} /> Editar
+            </button>
           </div>
+
+          {escalones.length === 0 && (
+            <div style={{ fontSize: 12, color: colors.warning, padding: '8px 0' }}>
+              Sin ningún premio: los clientes pueden grabar vídeos que no ganarán nada.
+            </div>
+          )}
+
           {escalones.map(e => (
             <div key={e.nivel} style={{
               display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0',
@@ -143,10 +222,114 @@ export default function CreadoresCard({ establecimiento }) {
               </span>
             </div>
           ))}
+
           <div style={{ fontSize: 11, color: 'var(--c-muted)', marginTop: 8, lineHeight: 1.5 }}>
-            La escalera la edita el restaurante desde su panel. Estos valores son los que
-            se sembraron al activar.
+            Normalmente la edita el restaurante desde su panel — la paga él. Edítala tú si
+            hay que montársela o arreglársela.
           </div>
+        </div>
+      )}
+
+      {/* ── Editor ── */}
+      {activo && edit && (
+        <div style={{ marginTop: 12, padding: 12, borderRadius: 10, border: `1px solid ${colors.terracotta}`, background: 'var(--c-surface)' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-text)', marginBottom: 8 }}>
+            Editar escalera de {establecimiento?.nombre}
+          </div>
+
+          {edit.map((f, i) => (
+            <div key={i} style={{ display: 'grid', gap: 6, marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--c-border)' }}>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {TIPOS_ADMIN.map(t => (
+                  <button key={t.id}
+                    onClick={() => setEdit(l => l.map((x, j) => j === i ? {
+                      ...x, tipo_premio: t.id,
+                      valor: t.id === 'porcentaje' ? 10 : (t.id === 'descuento_fijo' ? 2 : null),
+                      coste_estimado: costeSugerido(t.id, t.id === 'descuento_fijo' ? 2 : 10),
+                    } : x))}
+                    style={{
+                      padding: '4px 9px', borderRadius: 7, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit',
+                      border: `1px solid ${f.tipo_premio === t.id ? colors.terracotta : 'var(--c-border)'}`,
+                      background: f.tipo_premio === t.id ? 'rgba(197,86,44,0.15)' : 'transparent',
+                      color: 'var(--c-text)',
+                    }}>{t.label}</button>
+                ))}
+                {f.tipo_premio === 'producto_gratis' && (
+                  <span style={{ fontSize: 11, color: colors.warning, alignSelf: 'center' }}>
+                    Producto gratis — solo editable desde el panel del restaurante
+                  </span>
+                )}
+                <button onClick={() => setEdit(l => l.filter((_, j) => j !== i))}
+                  style={{ ...ds.secondaryBtn, marginLeft: 'auto', padding: '4px 8px', fontSize: 11 }}>
+                  <Trash2 size={11} />
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(92px, 1fr))', gap: 6 }}>
+                <div>
+                  <label style={{ fontSize: 10, color: 'var(--c-muted)' }}>Views (mín. 100)</label>
+                  <input style={ds.formInput} type="number" min={100} value={f.views_necesarias ?? ''}
+                         onChange={ev => setEdit(l => l.map((x, j) => j === i ? { ...x, views_necesarias: ev.target.value } : x))} />
+                </div>
+                {(f.tipo_premio === 'descuento_fijo' || f.tipo_premio === 'porcentaje') && (
+                  <div>
+                    <label style={{ fontSize: 10, color: 'var(--c-muted)' }}>
+                      {f.tipo_premio === 'porcentaje' ? '% (máx. 50)' : '€ (máx. 25)'}
+                    </label>
+                    <input style={ds.formInput} type="number" step="0.5" value={f.valor ?? ''}
+                           onChange={ev => setEdit(l => l.map((x, j) => j === i ? {
+                             ...x, valor: ev.target.value,
+                             coste_estimado: costeSugerido(x.tipo_premio, ev.target.value),
+                           } : x))} />
+                  </div>
+                )}
+                <div>
+                  <label style={{ fontSize: 10, color: 'var(--c-muted)' }}>Le cuesta (€)</label>
+                  <input style={ds.formInput} type="number" step="0.5" value={f.coste_estimado ?? ''}
+                         onChange={ev => setEdit(l => l.map((x, j) => j === i ? { ...x, coste_estimado: ev.target.value } : x))} />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: 10, color: 'var(--c-muted)' }}>Cómo lo ve el cliente</label>
+                <input style={ds.formInput} maxLength={80} placeholder="2 € de descuento en tu próximo pedido"
+                       value={f.descripcion || ''}
+                       onChange={ev => setEdit(l => l.map((x, j) => j === i ? { ...x, descripcion: ev.target.value } : x))} />
+              </div>
+            </div>
+          ))}
+
+          {edit.length < 5 && (
+            <button onClick={() => setEdit(l => [...l, {
+              views_necesarias: (Number(l.at(-1)?.views_necesarias) || 0) * 4 || 200,
+              tipo_premio: 'descuento_fijo', valor: 2, descripcion: '', coste_estimado: 2, activo: true,
+            }])} style={{ ...ds.secondaryBtn, fontSize: 11, padding: '5px 10px', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+              <Plus size={11} /> Añadir premio
+            </button>
+          )}
+
+          <div style={{ fontSize: 11, color: 'var(--c-muted)', marginTop: 10, lineHeight: 1.5 }}>
+            Se ordenan solos de menos a más visualizaciones. Tiene que quedar al menos uno.
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 10, justifyContent: 'flex-end' }}>
+            <button onClick={() => setEdit(null)} style={ds.secondaryBtn} disabled={busy}>Cancelar</button>
+            <button onClick={guardarEscalera} style={ds.primaryBtn} disabled={busy || edit.length === 0}>
+              {busy ? 'Guardando…' : 'Guardar escalera'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Tope mensual ── */}
+      {activo && (
+        <div style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+          <div style={{ flex: 1, maxWidth: 200 }}>
+            <label style={{ fontSize: 10, color: 'var(--c-muted)' }}>Tope mensual (€, vacío = sin tope)</label>
+            <input style={ds.formInput} type="number" step="5" min="1" placeholder="Sin tope"
+                   value={topeInput} onChange={e => setTopeInput(e.target.value)} />
+          </div>
+          <button onClick={guardarTope} style={ds.secondaryBtn} disabled={busy}>Guardar tope</button>
         </div>
       )}
     </div>
