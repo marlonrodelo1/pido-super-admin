@@ -18,6 +18,7 @@ import Reembolsos from './pages/Reembolsos'
 import Liquidaciones from './pages/Liquidaciones'
 import Cargos from './pages/Cargos'
 import Socios from './pages/Socios'
+import Creadores from './pages/Creadores'
 import LandingRiders from './pages/LandingRiders'
 import { useMediaQuery, BP } from './lib/useMediaQuery'
 import './index.css'
@@ -35,6 +36,7 @@ const SECCION_TITULOS = {
   liquidaciones: 'Liquidaciones',
   cargos: 'Cargos',
   socios: 'Socios',
+  creadores: 'Creadores',
   'landing-riders': 'Landing Riders',
   salud: 'Salud del sistema',
   config: 'Configuración',
@@ -198,6 +200,7 @@ function AppContent() {
           {seccion === 'liquidaciones' && <Liquidaciones />}
           {seccion === 'cargos' && <Cargos />}
           {seccion === 'socios' && <Socios />}
+          {seccion === 'creadores' && <Creadores />}
           {seccion === 'landing-riders' && <LandingRiders />}
           {seccion === 'salud' && <SaludSistema />}
           {seccion === 'config' && <Configuracion />}

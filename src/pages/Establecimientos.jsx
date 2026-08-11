@@ -8,6 +8,7 @@ import CargaMasivaModal from '../components/CargaMasivaModal'
 import ImportUrlModal from '../components/ImportUrlModal'
 import RidersCard from '../components/RidersCard'
 import HorarioEstadoCard from '../components/HorarioEstadoCard'
+import CreadoresCard from '../components/CreadoresCard'
 // PlanTiendaCard eliminado: el plan SaaS 39€/mes está muerto. El alta/plan se gestiona en AltaPlanCard (abajo).
 import ResetPasswordModal from '../components/ResetPasswordModal'
 import EliminarEntidadModal from '../components/EliminarEntidadModal'
@@ -591,6 +592,9 @@ export default function Establecimientos() {
           establecimiento={detalle}
           onChanged={async () => { await load(); const { data } = await supabase.from('establecimientos').select('*').eq('id', detalle.id).single(); if (data) setDetalle(data) }}
         />
+
+        {/* Pidoo Creadores — interruptor maestro (el dueño solo puede pausar) */}
+        <CreadoresCard establecimiento={detalle} />
 
         {/* Categorías generales — chips asignadas + dropdown añadir */}
         <div style={{ marginTop: 20 }}>

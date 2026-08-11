@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   BarChart3, Store, Users, User, ClipboardList, Map,
   MessageCircle, Settings, LogOut, X, Truck, Bell, RotateCcw, FileText, Receipt,
-  Activity, Scale,
+  Activity, Scale, Video,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { colors } from '../lib/darkStyles'
@@ -24,6 +24,7 @@ const menuItems = [
   { id: 'reembolsos',         label: 'Reembolsos',         Icon: RotateCcw },
   { id: 'liquidaciones',      label: 'Liquidaciones',      Icon: Receipt },
   { id: 'cargos',             label: 'Cargos',             Icon: Scale },
+  { id: 'creadores',          label: 'Creadores',          Icon: Video },
   { id: 'notificaciones',     label: 'Notificaciones',     Icon: Bell },
   { id: 'soporte',            label: 'Soporte',            Icon: MessageCircle },
   { id: 'soporte-rider',      label: 'Soporte rider',      Icon: Truck },
@@ -35,10 +36,12 @@ const menuItems = [
 export default function Sidebar({ active, onChange, onLogout, user, mobile = false, onClose }) {
   const [pendientes, setPendientes] = useState(0)
   const [unreadRider, setUnreadRider] = useState(0)
+  const [creadoresPend, setCreadoresPend] = useState(0)
 
   useEffect(() => {
     loadPendientes()
     loadUnreadRider()
+    loadCreadoresPend()
     const ch1 = supabase.channel('sidebar-pendientes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'socio_establecimiento' }, loadPendientes)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'establecimientos' }, loadPendientes)
@@ -46,7 +49,11 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
     const ch2 = supabase.channel('sidebar-unread-rider')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'rider_support_messages' }, loadUnreadRider)
       .subscribe()
-    return () => { supabase.removeChannel(ch1); supabase.removeChannel(ch2) }
+    // Creadores va por polling y NO por realtime: `participaciones_creador` no está
+    // en la publicación `supabase_realtime`, así que un .subscribe() devolvería
+    // SUBSCRIBED y no llegaría jamás un evento — fallo mudo.
+    const t = setInterval(loadCreadoresPend, 60000)
+    return () => { supabase.removeChannel(ch1); supabase.removeChannel(ch2); clearInterval(t) }
   }, [])
 
   // Lo que espera decisión del superadmin, agregado sobre "Establecimientos" (donde se resuelve):
@@ -70,6 +77,18 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
       .eq('remitente', 'rider')
       .eq('leido', false)
     setUnreadRider(count || 0)
+  }
+
+  // Vídeos en juego que llevan más de 24 h sin que nadie mire sus visualizaciones.
+  // Con las lecturas a mano, el enganche del cliente se pierde por aquí mucho antes
+  // que por volumen: ve su barra congelada varios días y deja de mirar.
+  async function loadCreadoresPend() {
+    const hace24h = new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+    const { count } = await supabase.from('participaciones_creador')
+      .select('id', { count: 'exact', head: true })
+      .in('estado', ['activa', 'en_espera_tope'])
+      .or(`ultima_revision_at.is.null,ultima_revision_at.lt.${hace24h}`)
+    setCreadoresPend(count || 0)
   }
 
   const userEmail = user?.email || ''
@@ -167,6 +186,7 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
           const dynamicBadge =
             item.id === 'establecimientos' ? pendientes :
             item.id === 'soporte-rider' ? unreadRider :
+            item.id === 'creadores' ? creadoresPend :
             0
 
           return (
