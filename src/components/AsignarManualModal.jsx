@@ -47,25 +47,40 @@ export default function AsignarManualModal({ pedido, establecimiento, onClose, o
   async function cargarRiders() {
     setCargando(true)
     try {
-      // Vinculados al restaurante
-      const { data: rrData } = await supabase
-        .from('restaurante_riders')
-        .select('prioridad, rider_account_id, rider_accounts!inner(id, nombre, telefono, activa, estado, socio_id)')
-        .eq('establecimiento_id', pedido.establecimiento_id)
-        .eq('rider_accounts.activa', true)
-        .eq('rider_accounts.estado', 'activa')
-      const vincList = (rrData || [])
-        .map((r) => ({ ...r.rider_accounts, prioridad: r.prioridad }))
-        .filter((r) => !!r.id)
-      setVinculados(vincList)
-
-      // Todos los activos (para forzar)
+      // Todos los activos (base para las dos listas)
       const { data: allRiders } = await supabase
         .from('rider_accounts')
         .select('id, nombre, telefono, activa, estado, socio_id')
         .eq('activa', true)
         .eq('estado', 'activa')
       setTodos(allRiders || [])
+
+      // ── Quién está vinculado a ESTE restaurante ──
+      // Se mira en las DOS tablas, y la buena es la segunda:
+      //   · `restaurante_riders` es del modelo Shipday. Está VACÍA en 6 de los 9
+      //     restaurantes (Café Bar Australia 0, Mamma Mia 0, Octava Isla 0…).
+      //   · `socio_establecimiento` con estado 'activa' es el vínculo de verdad
+      //     hoy, el que aprueba el restaurante y el que usa el dispatcher.
+      // Mirando solo la primera, este modal marcaba a TODOS como "no vinculado"
+      // y obligaba a activar el modo forzar, con lo que cada asignación manual
+      // se mandaba con `forzar: true`.
+      const [rrRes, seRes] = await Promise.all([
+        supabase
+          .from('restaurante_riders')
+          .select('prioridad, rider_account_id')
+          .eq('establecimiento_id', pedido.establecimiento_id),
+        supabase
+          .from('socio_establecimiento')
+          .select('socio_id')
+          .eq('establecimiento_id', pedido.establecimiento_id)
+          .eq('estado', 'activa'),
+      ])
+      const prioridadPorCuenta = new Map((rrRes.data || []).map((r) => [r.rider_account_id, r.prioridad]))
+      const sociosVinculados = new Set((seRes.data || []).map((s) => s.socio_id))
+      const vincList = (allRiders || [])
+        .filter((r) => prioridadPorCuenta.has(r.id) || (r.socio_id && sociosVinculados.has(r.socio_id)))
+        .map((r) => ({ ...r, prioridad: prioridadPorCuenta.get(r.id) ?? 999 }))
+      setVinculados(vincList)
 
       const ids = Array.from(new Set([...(allRiders || []).map((r) => r.id), ...vincList.map((r) => r.id)]))
       if (ids.length > 0) {
@@ -207,7 +222,10 @@ export default function AsignarManualModal({ pedido, establecimiento, onClose, o
   const restNombre = establecimiento?.nombre || pedido?.establecimientos?.nombre || '—'
 
   return (
-    <div style={ds.modal} onClick={onClose}>
+    // zIndex 1300: la ficha del pedido (PedidoDrawer) va en 1200, y este modal
+    // se abre DESDE ella. Con el 1000 de `ds.modal` quedaba por detrás y medio
+    // tapado por el panel, que es justo el "sale por atrás" que se reportó.
+    <div style={{ ...ds.modal, zIndex: 1300 }} onClick={onClose}>
       <div
         className="admin-modal-content"
         style={{ ...ds.modalContent, maxWidth: 640, width: '90vw', maxHeight: '90vh', overflow: 'auto' }}

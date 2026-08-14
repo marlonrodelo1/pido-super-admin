@@ -239,6 +239,11 @@ export default function PedidoDrawer({ pedido: pedidoProp, onClose, onReasignar,
           </Chip>
           <Chip tono="neutral">{pedido.modo_entrega === 'delivery' ? 'Reparto' : 'Recogida'}</Chip>
           {yaReembolsado && <Chip tono="sage">Reembolsado</Chip>}
+          {/* Aceptación del restaurante, arriba del todo: es el dato que decide
+              si el pedido va a salir adelante o se va a auto-cancelar. */}
+          {!pedido.aceptado_at && !ESTADOS_CERRADOS.includes(pedido.estado) && (
+            <Chip tono="danger" title="El restaurante todavía no lo ha aceptado">Sin aceptar</Chip>
+          )}
           <span style={{ marginLeft: 'auto', ...type.h3, color: colors.text }}>{fmtEUR(pedido.total)}</span>
         </div>
       </div>

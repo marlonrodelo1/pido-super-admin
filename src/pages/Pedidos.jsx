@@ -157,7 +157,14 @@ export default function Pedidos() {
                 {p.establecimientos?.nombre || '—'}
               </span>
               <span data-col="tot" style={{ width: 84, flexShrink: 0, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{fmtEUR(p.total)}</span>
-              <span data-col="est" style={{ flex: '1 1 96px', minWidth: 0 }}><EstadoBadge estado={p.estado} /></span>
+              <span data-col="est" style={{ flex: '1 1 96px', minWidth: 0, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                <EstadoBadge estado={p.estado} />
+                {/* Sin aceptar por el restaurante: el hueco por el que se
+                    pierden los pedidos (10 auto-cancelados en 45 días). */}
+                {!p.aceptado_at && !['cancelado', 'fallido', 'entregado'].includes(p.estado) && (
+                  <Chip tono="danger" title="El restaurante todavía no lo ha aceptado">Sin aceptar</Chip>
+                )}
+              </span>
               <span data-col="pag" style={{ width: 84, flexShrink: 0 }}>
                 <Chip tono={p.metodo_pago === 'tarjeta' ? 'info' : 'warning'}>
                   {p.metodo_pago === 'tarjeta' ? 'Tarjeta' : p.metodo_pago === 'datafono' ? 'Datáfono' : 'Efectivo'}

@@ -2,8 +2,8 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { useJsApiLoader } from '@react-google-maps/api'
 import { supabase } from '../lib/supabase'
 import { ds, colors, type, radius } from '../lib/darkStyles'
-import { Card, Chip, EstadoBadge, GhostBtn, GlossyBtn, StatCard, Vacio, fmtEUR } from '../lib/ui'
-import { RefreshCw, MapPin, Phone, Navigation, AlertTriangle } from 'lucide-react'
+import { Card, Chip, EstadoBadge, GhostBtn, GlossyBtn, MiniBtn, StatCard, Vacio, fmtEUR } from '../lib/ui'
+import { RefreshCw, MapPin, Phone, Navigation, AlertTriangle, Eye } from 'lucide-react'
 import AsignarManualModal from '../components/AsignarManualModal'
 import MapaFlota from '../components/MapaFlota'
 import PedidoDrawer from '../components/PedidoDrawer'
@@ -61,6 +61,7 @@ export default function Dispatch() {
   const [socios, setSocios] = useState([])
   const [cuentas, setCuentas] = useState([])          // rider_accounts
   const [establecimientos, setEstablecimientos] = useState([])
+  const [asignaciones, setAsignaciones] = useState({}) // pedido_id -> última oferta sin resolver
   const [pedidoSel, setPedidoSel] = useState(null)     // id del pedido elegido (lo enfoca el mapa)
   const [ficha, setFicha] = useState(null)             // id del pedido con la ficha abierta
   const [modalAsignar, setModalAsignar] = useState(null)
@@ -83,9 +84,13 @@ export default function Dispatch() {
   }, [])
 
   async function cargar() {
-    const [pedRes, socRes, cuentasRes, estRes] = await Promise.all([
+    const [pedRes, socRes, cuentasRes, estRes, asigRes] = await Promise.all([
       supabase.from('pedidos')
-        .select('id, codigo, estado, modo_entrega, total, created_at, assigned_at, socio_id, rider_account_id, shipday_status, intento_asignacion, establecimiento_id, direccion_entrega, lat_entrega, lng_entrega, metodo_pago, establecimientos(nombre, latitud, longitud)')
+        // `aceptado_at` es imprescindible: sin él la insignia "Sin aceptar" salía
+        // SIEMPRE, porque una columna que no se pide llega como undefined y eso
+        // es falsy. Es la misma clase de fallo que documenta lib/estColumns.js
+        // en pido-app: cada listado escribiendo su propia lista de columnas.
+        .select('id, codigo, estado, modo_entrega, total, created_at, aceptado_at, assigned_at, socio_id, rider_account_id, shipday_status, intento_asignacion, establecimiento_id, direccion_entrega, lat_entrega, lng_entrega, metodo_pago, establecimientos(nombre, latitud, longitud)')
         .in('estado', ESTADOS_EN_VUELO)
         .order('created_at', { ascending: true }),
       supabase.from('socios')
@@ -97,11 +102,21 @@ export default function Dispatch() {
       supabase.from('establecimientos')
         .select('id, nombre, latitud, longitud, logo_url, activo, estado')
         .eq('activo', true),
+      // Última oferta de cada pedido: es lo único que dice si el repartidor
+      // ACEPTÓ o sigue sin contestar. Sin esto, un pedido con repartidor
+      // asignado y uno ya aceptado se ven igual.
+      supabase.from('pedido_asignaciones')
+        .select('pedido_id, intento, estado, created_at, rider_account_id')
+        .is('resolved_at', null)
+        .order('intento', { ascending: false }),
     ])
     setPedidos(pedRes.data || [])
     setSocios(socRes.data || [])
     setCuentas(cuentasRes.data || [])
     setEstablecimientos(estRes.data || [])
+    const ultima = {}
+    for (const a of (asigRes.data || [])) if (!ultima[a.pedido_id]) ultima[a.pedido_id] = a
+    setAsignaciones(ultima)
     setUltima(new Date())
     setCargando(false)
   }
@@ -227,14 +242,44 @@ export default function Dispatch() {
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                     <EstadoBadge estado={p.estado} />
+                    {/* ¿Lo ha aceptado el RESTAURANTE? `aceptado_at` es el sello.
+                        Un pedido recién entrado y uno ya aceptado se veían igual,
+                        y es justo el hueco por el que se pierden (10 auto-
+                        cancelados en 45 días por no aceptar a tiempo). */}
+                    {!p.aceptado_at && !['cancelado', 'fallido', 'entregado'].includes(p.estado) && (
+                      <Chip tono="danger" title="El restaurante todavía no lo ha aceptado">Sin aceptar</Chip>
+                    )}
                     {p.modo_entrega === 'recogida'
                       ? <Chip tono="neutral">Recogida</Chip>
                       : socio
-                        ? <Chip tono="sage" dot>{socio.nombre?.split(' ')[0]}</Chip>
+                        ? (
+                          // Con repartidor asignado hay dos situaciones muy
+                          // distintas: que lo haya aceptado o que siga sin
+                          // contestar. Antes las dos se pintaban igual.
+                          asignaciones[p.id]?.estado === 'esperando_aceptacion'
+                            ? <Chip tono="warning" title={`Ofrecido hace ${hace(asignaciones[p.id].created_at)}, sin respuesta`}>
+                                {socio.nombre?.split(' ')[0]}: sin contestar
+                              </Chip>
+                            : <Chip tono="sage" dot title="Repartidor que ha aceptado el pedido">
+                                {socio.nombre?.split(' ')[0]} lo aceptó
+                              </Chip>
+                        )
                         : <Chip tono="danger">Sin repartidor</Chip>}
                     {(p.intento_asignacion || 0) > 0 && <Chip tono="warning">Intento {p.intento_asignacion}/3</Chip>}
                   </div>
                   <div style={{ ...type.caption, color: colors.stone, marginTop: 6 }}>Entró hace {hace(p.created_at)}</div>
+
+                  {/* Las dos acciones, en el propio pedido */}
+                  <div style={{ display: 'flex', gap: 6, marginTop: 10 }} onClick={e => e.stopPropagation()}>
+                    <MiniBtn onClick={() => { setPedidoSel(p.id); setFicha(p.id) }} aria-label={`Ver el pedido ${p.codigo}`}>
+                      <Eye size={12} /> Ver pedido
+                    </MiniBtn>
+                    {p.modo_entrega === 'delivery' && !['cancelado', 'fallido', 'entregado'].includes(p.estado) && (
+                      <MiniBtn onClick={() => abrirAsignar(p)} aria-label={`Reasignar el pedido ${p.codigo}`}>
+                        <RefreshCw size={12} /> {p.socio_id ? 'Reasignar' : 'Asignar'}
+                      </MiniBtn>
+                    )}
+                  </div>
                 </div>
               )
             })}
