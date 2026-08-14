@@ -262,10 +262,12 @@ export function PillTabs({ options, value, onChange, style }) {
             }}
           >
             {opt.label}
+            {/* El fondo del contador cuando la pestaña está activa se OSCURECE:
+                aclarar el terracota con blanco al 22% dejaba la cifra en 2,82:1. */}
             {opt.count != null && (
               <span style={{
                 fontSize: 11, padding: '0 6px', borderRadius: radius.full,
-                background: activo ? 'rgba(255,255,255,0.22)' : colors.cream2,
+                background: activo ? 'rgba(26,24,21,0.22)' : colors.cream2,
                 color: activo ? colors.cream : colors.stone,
               }}>{opt.count}</span>
             )}

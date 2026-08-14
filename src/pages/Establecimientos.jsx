@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { uploadImage } from '../lib/upload'
-import { ds } from '../lib/darkStyles'
+import { ds, colors, type, radius } from '../lib/darkStyles'
+import { Card, Chip, EstadoBadge, GhostBtn, GlossyBtn, MiniBtn, PillTabs, SectionLabel, Toggle, Vacio } from '../lib/ui'
 import { Plus, X, Upload, Save, Trash2, KeyRound, Search, ChevronLeft, ChevronRight, Pencil, Copy, Eye, EyeOff, Wand2, Check, Share2 } from 'lucide-react'
 import { toast, confirmar } from '../App'
 import CargaMasivaModal from '../components/CargaMasivaModal'
@@ -15,6 +16,32 @@ import EliminarEntidadModal from '../components/EliminarEntidadModal'
 import AddressAutocomplete from '../components/AddressAutocomplete'
 
 const CATEGORIAS_PADRE = ['comida', 'farmacia', 'marketplace']
+
+// Fila de listado dentro de una Card. Antes cada producto/extra/reseña era otra
+// `ds.card` metida dentro de la card de la sección: dos sombras y dos bordes del
+// mismo color, uno dentro de otro, que no separaban nada.
+const filaLista = {
+  display: 'flex', alignItems: 'center', gap: 12,
+  padding: '10px 12px', marginBottom: 6,
+  borderRadius: radius.md,
+  border: `1px solid ${colors.border}`,
+  background: colors.cream,
+}
+
+// Aspa de cerrar modal — repetida a mano en los tres modales de la pantalla.
+const cerrarModalBtn = {
+  background: colors.cream2, border: 'none', borderRadius: radius.sm,
+  width: 32, height: 32, cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+}
+
+// Opción de contraseña (radio grande) del modal de creación.
+const opcionPwd = {
+  display: 'flex', alignItems: 'center', gap: 8,
+  padding: '10px 12px', minHeight: 44, borderRadius: radius.sm,
+  border: '1px solid transparent', cursor: 'pointer',
+  ...type.body, color: colors.text,
+}
 
 export default function Establecimientos() {
   const [items, setItems] = useState([])
@@ -124,7 +151,17 @@ export default function Establecimientos() {
     setEstCats((data || []).map(d => d.categoria_id))
   }
 
-  async function toggleActivo(id, activo) {
+  // `activo` decide si el restaurante SE VE en la app del cliente, y además la pisa
+  // el motor de presencia cada minuto. Antes esto era un botón que ponía "On"/"Off";
+  // al pasar a interruptor se volvió mucho más fácil de accionar sin querer, así que
+  // se pregunta. La escritura es exactamente la misma de siempre.
+  async function toggleActivo(id, activo, nombre = 'este establecimiento') {
+    const ok = await confirmar(
+      activo
+        ? `¿Cerrar «${nombre}» ahora mismo? Dejará de verse en la app del cliente hasta que se vuelva a abrir.`
+        : `¿Abrir «${nombre}» ahora mismo?`
+    )
+    if (!ok) return
     const { error } = await supabase.from('establecimientos').update({ activo: !activo }).eq('id', id)
     if (error) return toast('Error: ' + error.message, 'error')
     load()
@@ -470,68 +507,62 @@ export default function Establecimientos() {
       <div>
         <button onClick={() => { setDetalle(null); setEditando(false) }} style={ds.backBtn}>← Volver</button>
 
-        <div style={{ ...ds.card, padding: 28 }}>
+        <Card pad={24}>
           <div className="admin-page-header" style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
-            <div style={{ width: 60, height: 60, borderRadius: 14, background: 'var(--c-surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, overflow: 'hidden', cursor: 'pointer', position: 'relative' }}
+            <div style={{ width: 60, height: 60, borderRadius: radius.md, background: colors.cream2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, overflow: 'hidden', cursor: 'pointer', position: 'relative' }}
               onClick={() => logoRef.current?.click()}>
               {(form.logo_url || detalle.logo_url) ? <img src={form.logo_url || detalle.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🍽️'}
               <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0 }} onMouseEnter={e => e.currentTarget.style.opacity = 1} onMouseLeave={e => e.currentTarget.style.opacity = 0}>
-                <Upload size={16} color="#fff" />
+                <Upload size={16} color={colors.cream} />
               </div>
               <input ref={logoRef} type="file" accept="image/*" hidden onChange={e => handleUpload(e.target.files[0], 'logo_url')} />
             </div>
             <div style={{ flex: 1 }}>
               {editando ? (
-                <input value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} style={{ ...ds.formInput, fontSize: 18, fontWeight: 800 }} />
+                <input value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} style={{ ...ds.formInput, fontSize: type.h3.fontSize, fontWeight: 700, height: 44 }} />
               ) : (
-                <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-text)' }}>{detalle.nombre}</h2>
+                <h1 style={ds.h1}>{detalle.nombre}</h1>
               )}
-              <div style={{ fontSize: 12, ...ds.muted }}>{detalle.tipo} · {detalle.categoria_padre}</div>
+              <div style={{ ...type.label, color: colors.textMute, marginTop: 4 }}>{detalle.tipo} · {detalle.categoria_padre}</div>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {!editando ? (
                 <>
-                  <button
+                  <GhostBtn
                     onClick={() => setResetPwd(true)}
                     disabled={!detalle.user_id}
                     title={detalle.user_id ? 'Restablecer contraseña del dueño' : 'Sin dueño vinculado'}
-                    style={{ ...ds.secondaryBtn, display: 'flex', alignItems: 'center', gap: 4, opacity: detalle.user_id ? 1 : 0.4 }}
+                    style={{ opacity: detalle.user_id ? 1 : 0.4 }}
                   >
                     <KeyRound size={14} /> Contraseña
-                  </button>
-                  <button
+                  </GhostBtn>
+                  <GhostBtn
+                    danger
                     onClick={() => setShowEliminar(true)}
                     title="Eliminar restaurante definitivamente"
-                    style={{
-                      ...ds.secondaryBtn,
-                      color: '#B5564A',
-                      borderColor: 'rgba(220,38,38,0.32)',
-                      background: 'rgba(220,38,38,0.06)',
-                      display: 'flex', alignItems: 'center', gap: 4,
-                    }}
                   >
                     <Trash2 size={14} /> Eliminar
-                  </button>
-                  <button onClick={() => { setForm(initForm(detalle)); setEditando(true) }} style={ds.primaryBtn}>Editar</button>
+                  </GhostBtn>
+                  <GlossyBtn accent onClick={() => { setForm(initForm(detalle)); setEditando(true) }}>Editar</GlossyBtn>
                 </>
               ) : (
                 <>
-                  <button onClick={guardarEstablecimiento} disabled={saving} style={{ ...ds.primaryBtn, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <GlossyBtn accent onClick={guardarEstablecimiento} disabled={saving}>
                     <Save size={14} /> {saving ? 'Guardando...' : 'Guardar'}
-                  </button>
-                  <button onClick={() => setEditando(false)} style={ds.secondaryBtn}>Cancelar</button>
+                  </GlossyBtn>
+                  <GhostBtn onClick={() => setEditando(false)}>Cancelar</GhostBtn>
                 </>
               )}
             </div>
           </div>
 
           {/* Banner upload */}
-          <div style={{ height: 120, borderRadius: 12, marginBottom: 16, overflow: 'hidden', cursor: 'pointer', position: 'relative',
-            background: (form.banner_url || detalle.banner_url) ? `url(${form.banner_url || detalle.banner_url}) center/cover` : 'var(--c-surface2)',
+          <div style={{ height: 120, borderRadius: radius.md, marginBottom: 16, overflow: 'hidden', cursor: 'pointer', position: 'relative',
+            background: (form.banner_url || detalle.banner_url) ? `url(${form.banner_url || detalle.banner_url}) center/cover` : colors.cream2,
           }} onClick={() => bannerRef.current?.click()}>
             <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: 0, transition: '0.2s' }}
               onMouseEnter={e => e.currentTarget.style.opacity = 1} onMouseLeave={e => e.currentTarget.style.opacity = 0}>
-              <Upload size={16} color="#fff" /><span style={{ color: '#fff', fontSize: 12, fontWeight: 600 }}>{uploading === 'banner_url' ? 'Subiendo...' : 'Cambiar banner (800x300 px)'}</span>
+              <Upload size={16} color={colors.cream} /><span style={{ ...type.label, color: colors.cream, fontWeight: 600 }}>{uploading === 'banner_url' ? 'Subiendo...' : 'Cambiar banner (800x300 px)'}</span>
             </div>
             <input ref={bannerRef} type="file" accept="image/*" hidden onChange={e => handleUpload(e.target.files[0], 'banner_url')} />
           </div>
@@ -561,7 +592,7 @@ export default function Establecimientos() {
                   placeholder="Buscar dirección…"
                 />
                 {form.latitud != null && form.longitud != null && (
-                  <div style={{ marginTop: 6, fontSize: 11.5, color: 'var(--c-muted)' }}>
+                  <div style={{ marginTop: 6, ...type.caption, color: colors.textMute }}>
                     Coordenadas: {Number(form.latitud).toFixed(6)}, {Number(form.longitud).toFixed(6)}
                   </div>
                 )}
@@ -570,16 +601,34 @@ export default function Establecimientos() {
               <div style={{ gridColumn: '1/-1' }}><label style={ds.label}>Descripción</label><textarea value={form.descripcion} onChange={e => setForm({ ...form, descripcion: e.target.value })} rows={2} style={{ ...ds.formInput, resize: 'vertical' }} /></div>
             </div>
           ) : (
-            <div className="admin-grid-2col-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 13, color: 'var(--c-text)' }}>
-              <div><span style={ds.muted}>Email:</span> {detalle.email || '-'}</div>
-              <div><span style={ds.muted}>Telefono:</span> {detalle.telefono || '-'}</div>
-              <div><span style={ds.muted}>Direccion:</span> {detalle.direccion || '-'}</div>
-              <div><span style={ds.muted}>Radio:</span> {detalle.radio_cobertura_km} km</div>
-              <div><span style={ds.muted}>Rating:</span> {detalle.rating?.toFixed(1)} ({detalle.total_resenas} reseñas)</div>
-              <div><span style={ds.muted}>Creado:</span> {new Date(detalle.created_at).toLocaleDateString('es-ES')}</div>
+            <div className="admin-grid-2col-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div>
+                <div style={ds.label}>Email</div>
+                <div style={{ ...type.body, color: colors.text }}>{detalle.email || '—'}</div>
+              </div>
+              <div>
+                <div style={ds.label}>Teléfono</div>
+                <div style={{ ...type.body, color: colors.text }}>{detalle.telefono || '—'}</div>
+              </div>
+              <div>
+                <div style={ds.label}>Dirección</div>
+                <div style={{ ...type.body, color: colors.text }}>{detalle.direccion || '—'}</div>
+              </div>
+              <div>
+                <div style={ds.label}>Radio de cobertura</div>
+                <div style={{ ...type.body, color: colors.text }}>{detalle.radio_cobertura_km} km</div>
+              </div>
+              <div>
+                <div style={ds.label}>Rating</div>
+                <div style={{ ...type.body, color: colors.text }}>{detalle.rating?.toFixed(1)} ({detalle.total_resenas} reseñas)</div>
+              </div>
+              <div>
+                <div style={ds.label}>Creado</div>
+                <div style={{ ...type.body, color: colors.text }}>{new Date(detalle.created_at).toLocaleDateString('es-ES')}</div>
+              </div>
             </div>
           )}
-        </div>
+        </Card>
 
         {/* Socios vinculados */}
         <RidersCard
@@ -603,56 +652,49 @@ export default function Establecimientos() {
         <CreadoresCard establecimiento={detalle} />
 
         {/* Categorías generales — chips asignadas + dropdown añadir */}
-        <div style={{ marginTop: 20 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', marginBottom: 10 }}>Categorías generales</h3>
+        <Card style={{ marginTop: 20 }}>
+          <h3 style={{ ...ds.h3, marginBottom: 10 }}>Categorías generales</h3>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
             {catsAsignadas.length === 0 && (
-              <span style={{ fontSize: 12, ...ds.muted }}>Sin categorías asignadas</span>
+              <span style={{ ...type.body, color: colors.textMute }}>Sin categorías asignadas</span>
             )}
             {catsAsignadas.map(c => (
-              <span key={c.id} style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '6px 8px 6px 12px', borderRadius: 999,
-                border: '1px solid rgba(255,107,44,0.32)',
-                background: 'rgba(255,107,44,0.10)',
-                color: '#C5562C', fontSize: 12, fontWeight: 600,
-                fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif",
-              }}>
+              <Chip key={c.id} tono="terracotta" style={{ paddingRight: 5 }}>
                 {c.emoji} {c.nombre}
                 <button
                   aria-label={`Quitar categoría ${c.nombre}`}
                   onClick={() => toggleCatGeneral(c.id)}
                   style={{
                     background: 'transparent', border: 'none', cursor: 'pointer',
-                    color: '#C5562C', display: 'inline-flex', alignItems: 'center',
-                    padding: 2, borderRadius: 999,
+                    color: colors.onTerracottaSoft, display: 'inline-flex', alignItems: 'center',
+                    padding: 2, borderRadius: radius.full,
                   }}
                 >
                   <X size={12} />
                 </button>
-              </span>
+              </Chip>
             ))}
             <div style={{ position: 'relative' }}>
-              <button
+              <GhostBtn
+                size="sm"
                 aria-label="Añadir categoría general"
                 onClick={() => setShowAddCatGeneral(s => !s)}
                 disabled={catsNoAsignadas.length === 0}
                 style={{
-                  ...ds.secondaryBtn, fontSize: 12,
                   opacity: catsNoAsignadas.length === 0 ? 0.5 : 1,
                   cursor: catsNoAsignadas.length === 0 ? 'not-allowed' : 'pointer',
                 }}
               >
                 <Plus size={12} /> {catsNoAsignadas.length === 0 ? 'Todas asignadas' : 'Añadir categoría'}
-              </button>
+              </GhostBtn>
               {showAddCatGeneral && catsNoAsignadas.length > 0 && (
                 <>
                   <div onClick={() => setShowAddCatGeneral(false)} style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
                   <div style={{
                     position: 'absolute', top: '100%', left: 0, marginTop: 6, zIndex: 60,
                     minWidth: 220, maxWidth: 320, maxHeight: 280, overflowY: 'auto',
-                    background: '#fff', border: '1px solid var(--c-border-strong)',
-                    borderRadius: 10, boxShadow: '0 8px 24px rgba(15,15,15,0.14)',
+                    background: colors.paper, border: `1px solid ${colors.borderStrong}`,
+                    borderRadius: radius.md, boxShadow: colors.shadowLg,
                     padding: 4,
                   }}>
                     {catsNoAsignadas.map(c => (
@@ -662,12 +704,11 @@ export default function Establecimientos() {
                         style={{
                           display: 'flex', alignItems: 'center', gap: 8,
                           width: '100%', padding: '10px 12px', minHeight: 44,
-                          background: 'transparent', border: 'none', borderRadius: 6,
-                          fontSize: 13, color: 'var(--c-text)', cursor: 'pointer',
-                          fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif",
+                          background: 'transparent', border: 'none', borderRadius: radius.sm,
+                          ...type.label, color: colors.text, cursor: 'pointer',
                           textAlign: 'left',
                         }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'var(--c-surface2)'}
+                        onMouseEnter={e => e.currentTarget.style.background = colors.cream2}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                       >
                         <span>{c.emoji}</span> {c.nombre}
@@ -678,18 +719,21 @@ export default function Establecimientos() {
               )}
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Categorías de la carta — selector + acciones */}
-        <div style={{ marginTop: 20 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', marginBottom: 10 }}>Categorías de la carta</h3>
+        <Card style={{ marginTop: 20 }}>
+          <h3 style={{ ...ds.h3, marginBottom: 10 }}>Categorías de la carta</h3>
           {categorias.length === 0 ? (
-            <div style={{ ...ds.card, padding: 16, textAlign: 'center' }}>
-              <div style={{ fontSize: 13, color: 'var(--c-muted)', marginBottom: 10 }}>Aún no hay categorías</div>
-              <button onClick={abrirCrearCategoriaModal} style={ds.primaryBtn}>
-                <Plus size={14} /> Crea tu primera categoría
-              </button>
-            </div>
+            <Vacio
+              titulo="Aún no hay categorías"
+              texto="Las categorías agrupan los productos dentro de la carta del restaurante."
+              accion={(
+                <GlossyBtn accent onClick={abrirCrearCategoriaModal}>
+                  <Plus size={14} /> Crea tu primera categoría
+                </GlossyBtn>
+              )}
+            />
           ) : (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
               <select
@@ -703,44 +747,46 @@ export default function Establecimientos() {
                   <option key={c.id} value={c.id}>{c.nombre} (orden {c.orden})</option>
                 ))}
               </select>
-              <button onClick={abrirCrearCategoriaModal} style={ds.secondaryBtn} aria-label="Nueva categoría">
+              <GhostBtn onClick={abrirCrearCategoriaModal} aria-label="Nueva categoría">
                 <Plus size={14} /> Nueva
-              </button>
+              </GhostBtn>
               {selectedCartCatId && (() => {
                 const c = categorias.find(x => x.id === selectedCartCatId)
                 if (!c) return null
                 return (
                   <>
-                    <button onClick={() => abrirEditarCategoriaModal(c)} style={ds.secondaryBtn} aria-label={`Editar ${c.nombre}`}>
+                    <GhostBtn onClick={() => abrirEditarCategoriaModal(c)} aria-label={`Editar ${c.nombre}`}>
                       <Pencil size={12} /> Editar
-                    </button>
-                    <button onClick={() => eliminarCategoria(c.id)} style={{ ...ds.secondaryBtn, color: 'var(--c-danger)', borderColor: 'rgba(220,38,38,0.32)' }} aria-label={`Eliminar ${c.nombre}`}>
+                    </GhostBtn>
+                    <GhostBtn danger onClick={() => eliminarCategoria(c.id)} aria-label={`Eliminar ${c.nombre}`}>
                       <Trash2 size={12} /> Eliminar
-                    </button>
+                    </GhostBtn>
                   </>
                 )
               })()}
             </div>
           )}
-        </div>
+        </Card>
 
         {/* Productos — buscador + filtro categoría + paginación */}
-        <div style={{ marginTop: 20 }}>
-          <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, gap: 8, flexWrap: 'wrap' }}>
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)' }}>
+        <Card style={{ marginTop: 20 }}>
+          <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, gap: 8, flexWrap: 'wrap' }}>
+            <h3 style={ds.h3}>
               Productos ({productosFiltrados.length}{productosFiltrados.length !== productos.length ? ` de ${productos.length}` : ''})
             </h3>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              <button onClick={() => setShowImportUrl(true)} style={{ ...ds.secondaryBtn, fontSize: 11, padding: '0 12px', height: 30, display: 'flex', alignItems: 'center', gap: 4 }}>🔗 Importar URL</button>
-              <button onClick={() => setShowCargaMasiva(true)} style={{ ...ds.secondaryBtn, fontSize: 11, padding: '0 12px', height: 30, display: 'flex', alignItems: 'center', gap: 4 }}><Upload size={12} /> Carga masiva</button>
-              <button onClick={() => { setEditProd('new'); setProdForm({ nombre: '', descripcion: '', precio: '', precio_local: '', categoria_id: selectedCartCatId || '', imagen_url: '' }); setProdExtras([]) }} style={{ ...ds.primaryBtn, fontSize: 11, padding: '0 12px', height: 30 }}>+ Producto</button>
+              <GhostBtn size="sm" onClick={() => setShowImportUrl(true)}>🔗 Importar URL</GhostBtn>
+              <GhostBtn size="sm" onClick={() => setShowCargaMasiva(true)}><Upload size={12} /> Carga masiva</GhostBtn>
+              <GlossyBtn size="sm" accent onClick={() => { setEditProd('new'); setProdForm({ nombre: '', descripcion: '', precio: '', precio_local: '', categoria_id: selectedCartCatId || '', imagen_url: '' }); setProdExtras([]) }}>
+                <Plus size={14} /> Producto
+              </GlossyBtn>
             </div>
           </div>
 
           {/* Toolbar buscador + filtro */}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
             <div style={{ position: 'relative', flex: '1 1 240px', minWidth: 200 }}>
-              <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--c-muted)', pointerEvents: 'none' }} />
+              <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: colors.textMute, pointerEvents: 'none' }} />
               <input
                 type="search"
                 aria-label="Buscar producto"
@@ -774,99 +820,108 @@ export default function Establecimientos() {
 
           {/* Lista paginada */}
           {productosPagina.map(p => (
-            <div key={p.id} style={{ ...ds.card, padding: '10px 16px', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 12, opacity: p.disponible ? 1 : 0.4 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 8, background: 'var(--c-surface2)', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, color: 'var(--c-muted)' }}>
+            <div key={p.id} style={{ ...filaLista, opacity: p.disponible ? 1 : 0.45 }}>
+              <div style={{ width: 40, height: 40, borderRadius: radius.sm, background: colors.cream2, overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
                 {p.imagen_url ? <img src={p.imagen_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '📷'}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--c-text)' }}>{p.nombre}</div>
-                {p.descripcion && <div style={{ fontSize: 11, color: 'var(--c-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.descripcion}</div>}
+                <div style={{ ...type.body, fontWeight: 600, color: colors.text }}>{p.nombre}</div>
+                {p.descripcion && <div style={{ ...type.label, color: colors.textMute, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.descripcion}</div>}
               </div>
-              <span style={{ fontWeight: 700, fontSize: 13, color: '#C5562C', minWidth: 60, textAlign: 'right' }}>{Number(p.precio).toFixed(2)} €</span>
-              <div style={{ display: 'flex', gap: 4 }}>
-                <button onClick={() => toggleDisponible(p.id, p.disponible)} style={{ ...ds.actionBtn, color: p.disponible ? 'var(--c-text)' : 'var(--c-danger)', fontSize: 10 }} aria-label={p.disponible ? 'Desactivar producto' : 'Activar producto'}>{p.disponible ? 'On' : 'Off'}</button>
-                <button onClick={() => abrirEditarProd(p)} style={{ ...ds.actionBtn, fontSize: 10 }} aria-label="Editar producto">Editar</button>
-                <button onClick={() => eliminarProd(p.id)} style={{ ...ds.actionBtn, color: 'var(--c-danger)', fontSize: 10 }} aria-label="Eliminar producto">×</button>
+              <span style={{ ...type.body, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: colors.terracotta2, minWidth: 64, textAlign: 'right' }}>{Number(p.precio).toFixed(2)} €</span>
+              <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                <MiniBtn onClick={() => toggleDisponible(p.id, p.disponible)} aria-label={p.disponible ? 'Desactivar producto' : 'Activar producto'} style={{ color: p.disponible ? colors.text : colors.danger }}>{p.disponible ? 'On' : 'Off'}</MiniBtn>
+                <MiniBtn onClick={() => abrirEditarProd(p)} aria-label="Editar producto">Editar</MiniBtn>
+                <MiniBtn danger onClick={() => eliminarProd(p.id)} aria-label="Eliminar producto">×</MiniBtn>
               </div>
             </div>
           ))}
 
           {productosFiltrados.length === 0 && (
-            <div style={{ ...ds.card, padding: 24, textAlign: 'center', color: 'var(--c-muted)', fontSize: 12 }}>
-              {productos.length === 0 ? 'Sin productos' : 'No hay productos que coincidan'}
-              {productos.length > 0 && (
-                <div style={{ marginTop: 10 }}>
-                  <button onClick={() => { setProdSearch(''); setProdFiltroCatId('all'); setSelectedCartCatId('') }} style={ds.secondaryBtn}>Limpiar filtros</button>
-                </div>
+            <Vacio
+              titulo={productos.length === 0 ? 'Sin productos' : 'No hay productos que coincidan'}
+              texto={productos.length === 0
+                ? 'Añade el primero a mano, o importa la carta desde una URL o un CSV.'
+                : 'Prueba a quitar la búsqueda o el filtro de categoría.'}
+              accion={productos.length > 0 && (
+                <GhostBtn onClick={() => { setProdSearch(''); setProdFiltroCatId('all'); setSelectedCartCatId('') }}>Limpiar filtros</GhostBtn>
               )}
-            </div>
+            />
           )}
 
           {/* Paginación */}
           {productosFiltrados.length > prodPageSize && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, gap: 8, flexWrap: 'wrap' }}>
-              <div style={{ fontSize: 11.5, color: 'var(--c-muted)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, gap: 8, flexWrap: 'wrap' }}>
+              <div style={{ ...type.caption, color: colors.textMute }}>
                 Página {prodPage} de {totalPagesProd} · {productosFiltrados.length} productos
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
-                <button
+                <GhostBtn
+                  size="sm"
                   onClick={() => setProdPage(p => Math.max(1, p - 1))}
                   disabled={prodPage === 1}
                   aria-label="Página anterior"
-                  style={{ ...ds.secondaryBtn, opacity: prodPage === 1 ? 0.5 : 1, cursor: prodPage === 1 ? 'not-allowed' : 'pointer' }}
+                  style={{ opacity: prodPage === 1 ? 0.5 : 1, cursor: prodPage === 1 ? 'not-allowed' : 'pointer' }}
                 >
                   <ChevronLeft size={14} /> Anterior
-                </button>
-                <button
+                </GhostBtn>
+                <GhostBtn
+                  size="sm"
                   onClick={() => setProdPage(p => Math.min(totalPagesProd, p + 1))}
                   disabled={prodPage >= totalPagesProd}
                   aria-label="Página siguiente"
-                  style={{ ...ds.secondaryBtn, opacity: prodPage >= totalPagesProd ? 0.5 : 1, cursor: prodPage >= totalPagesProd ? 'not-allowed' : 'pointer' }}
+                  style={{ opacity: prodPage >= totalPagesProd ? 0.5 : 1, cursor: prodPage >= totalPagesProd ? 'not-allowed' : 'pointer' }}
                 >
                   Siguiente <ChevronRight size={14} />
-                </button>
+                </GhostBtn>
               </div>
             </div>
           )}
-        </div>
+        </Card>
 
         {/* Extras */}
-        <div style={{ marginTop: 20 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', marginBottom: 10 }}>Grupos de extras ({gruposExtras.length})</h3>
+        <Card style={{ marginTop: 20 }}>
+          <h3 style={{ ...ds.h3, marginBottom: 12 }}>Grupos de extras ({gruposExtras.length})</h3>
           {gruposExtras.map(g => (
-            <div key={g.id} style={{ ...ds.card, padding: '10px 16px', marginBottom: 6 }}>
-              <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--c-text)' }}>{g.nombre} <span style={{ fontSize: 10, color: 'var(--c-muted)' }}>· {g.tipo === 'single' ? 'Elige 1' : `Máx. ${g.max_selecciones}`}</span></div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+            <div key={g.id} style={{ ...filaLista, display: 'block' }}>
+              <div style={{ ...type.body, fontWeight: 600, color: colors.text }}>
+                {g.nombre} <span style={{ ...type.caption, color: colors.textMute }}>· {g.tipo === 'single' ? 'Elige 1' : `Máx. ${g.max_selecciones}`}</span>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
                 {(g.extras_opciones || []).map(o => (
-                  <span key={o.id} style={{ fontSize: 11, padding: '3px 8px', borderRadius: 6, background: 'var(--c-surface2)', color: 'var(--c-text-soft)' }}>{o.nombre} +{o.precio.toFixed(2)}€</span>
+                  <Chip key={o.id} tono="neutral">{o.nombre} +{o.precio.toFixed(2)}€</Chip>
                 ))}
               </div>
             </div>
           ))}
-          {gruposExtras.length === 0 && <div style={{ padding: 16, textAlign: 'center', color: 'var(--c-muted)', fontSize: 12 }}>Sin extras</div>}
-        </div>
+          {gruposExtras.length === 0 && (
+            <Vacio titulo="Sin extras" texto="Este restaurante todavía no tiene grupos de extras en su carta." />
+          )}
+        </Card>
 
         {/* Reseñas */}
-        <div style={{ marginTop: 20 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', marginBottom: 10 }}>Reseñas ({resenas.length})</h3>
+        <Card style={{ marginTop: 20 }}>
+          <h3 style={{ ...ds.h3, marginBottom: 12 }}>Reseñas ({resenas.length})</h3>
           {resenas.map(r => (
-            <div key={r.id} style={{ ...ds.card, padding: '12px 16px', marginBottom: 8, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--c-text)' }}>{r.usuarios?.nombre || 'Usuario'}</span>
-                  <span style={{ fontSize: 11, color: 'var(--c-muted)' }}>{r.usuarios?.email}</span>
+            <div key={r.id} style={{ ...filaLista, alignItems: 'flex-start', padding: '12px 14px', marginBottom: 8 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                  <span style={{ ...type.body, fontWeight: 600, color: colors.text }}>{r.usuarios?.nombre || 'Usuario'}</span>
+                  <span style={{ ...type.label, color: colors.textMute }}>{r.usuarios?.email}</span>
                   <div style={{ display: 'flex', gap: 1 }}>
-                    {[1,2,3,4,5].map(i => <span key={i} style={{ color: i <= r.rating ? 'var(--c-warning)' : 'var(--c-border-strong)', fontSize: 12 }}>★</span>)}
+                    {[1,2,3,4,5].map(i => <span key={i} style={{ color: i <= r.rating ? colors.warning : colors.borderStrong, fontSize: type.label.fontSize }}>★</span>)}
                   </div>
                 </div>
-                {r.texto && <div style={{ fontSize: 12, color: 'var(--c-text-soft)', lineHeight: 1.5 }}>{r.texto}</div>}
-                <div style={{ fontSize: 10, color: 'var(--c-muted)', marginTop: 4 }}>{new Date(r.created_at).toLocaleDateString('es-ES')}</div>
+                {r.texto && <div style={{ ...type.body, color: colors.textDim }}>{r.texto}</div>}
+                <div style={{ ...type.caption, color: colors.textMute, marginTop: 4 }}>{new Date(r.created_at).toLocaleDateString('es-ES')}</div>
               </div>
-              <button onClick={() => eliminarResena(r.id, detalle.id)} style={{ ...ds.actionBtn, color: 'var(--c-danger)', fontSize: 10, flexShrink: 0 }}>Eliminar</button>
+              <MiniBtn danger onClick={() => eliminarResena(r.id, detalle.id)} style={{ flexShrink: 0 }}>Eliminar</MiniBtn>
             </div>
           ))}
-          {resenas.length === 0 && <div style={{ padding: 16, textAlign: 'center', color: 'var(--c-muted)', fontSize: 12 }}>Sin reseñas</div>}
-        </div>
+          {resenas.length === 0 && (
+            <Vacio titulo="Sin reseñas" texto="Cuando un cliente valore un pedido de este restaurante, aparecerá aquí." />
+          )}
+        </Card>
 
         {/* Modal carga masiva */}
         {showCargaMasiva && (
@@ -892,8 +947,8 @@ export default function Establecimientos() {
           <div style={ds.modal} onClick={() => setEditProd(null)}>
             <div className="admin-modal-content" style={ds.modalContent} onClick={e => e.stopPropagation()}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-text)' }}>{editProd === 'new' ? 'Nuevo producto' : 'Editar producto'}</h2>
-                <button onClick={() => setEditProd(null)} style={{ background: 'var(--c-surface2)', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} color='var(--c-text)' /></button>
+                <h2 style={ds.h3}>{editProd === 'new' ? 'Nuevo producto' : 'Editar producto'}</h2>
+                <button onClick={() => setEditProd(null)} aria-label="Cerrar" style={cerrarModalBtn}><X size={16} color={colors.text} /></button>
               </div>
               <div className="admin-grid-2col-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div style={{ gridColumn: '1/-1' }}><label style={ds.label}>Nombre *</label><input value={prodForm.nombre} onChange={e => setProdForm({ ...prodForm, nombre: e.target.value })} style={ds.formInput} /></div>
@@ -928,11 +983,12 @@ export default function Establecimientos() {
                     {gruposExtras.map(g => {
                       const sel = prodExtras.includes(g.id)
                       return (
-                        <button key={g.id} onClick={() => setProdExtras(prev => sel ? prev.filter(id => id !== g.id) : [...prev, g.id])} style={{
-                          padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", fontSize: 11, fontWeight: 600,
-                          border: sel ? '2px solid #C5562C' : '1px solid var(--c-border-strong)',
-                          background: sel ? 'var(--c-primary-soft)' : 'var(--c-surface2)',
-                          color: sel ? '#C5562C' : 'var(--c-muted)',
+                        <button key={g.id} onClick={() => setProdExtras(prev => sel ? prev.filter(id => id !== g.id) : [...prev, g.id])} aria-pressed={sel} style={{
+                          padding: '6px 12px', borderRadius: radius.sm, cursor: 'pointer',
+                          ...type.label, fontWeight: 600,
+                          border: `1px solid ${sel ? colors.terracotta : colors.borderStrong}`,
+                          background: sel ? colors.terracottaSoft : colors.cream2,
+                          color: sel ? colors.onTerracottaSoft : colors.textMute,
                         }}>
                           {sel && '✓ '}{g.nombre}
                         </button>
@@ -943,10 +999,10 @@ export default function Establecimientos() {
               )}
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
-                <button onClick={() => setEditProd(null)} style={ds.secondaryBtn}>Cancelar</button>
-                <button onClick={guardarProd} disabled={savingProd || !prodForm.nombre?.trim() || !prodForm.precio} style={{ ...ds.primaryBtn, opacity: savingProd || !prodForm.nombre?.trim() ? 0.5 : 1 }}>
+                <GhostBtn onClick={() => setEditProd(null)}>Cancelar</GhostBtn>
+                <GlossyBtn accent onClick={guardarProd} disabled={savingProd || !prodForm.nombre?.trim() || !prodForm.precio} style={{ opacity: savingProd || !prodForm.nombre?.trim() ? 0.5 : 1 }}>
                   {savingProd ? 'Guardando...' : editProd === 'new' ? 'Crear' : 'Guardar'}
-                </button>
+                </GlossyBtn>
               </div>
             </div>
           </div>
@@ -957,11 +1013,11 @@ export default function Establecimientos() {
           <div style={ds.modal} onClick={() => setShowCatModal(false)}>
             <div className="admin-modal-content" style={{ ...ds.modalContent, maxWidth: 420 }} onClick={e => e.stopPropagation()}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-text)' }}>
+                <h2 style={ds.h3}>
                   {catModalForm.id ? 'Editar categoría' : 'Nueva categoría'}
                 </h2>
-                <button onClick={() => setShowCatModal(false)} style={{ background: 'var(--c-surface2)', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} aria-label="Cerrar">
-                  <X size={16} color='var(--c-text)' />
+                <button onClick={() => setShowCatModal(false)} style={cerrarModalBtn} aria-label="Cerrar">
+                  <X size={16} color={colors.text} />
                 </button>
               </div>
               <div style={{ display: 'grid', gap: 12 }}>
@@ -986,14 +1042,15 @@ export default function Establecimientos() {
                 </div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
-                <button onClick={() => setShowCatModal(false)} style={ds.secondaryBtn}>Cancelar</button>
-                <button
+                <GhostBtn onClick={() => setShowCatModal(false)}>Cancelar</GhostBtn>
+                <GlossyBtn
+                  accent
                   onClick={guardarCategoriaModal}
                   disabled={!catModalForm.nombre.trim()}
-                  style={{ ...ds.primaryBtn, opacity: !catModalForm.nombre.trim() ? 0.5 : 1 }}
+                  style={{ opacity: !catModalForm.nombre.trim() ? 0.5 : 1 }}
                 >
                   {catModalForm.id ? 'Guardar' : 'Crear'}
-                </button>
+                </GlossyBtn>
               </div>
             </div>
           </div>
@@ -1031,31 +1088,43 @@ export default function Establecimientos() {
   // --- LISTA ---
   return (
     <div>
-      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, gap: 12 }}>
-        <h1 style={ds.h1}>Establecimientos</h1>
-        <button onClick={() => { setForm(initForm()); setShowCrear(true) }} style={{ ...ds.primaryBtn, display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20, gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <h1 style={{ ...ds.h1, marginBottom: 4 }}>Establecimientos</h1>
+          <div style={{ ...type.body, color: colors.textMute }}>
+            {filtrados.length === items.length
+              ? `${items.length} establecimiento${items.length === 1 ? '' : 's'}`
+              : `${filtrados.length} de ${items.length} establecimientos`}
+          </div>
+        </div>
+        <GlossyBtn accent onClick={() => { setForm(initForm()); setShowCrear(true) }}>
           <Plus size={16} /> Crear
-        </button>
+        </GlossyBtn>
       </div>
 
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
-        <input placeholder="Buscar..." value={buscar} onChange={e => setBuscar(e.target.value)} style={ds.input} />
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-          {['todos', ...CATEGORIAS_PADRE].map(t => (
-            <button key={t} onClick={() => setFiltroTipo(t)} style={{ ...ds.filterBtn, background: filtroTipo === t ? '#C5562C' : 'var(--c-surface2)', color: filtroTipo === t ? '#fff' : 'var(--c-muted)' }}>
-              {t === 'todos' ? 'Todos' : t === 'comida' ? '🍕 Comida' : t === 'farmacia' ? '💊 Farmacia' : '🛒 Market'}
-            </button>
-          ))}
-        </div>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input placeholder="Buscar restaurante..." aria-label="Buscar establecimiento" value={buscar} onChange={e => setBuscar(e.target.value)} style={ds.input} />
+        {/* Cada categoría lleva su recuento: se calcula sobre `items`, que ya está
+            en memoria — no hay ninguna consulta nueva por esto. */}
+        <PillTabs
+          value={filtroTipo}
+          onChange={setFiltroTipo}
+          options={['todos', ...CATEGORIAS_PADRE].map(t => ({
+            value: t,
+            label: t === 'todos' ? 'Todos' : t === 'comida' ? '🍕 Comida' : t === 'farmacia' ? '💊 Farmacia' : '🛒 Market',
+            count: t === 'todos' ? items.length : items.filter(x => x.categoria_padre === t).length,
+          }))}
+        />
         {totalPendientes > 0 && (
           <button
             onClick={() => setSoloPendientes(v => !v)}
             title="Solicitudes de vinculación, propuestas de tarifa y altas sin verificar"
             style={{
               ...ds.filterBtn,
-              background: soloPendientes ? '#C5562C' : 'var(--c-warning-soft)',
-              color: soloPendientes ? '#fff' : '#B45309',
-              borderColor: soloPendientes ? '#C5562C' : 'rgba(201,149,81,0.5)',
+              height: 34, borderRadius: radius.full,
+              background: soloPendientes ? colors.terracotta : colors.warningSoft,
+              color: soloPendientes ? colors.cream : colors.onWarningSoft,
+              borderColor: soloPendientes ? colors.terracotta : colors.warningSoft,
               fontWeight: 700,
             }}
           >
@@ -1064,86 +1133,129 @@ export default function Establecimientos() {
         )}
       </div>
 
-      <div style={ds.table}>
-        <div style={ds.tableHeader}>
-          <span style={{ width: 44, flexShrink: 0 }}></span>
-          <span style={{ flex: '2 1 200px', minWidth: 0 }}>Nombre</span>
-          <span data-tablet-sm-hide="true" style={{ flex: '1 1 120px', minWidth: 0 }}>Categoría</span>
-          <span style={{ flex: '1 1 120px', minWidth: 0 }}>Reparto</span>
+      {/* Dos columnas separadas a propósito: `estado` es el ALTA administrativa
+          (activo / pendiente_verificacion / suspendido) y `activo` es si está
+          ABIERTO ahora mismo — lo gobierna el motor de presencia. Fundirlas en un
+          solo indicador oculta que un restaurante verificado puede estar cerrado
+          y que uno abierto puede no salir en la app por no estar verificado. */}
+      <div className="ds-table-stack" style={ds.table}>
+        <div className="ds-th" style={ds.tableHeader}>
+          <span style={{ flex: '2 1 220px', minWidth: 0 }}>Nombre</span>
+          <span style={{ flex: '1 1 120px', minWidth: 0 }}>Categoría</span>
           <span data-tablet-hide="true" style={{ width: 64, flexShrink: 0 }}>Rating</span>
-          <span style={{ flex: '1 1 120px', minWidth: 0 }}>Estado</span>
-          <span style={{ width: 132, flexShrink: 0 }}>Acciones</span>
+          <span style={{ flex: '1 1 120px', minWidth: 0 }}>Alta</span>
+          <span style={{ flex: '1 1 110px', minWidth: 0 }}>Apertura</span>
+          <span data-tablet-sm-hide="true" style={{ flex: '1 1 130px', minWidth: 0 }}>Reparto</span>
+          <span style={{ width: 150, flexShrink: 0 }}>Acciones</span>
         </div>
         {filtrados.map(e => (
           <div key={e.id} className="ds-row-touch" style={ds.tableRow}>
-            <span style={{ width: 44, flexShrink: 0 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--c-surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, overflow: 'hidden' }}>
+            <span
+              data-col="nom"
+              style={{ flex: '2 1 220px', minWidth: 0, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+              onClick={() => { setDetalle(e); loadCategorias(e.id); loadEstCats(e.id); loadProductos(e.id); loadResenas(e.id) }}
+            >
+              <span style={{ width: 36, height: 36, borderRadius: radius.md, background: colors.cream2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, overflow: 'hidden', flexShrink: 0 }}>
                 {e.logo_url ? <img src={e.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🍽️'}
-              </div>
-            </span>
-            <span style={{ flex: '2 1 200px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2, cursor: 'pointer' }} onClick={() => { setDetalle(e); loadCategorias(e.id); loadEstCats(e.id); loadProductos(e.id); loadResenas(e.id) }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--c-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.nombre}</span>
-                {e.captador_socio_id && e.estado === 'pendiente_verificacion' && (
-                  <span style={{ ...ds.badge, flexShrink: 0, background: 'rgba(245,158,11,0.14)', color: '#B45309', whiteSpace: 'nowrap' }}>
-                    {e.alta_confirmada_at ? '🟠 Socio · verificar' : '⏳ Socio · sin confirmar'}
-                  </span>
-                )}
-                {(() => {
-                  const p = pendientes[e.id]
-                  if (!p || (p.vinc + p.tarifas) === 0) return null
-                  const partes = []
-                  if (p.vinc) partes.push(`${p.vinc} vinculación${p.vinc === 1 ? '' : 'es'}`)
-                  if (p.tarifas) partes.push(`${p.tarifas} tarifa${p.tarifas === 1 ? '' : 's'}`)
-                  return (
-                    <span
-                      title={`Esperando tu decisión: ${partes.join(' y ')}`}
-                      style={{ ...ds.badge, flexShrink: 0, background: 'var(--c-warning-soft)', color: '#B45309', border: '1px solid rgba(201,149,81,0.5)', whiteSpace: 'nowrap' }}
-                    >
-                      {p.vinc + p.tarifas} pendiente{p.vinc + p.tarifas === 1 ? '' : 's'}
-                    </span>
-                  )
-                })()}
               </span>
-              {e.direccion && (
-                <span style={{ fontSize: 11.5, color: 'var(--c-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.direccion}</span>
-              )}
-            </span>
-            <span data-tablet-sm-hide="true" style={{ flex: '1 1 120px', minWidth: 0 }}>
-              <span style={{ ...ds.badge, background: 'var(--c-surface2)', color: 'var(--c-text-soft)' }}>
-                {e.categoria_padre === 'comida' ? '🍕' : e.categoria_padre === 'farmacia' ? '💊' : '🛒'} {e.categoria_padre}
-              </span>
-            </span>
-            <span style={{ flex: '1 1 120px', minWidth: 0 }}>
-              <span
-                title={e.tiene_delivery ? 'Tiene socios/riders vinculados y activos' : 'Sin socios vinculados: solo puede vender para recoger'}
-                style={{ ...ds.badge, background: e.tiene_delivery ? 'var(--c-success-soft)' : 'var(--c-surface2)', color: e.tiene_delivery ? 'var(--c-success)' : 'var(--c-muted)' }}
-              >
-                {e.tiene_delivery ? 'Reparto' : 'Solo recogida'}
-              </span>
-            </span>
-            <span data-tablet-hide="true" style={{ width: 64, flexShrink: 0, fontSize: 12, color: 'var(--c-text)' }}>{e.rating?.toFixed(1)}</span>
-            <span style={{ flex: '1 1 120px', minWidth: 0 }}>
-              {e.estado !== 'activo' ? (
-                <span
-                  title="Sin verificar: no aparece en la app aunque esté abierto"
-                  style={{ ...ds.badge, background: 'var(--c-warning-soft)', color: '#B45309' }}
-                >Sin verificar</span>
-              ) : (
-                <span style={{ ...ds.badge, background: e.activo ? 'var(--c-success-soft)' : 'var(--c-danger-soft)', color: e.activo ? 'var(--c-success)' : 'var(--c-danger)' }}>
-                  {e.activo ? 'Abierto' : 'Cerrado'}
+              <span style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, flexWrap: 'wrap' }}>
+                  <span style={{ ...type.body, fontWeight: 600, color: colors.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.nombre}</span>
+                  {e.captador_socio_id && e.estado === 'pendiente_verificacion' && (
+                    <Chip tono="warning" style={{ flexShrink: 0 }}>
+                      {e.alta_confirmada_at ? '🟠 Socio · verificar' : '⏳ Socio · sin confirmar'}
+                    </Chip>
+                  )}
+                  {(() => {
+                    const p = pendientes[e.id]
+                    if (!p || (p.vinc + p.tarifas) === 0) return null
+                    const partes = []
+                    if (p.vinc) partes.push(`${p.vinc} vinculación${p.vinc === 1 ? '' : 'es'}`)
+                    if (p.tarifas) partes.push(`${p.tarifas} tarifa${p.tarifas === 1 ? '' : 's'}`)
+                    return (
+                      <Chip tono="warning" dot title={`Esperando tu decisión: ${partes.join(' y ')}`} style={{ flexShrink: 0 }}>
+                        {p.vinc + p.tarifas} pendiente{p.vinc + p.tarifas === 1 ? '' : 's'}
+                      </Chip>
+                    )
+                  })()}
                 </span>
-              )}
+                {e.direccion && (
+                  <span style={{ ...type.label, color: colors.textMute, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.direccion}</span>
+                )}
+              </span>
             </span>
-            <span style={{ width: 132, flexShrink: 0, display: 'flex', gap: 6 }}>
-              <button className="admin-action-btn" onClick={() => { setDetalle(e); loadCategorias(e.id); loadEstCats(e.id); loadProductos(e.id); loadResenas(e.id) }} style={ds.actionBtn}>Editar</button>
-              <button className="admin-action-btn" onClick={() => toggleActivo(e.id, e.activo)} style={{ ...ds.actionBtn, color: e.activo ? 'var(--c-danger)' : 'var(--c-text)' }}>
-                {e.activo ? 'Off' : 'On'}
-              </button>
+            <span data-col="cod" style={{ flex: '1 1 120px', minWidth: 0 }}>
+              <Chip tono="neutral">
+                {e.categoria_padre === 'comida' ? '🍕' : e.categoria_padre === 'farmacia' ? '💊' : '🛒'} {e.categoria_padre}
+              </Chip>
+            </span>
+            <span data-col="tot" data-tablet-hide="true" style={{ width: 64, flexShrink: 0, ...type.body, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: colors.text }}>
+              {e.rating != null ? `★ ${e.rating.toFixed(1)}` : '—'}
+            </span>
+            {/* ALTA administrativa — no dice si está abierto */}
+            <span
+              data-col="est"
+              title={e.estado === 'activo'
+                ? 'Alta verificada: puede aparecer en la app'
+                : 'Alta sin verificar: no aparece en la app aunque esté abierto'}
+              style={{ flex: '1 1 120px', minWidth: 0 }}
+            >
+              <EstadoBadge estado={e.estado} />
+            </span>
+            {/* APERTURA ahora mismo — la escribe el motor de presencia.
+                Si el alta no está verificada, el restaurante NO se ve en la app
+                aunque esté "abierto": el chip va en gris para no dar a entender
+                que está vendiendo. */}
+            <span
+              data-col="pag"
+              title={e.estado !== 'activo'
+                ? 'No se ve en la app hasta que el alta esté verificada'
+                : e.activo
+                  ? 'Abierto ahora mismo (intención del dueño + app conectada)'
+                  : 'Cerrado ahora mismo: no acepta pedidos'}
+              style={{ flex: '1 1 110px', minWidth: 0 }}
+            >
+              <Chip tono={e.estado === 'activo' && e.activo ? 'sage' : 'neutral'} dot>
+                {e.activo ? 'Abierto' : 'Cerrado'}
+              </Chip>
+            </span>
+            <span
+              data-col="ori"
+              data-tablet-sm-hide="true"
+              title={e.tiene_delivery ? 'Tiene socios/riders vinculados y activos' : 'Sin socios vinculados: solo puede vender para recoger'}
+              style={{ flex: '1 1 130px', minWidth: 0 }}
+            >
+              <Chip tono={e.tiene_delivery ? 'sage' : 'neutral'}>
+                {e.tiene_delivery ? 'Reparto' : 'Solo recogida'}
+              </Chip>
+            </span>
+            <span data-col="acc" style={{ width: 150, flexShrink: 0, display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'flex-end' }}>
+              <MiniBtn className="admin-action-btn" onClick={() => { setDetalle(e); loadCategorias(e.id); loadEstCats(e.id); loadProductos(e.id); loadResenas(e.id) }}>Editar</MiniBtn>
+              {/* Este interruptor escribe `activo` DIRECTAMENTE, la misma columna
+                  que apaga el motor de presencia y la que oculta el restaurante en
+                  la app del cliente. Va en `sm` (36×20) y envuelto en un span para
+                  que la regla móvil `[data-col="acc"] > button { flex: 1 }` no lo
+                  estire a media pantalla: no debe ser fácil de pulsar sin querer. */}
+              <span style={{ display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}>
+                <Toggle
+                  size="sm"
+                  on={!!e.activo}
+                  tone="sage"
+                  onChange={() => toggleActivo(e.id, e.activo, e.nombre)}
+                  aria-label={e.activo ? `Cerrar ahora ${e.nombre}` : `Abrir ahora ${e.nombre}`}
+                />
+              </span>
             </span>
           </div>
         ))}
-        {filtrados.length === 0 && <div style={{ padding: 32, textAlign: 'center', ...ds.muted, fontSize: 13 }}>Sin establecimientos</div>}
+        {filtrados.length === 0 && (
+          <Vacio
+            titulo="Ningún establecimiento con esos filtros"
+            texto={items.length === 0
+              ? 'Todavía no hay ningún restaurante dado de alta.'
+              : 'Prueba a quitar la búsqueda, el filtro de categoría o el de pendientes.'}
+          />
+        )}
       </div>
 
       {/* Modal crear */}
@@ -1153,24 +1265,22 @@ export default function Establecimientos() {
             {!crearExito ? (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                  <h2 style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-text)' }}>Crear establecimiento</h2>
-                  <button onClick={cerrarModalCrear} style={{ background: 'var(--c-surface2)', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} color='var(--c-text)' /></button>
+                  <h2 style={ds.h3}>Crear establecimiento</h2>
+                  <button onClick={cerrarModalCrear} aria-label="Cerrar" style={cerrarModalBtn}><X size={16} color={colors.text} /></button>
                 </div>
 
                 {crearError && (
                   <div style={{
-                    padding: '10px 12px', borderRadius: 8, marginBottom: 14,
-                    background: 'rgba(220,38,38,0.10)', border: '1px solid rgba(220,38,38,0.32)',
-                    color: 'var(--c-danger)', fontSize: 12.5, lineHeight: 1.4,
+                    padding: '10px 12px', borderRadius: radius.sm, marginBottom: 14,
+                    background: colors.dangerSoft, border: `1px solid ${colors.danger}`,
+                    color: colors.onDangerSoft, ...type.body,
                   }}>
                     {crearError}
                   </div>
                 )}
 
                 {/* SECCIÓN 1: Datos del restaurante */}
-                <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6, color: 'var(--c-muted)', marginBottom: 8 }}>
-                  Datos del restaurante
-                </div>
+                <SectionLabel>Datos del restaurante</SectionLabel>
                 <div className="admin-grid-2col-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div style={{ gridColumn: '1/-1' }}><label style={ds.label}>Nombre *</label><input value={form.nombre || ''} onChange={e => setForm({ ...form, nombre: e.target.value })} style={ds.formInput} /></div>
                   <div><label style={ds.label}>Tipo</label><select value={form.tipo || 'restaurante'} onChange={e => setForm({ ...form, tipo: e.target.value })} style={ds.select}>
@@ -1191,15 +1301,15 @@ export default function Establecimientos() {
                     />
                     {form.direccion && (form.latitud == null || form.longitud == null) && (
                       <div style={{
-                        marginTop: 6, padding: '8px 10px', borderRadius: 8,
-                        background: 'rgba(234,179,8,0.10)', border: '1px solid rgba(234,179,8,0.38)',
-                        color: '#a16207', fontSize: 12, lineHeight: 1.4,
+                        marginTop: 6, padding: '8px 10px', borderRadius: radius.sm,
+                        background: colors.warningSoft, border: `1px solid ${colors.warning}`,
+                        color: colors.onWarningSoft, ...type.body,
                       }}>
                         No has elegido una sugerencia. Las coordenadas se aproximarán al crear el restaurante.
                       </div>
                     )}
                     {form.latitud != null && form.longitud != null && (
-                      <div style={{ marginTop: 6, fontSize: 11.5, color: 'var(--c-muted)' }}>
+                      <div style={{ marginTop: 6, ...type.caption, color: colors.textMute }}>
                         Coordenadas: {form.latitud.toFixed(6)}, {form.longitud.toFixed(6)}
                       </div>
                     )}
@@ -1220,13 +1330,9 @@ export default function Establecimientos() {
                 </div>
 
                 {/* SECCIÓN 2: Datos del dueño */}
-                <div style={{
-                  fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.6,
-                  color: 'var(--c-muted)', marginTop: 22, marginBottom: 8,
-                  paddingTop: 16, borderTop: '1px solid var(--c-border)',
-                }}>
+                <SectionLabel style={{ marginTop: 22, paddingTop: 16, borderTop: `1px solid ${colors.border}` }}>
                   Datos del dueño / acceso al panel
-                </div>
+                </SectionLabel>
                 <div className="admin-grid-2col-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div><label style={ds.label}>Nombre del dueño</label><input value={duenoForm.nombre} onChange={e => setDuenoForm({ ...duenoForm, nombre: e.target.value })} style={ds.formInput} /></div>
                   <div><label style={ds.label}>Teléfono dueño</label><input value={duenoForm.telefono} placeholder={form.telefono || ''} onChange={e => setDuenoForm({ ...duenoForm, telefono: e.target.value })} style={ds.formInput} /></div>
@@ -1235,38 +1341,38 @@ export default function Establecimientos() {
                   <div style={{ gridColumn: '1/-1' }}>
                     <label style={ds.label}>Contraseña</label>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', minHeight: 44, borderRadius: 8, border: `1px solid ${duenoForm.modoPwd === 'auto' ? '#C5562C' : 'var(--c-border-strong)'}`, background: duenoForm.modoPwd === 'auto' ? 'rgba(255,107,44,0.06)' : 'var(--c-surface2)', cursor: 'pointer', fontSize: 13, color: 'var(--c-text)' }}>
-                        <input type="radio" name="modoPwd" checked={duenoForm.modoPwd === 'auto'} onChange={() => setDuenoForm({ ...duenoForm, modoPwd: 'auto' })} style={{ accentColor: '#C5562C' }} />
+                      <label style={{ ...opcionPwd, borderColor: duenoForm.modoPwd === 'auto' ? colors.terracotta : colors.borderStrong, background: duenoForm.modoPwd === 'auto' ? colors.terracottaSoft : colors.cream2 }}>
+                        <input type="radio" name="modoPwd" checked={duenoForm.modoPwd === 'auto'} onChange={() => setDuenoForm({ ...duenoForm, modoPwd: 'auto' })} style={{ accentColor: colors.terracotta }} />
                         Generar contraseña automática (recomendado)
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', minHeight: 44, borderRadius: 8, border: `1px solid ${duenoForm.modoPwd === 'manual' ? '#C5562C' : 'var(--c-border-strong)'}`, background: duenoForm.modoPwd === 'manual' ? 'rgba(255,107,44,0.06)' : 'var(--c-surface2)', cursor: 'pointer', fontSize: 13, color: 'var(--c-text)' }}>
-                        <input type="radio" name="modoPwd" checked={duenoForm.modoPwd === 'manual'} onChange={() => setDuenoForm({ ...duenoForm, modoPwd: 'manual', password: duenoForm.password || generarPasswordAleatoria(12) })} style={{ accentColor: '#C5562C' }} />
+                      <label style={{ ...opcionPwd, borderColor: duenoForm.modoPwd === 'manual' ? colors.terracotta : colors.borderStrong, background: duenoForm.modoPwd === 'manual' ? colors.terracottaSoft : colors.cream2 }}>
+                        <input type="radio" name="modoPwd" checked={duenoForm.modoPwd === 'manual'} onChange={() => setDuenoForm({ ...duenoForm, modoPwd: 'manual', password: duenoForm.password || generarPasswordAleatoria(12) })} style={{ accentColor: colors.terracotta }} />
                         Establecer contraseña manual
                       </label>
                       {duenoForm.modoPwd === 'manual' && (
                         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                          <input type={showCrearPwd ? 'text' : 'password'} value={duenoForm.password} onChange={e => setDuenoForm({ ...duenoForm, password: e.target.value })} style={{ ...ds.formInput, fontFamily: 'monospace', flex: '1 1 220px', minWidth: 200 }} placeholder="Mínimo 8 caracteres" />
-                          <button type="button" onClick={() => setShowCrearPwd(s => !s)} style={{ ...ds.secondaryBtn, minWidth: 44, minHeight: 44, padding: 0, justifyContent: 'center' }} title={showCrearPwd ? 'Ocultar' : 'Mostrar'}>
+                          <input type={showCrearPwd ? 'text' : 'password'} value={duenoForm.password} onChange={e => setDuenoForm({ ...duenoForm, password: e.target.value })} style={{ ...ds.formInput, ...type.mono, flex: '1 1 220px', minWidth: 200 }} placeholder="Mínimo 8 caracteres" />
+                          <GhostBtn type="button" onClick={() => setShowCrearPwd(s => !s)} style={{ minWidth: 44, minHeight: 44, padding: 0 }} title={showCrearPwd ? 'Ocultar' : 'Mostrar'} aria-label={showCrearPwd ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
                             {showCrearPwd ? <EyeOff size={16} /> : <Eye size={16} />}
-                          </button>
-                          <button type="button" onClick={() => setDuenoForm({ ...duenoForm, password: generarPasswordAleatoria(12) })} style={{ ...ds.secondaryBtn, display: 'flex', alignItems: 'center', gap: 4, minHeight: 44 }}>
+                          </GhostBtn>
+                          <GhostBtn type="button" onClick={() => setDuenoForm({ ...duenoForm, password: generarPasswordAleatoria(12) })} style={{ minHeight: 44 }}>
                             <Wand2 size={14} /> Aleatoria 12
-                          </button>
+                          </GhostBtn>
                         </div>
                       )}
                     </div>
                   </div>
                 </div>
 
-                <div style={{ fontSize: 11, color: 'var(--c-muted)', marginTop: 14 }}>
+                <div style={{ ...type.label, color: colors.textMute, marginTop: 14 }}>
                   Al crear se generará la cuenta del dueño en <code>panel.pidoo.es</code>. Tras crear el restaurante, añade sus repartidores desde la ficha para activar Delivery.
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
-                  <button onClick={cerrarModalCrear} style={{ ...ds.secondaryBtn, minHeight: 44 }} disabled={saving}>Cancelar</button>
-                  <button onClick={guardarEstablecimiento} disabled={saving || !form.nombre?.trim() || !duenoForm.email?.trim()} style={{ ...ds.primaryBtn, minHeight: 44, opacity: saving || !form.nombre?.trim() || !duenoForm.email?.trim() ? 0.5 : 1 }}>
+                  <GhostBtn onClick={cerrarModalCrear} style={{ minHeight: 44 }} disabled={saving}>Cancelar</GhostBtn>
+                  <GlossyBtn accent onClick={guardarEstablecimiento} disabled={saving || !form.nombre?.trim() || !duenoForm.email?.trim()} style={{ minHeight: 44, opacity: saving || !form.nombre?.trim() || !duenoForm.email?.trim() ? 0.5 : 1 }}>
                     {saving ? 'Creando...' : 'Crear restaurante y cuenta'}
-                  </button>
+                  </GlossyBtn>
                 </div>
               </>
             ) : (
@@ -1274,83 +1380,74 @@ export default function Establecimientos() {
               <div>
                 <div style={{ textAlign: 'center', marginBottom: 24 }}>
                   <div style={{
-                    width: 64, height: 64, borderRadius: '50%',
-                    background: 'rgba(34,197,94,0.12)', border: '2px solid rgba(34,197,94,0.5)',
+                    width: 64, height: 64, borderRadius: radius.full,
+                    background: colors.sageSoft, border: `2px solid ${colors.sage}`,
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                     marginBottom: 12,
                   }}>
-                    <Check size={32} color="#22c55e" strokeWidth={3} />
+                    <Check size={32} color={colors.onSageSoft} strokeWidth={3} />
                   </div>
-                  <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)', marginBottom: 4 }}>✓ Restaurante creado</h2>
-                  <div style={{ fontSize: 14, color: 'var(--c-muted)' }}>{crearExito.establecimiento.nombre}</div>
+                  <h2 style={{ ...ds.h2, marginBottom: 4 }}>✓ Restaurante creado</h2>
+                  <div style={{ ...type.bodyLg, color: colors.textMute }}>{crearExito.establecimiento.nombre}</div>
                 </div>
 
                 <div style={{
-                  background: 'var(--c-surface2)', borderRadius: 12, padding: 16,
-                  border: '1px solid var(--c-border-strong)', marginBottom: 16,
+                  background: colors.cream2, borderRadius: radius.md, padding: 16,
+                  border: `1px solid ${colors.borderStrong}`, marginBottom: 16,
                   display: 'flex', flexDirection: 'column', gap: 12,
                 }}>
                   {/* Email */}
                   <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Email</div>
+                    <SectionLabel style={{ marginBottom: 4 }}>Email</SectionLabel>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ flex: 1, fontFamily: 'monospace', fontSize: 14, color: 'var(--c-text)', wordBreak: 'break-all' }}>{crearExito.dueno.email}</div>
-                      <button onClick={() => copiarTexto(crearExito.dueno.email)} style={{ ...ds.secondaryBtn, minWidth: 44, minHeight: 44, padding: 0, justifyContent: 'center' }} title="Copiar email">
+                      <div style={{ flex: 1, ...type.mono, fontSize: type.bodyLg.fontSize, color: colors.text, wordBreak: 'break-all' }}>{crearExito.dueno.email}</div>
+                      <GhostBtn onClick={() => copiarTexto(crearExito.dueno.email)} style={{ minWidth: 44, minHeight: 44, padding: 0 }} title="Copiar email" aria-label="Copiar email">
                         <Copy size={16} />
-                      </button>
+                      </GhostBtn>
                     </div>
                   </div>
 
                   {/* Contraseña */}
                   <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>Contraseña</div>
+                    <SectionLabel style={{ marginBottom: 4 }}>Contraseña</SectionLabel>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ flex: 1, fontFamily: 'monospace', fontSize: 16, fontWeight: 700, color: 'var(--c-text)', wordBreak: 'break-all', letterSpacing: 0.5 }}>
+                      <div style={{ flex: 1, ...type.mono, fontSize: type.h3.fontSize, fontWeight: 700, color: colors.text, wordBreak: 'break-all', letterSpacing: 0.5 }}>
                         {showExitoPwd ? crearExito.dueno.password_temporal : '•'.repeat(crearExito.dueno.password_temporal.length)}
                       </div>
-                      <button onClick={() => setShowExitoPwd(s => !s)} style={{ ...ds.secondaryBtn, minWidth: 44, minHeight: 44, padding: 0, justifyContent: 'center' }} title={showExitoPwd ? 'Ocultar' : 'Mostrar'}>
+                      <GhostBtn onClick={() => setShowExitoPwd(s => !s)} style={{ minWidth: 44, minHeight: 44, padding: 0 }} title={showExitoPwd ? 'Ocultar' : 'Mostrar'} aria-label={showExitoPwd ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
                         {showExitoPwd ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                      <button onClick={() => copiarTexto(crearExito.dueno.password_temporal)} style={{ ...ds.secondaryBtn, minWidth: 44, minHeight: 44, padding: 0, justifyContent: 'center' }} title="Copiar contraseña">
+                      </GhostBtn>
+                      <GhostBtn onClick={() => copiarTexto(crearExito.dueno.password_temporal)} style={{ minWidth: 44, minHeight: 44, padding: 0 }} title="Copiar contraseña" aria-label="Copiar contraseña">
                         <Copy size={16} />
-                      </button>
+                      </GhostBtn>
                     </div>
                   </div>
 
                   {/* URL */}
                   <div>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>URL para entrar</div>
+                    <SectionLabel style={{ marginBottom: 4 }}>URL para entrar</SectionLabel>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ flex: 1, fontFamily: 'monospace', fontSize: 14, color: 'var(--c-text)' }}>https://panel.pidoo.es</div>
-                      <button onClick={() => copiarTexto('https://panel.pidoo.es')} style={{ ...ds.secondaryBtn, minWidth: 44, minHeight: 44, padding: 0, justifyContent: 'center' }} title="Copiar URL">
+                      <div style={{ flex: 1, ...type.mono, fontSize: type.bodyLg.fontSize, color: colors.text }}>https://panel.pidoo.es</div>
+                      <GhostBtn onClick={() => copiarTexto('https://panel.pidoo.es')} style={{ minWidth: 44, minHeight: 44, padding: 0 }} title="Copiar URL" aria-label="Copiar URL">
                         <Copy size={16} />
-                      </button>
+                      </GhostBtn>
                     </div>
                   </div>
                 </div>
 
-                <button onClick={compartirCredenciales} style={{
-                  width: '100%', minHeight: 52, padding: '12px 16px',
-                  background: '#C5562C', color: '#fff', border: 'none', borderRadius: 12,
-                  fontSize: 15, fontWeight: 700, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  marginBottom: 10,
-                }}>
+                <GlossyBtn accent full size="lg" onClick={compartirCredenciales} style={{ minHeight: 52, marginBottom: 10 }}>
                   <Share2 size={18} />
                   📤 {typeof navigator !== 'undefined' && navigator.share ? 'Compartir credenciales' : 'Copiar todo'}
-                </button>
+                </GlossyBtn>
 
-                <button onClick={cerrarModalCrear} style={{
-                  width: '100%', minHeight: 44, padding: '10px 16px',
-                  ...ds.secondaryBtn, justifyContent: 'center', fontSize: 14,
-                }}>
+                <GhostBtn full onClick={cerrarModalCrear} style={{ minHeight: 44 }}>
                   Cerrar y volver a la lista
-                </button>
+                </GhostBtn>
 
                 <div style={{
-                  marginTop: 14, padding: '10px 12px', borderRadius: 8,
-                  background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.30)',
-                  fontSize: 11.5, color: 'var(--c-text-soft)', lineHeight: 1.5,
+                  marginTop: 14, padding: '10px 12px', borderRadius: radius.sm,
+                  background: colors.warningSoft, border: `1px solid ${colors.warning}`,
+                  ...type.label, color: colors.onWarningSoft,
                 }}>
                   ⚠️ Anota o comparte la contraseña ahora — no la podrás recuperar después (siempre puedes restablecerla desde la ficha del restaurante).
                 </div>
@@ -1367,31 +1464,16 @@ export default function Establecimientos() {
 // Alta y plan del restaurante (modelo 10% por pedido — sin cuota mensual)
 // Sustituye a PlanTiendaCard (suscripción 39€ muerta). plan_pro = flag gratis.
 // ──────────────────────────────────────────────────────────────────────────────
-function AltaToggle({ on, busy, onClick }) {
-  return (
-    <button onClick={onClick} disabled={busy} aria-pressed={on} style={{
-      width: 46, height: 26, borderRadius: 999, border: 'none',
-      cursor: busy ? 'not-allowed' : 'pointer', flexShrink: 0,
-      background: on ? '#C5562C' : 'var(--c-surface2)', position: 'relative',
-      opacity: busy ? 0.6 : 1, transition: 'background 0.15s',
-    }}>
-      <span style={{
-        position: 'absolute', top: 3, left: on ? 23 : 3, width: 20, height: 20,
-        borderRadius: '50%', background: '#fff', transition: 'left 0.15s',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
-      }} />
-    </button>
-  )
-}
-
 function AltaPlanCard({ establecimiento, onChanged }) {
   const [busy, setBusy] = useState(false)
   const e = establecimiento || {}
   const planPro = !!e.plan_pro
   const altaCobrada = !!e.alta_150_cobrada
+  // El interruptor propio de esta tarjeta (46×26, naranja a pelo) se sustituye por
+  // el `Toggle` del sistema: mismos permisos, mismas escrituras, un solo aspecto.
   const rowStyle = {
     display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
-    borderRadius: 10, border: '1px solid var(--c-border)', background: 'var(--c-surface)',
+    borderRadius: radius.md, border: `1px solid ${colors.border}`, background: colors.cream,
   }
 
   async function togglePlanPro() {
@@ -1448,58 +1530,58 @@ function AltaPlanCard({ establecimiento, onChanged }) {
   }
 
   return (
-    <div style={{ ...ds.card, marginTop: 20 }}>
-      <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', marginBottom: 4 }}>Alta y plan</h3>
-      <div style={{ fontSize: 12, color: 'var(--c-muted)', marginBottom: 14, lineHeight: 1.5 }}>
+    <Card style={{ marginTop: 20 }}>
+      <h3 style={{ ...ds.h3, marginBottom: 4 }}>Alta y plan</h3>
+      <div style={{ ...type.body, color: colors.textMute, marginBottom: 14 }}>
         Pidoo cobra el 10% por pedido. El alta son 150 EUR unicos en efectivo (fuera de plataforma). Sin cuota mensual.
       </div>
 
       <div style={rowStyle}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>
+          <div style={{ ...type.body, fontWeight: 600, color: colors.text }}>
             Tienda publica {e.slug ? `(pidoo.es/${e.slug})` : ''}
           </div>
-          <div style={{ fontSize: 11.5, color: 'var(--c-muted)', marginTop: 2 }}>
+          <div style={{ ...type.label, color: colors.textMute, marginTop: 2 }}>
             Gratis. Activa la pagina publica del restaurante y sus precios de tienda.
           </div>
         </div>
-        <AltaToggle on={planPro} busy={busy} onClick={togglePlanPro} />
+        <Toggle on={planPro} disabled={busy} tone="terracotta" onChange={togglePlanPro} aria-label="Tienda publica del restaurante" />
       </div>
 
       <div style={{ ...rowStyle, marginTop: 10 }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>
+          <div style={{ ...type.body, fontWeight: 600, color: colors.text }}>
             Carta del local {e.slug ? `(pidoo.es/${e.slug}/carta)` : ''}
           </div>
-          <div style={{ fontSize: 11.5, color: 'var(--c-muted)', marginTop: 2 }}>
+          <div style={{ ...type.label, color: colors.textMute, marginTop: 2 }}>
             QR de mesa con precios propios del local. Solo carta: desde ahi no se puede pedir ni pagar,
             asi que no afecta a la comision ni a la liquidacion.
           </div>
         </div>
-        <AltaToggle on={!!e.carta_local_activa} busy={busy} onClick={toggleCartaLocal} />
+        <Toggle on={!!e.carta_local_activa} disabled={busy} tone="terracotta" onChange={toggleCartaLocal} aria-label="Carta del local (QR de mesa)" />
       </div>
 
       <div style={{ ...rowStyle, marginTop: 10 }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>Destacado en la Home</div>
-          <div style={{ fontSize: 11.5, color: 'var(--c-muted)', marginTop: 2 }}>
+          <div style={{ ...type.body, fontWeight: 600, color: colors.text }}>Destacado en la Home</div>
+          <div style={{ ...type.label, color: colors.textMute, marginTop: 2 }}>
             Sale en el carrusel "Destacados" de pidoo.es, por delante de los automaticos por rating.
           </div>
         </div>
-        <AltaToggle on={!!e.destacado} busy={busy} onClick={toggleDestacado} />
+        <Toggle on={!!e.destacado} disabled={busy} tone="terracotta" onChange={toggleDestacado} aria-label="Destacado en la Home de pidoo.es" />
       </div>
 
       <div style={{ ...rowStyle, marginTop: 10 }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>Alta de 150 EUR (efectivo)</div>
-          <div style={{ fontSize: 11.5, color: 'var(--c-muted)', marginTop: 2 }}>
+          <div style={{ ...type.body, fontWeight: 600, color: colors.text }}>Alta de 150 EUR (efectivo)</div>
+          <div style={{ ...type.label, color: colors.textMute, marginTop: 2 }}>
             {altaCobrada && e.alta_150_cobrada_at
               ? `Cobrada el ${new Date(e.alta_150_cobrada_at).toLocaleDateString('es-ES')}`
               : 'Pendiente de cobrar'}
           </div>
         </div>
-        <AltaToggle on={altaCobrada} busy={busy} onClick={toggleAlta} />
+        <Toggle on={altaCobrada} disabled={busy} tone="terracotta" onChange={toggleAlta} aria-label="Alta de 150 EUR cobrada en efectivo" />
       </div>
-    </div>
+    </Card>
   )
 }

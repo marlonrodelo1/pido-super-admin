@@ -1,10 +1,14 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
-import { ds, colors } from '../lib/darkStyles'
+import { ds, colors, type } from '../lib/darkStyles'
+import {
+  Card, StatCard, Chip, EstadoBadge, GlossyBtn, GhostBtn, MiniBtn,
+  Segmented, PillTabs, Toggle, Vacio, fmtEUR,
+} from '../lib/ui'
 import {
   Users, ExternalLink, Plus, Eye, EyeOff, ChevronRight, ArrowLeft, X, Save, KeyRound,
-  Search, CircleDot, Truck, Store, ClipboardList, Wallet, Settings, FileText,
-  Pencil, Check, AlertCircle, Copy, Phone, Mail, Globe, AtSign, Music, RefreshCw, Trash2,
+  Search, Truck, Store,
+  Pencil, Check, AlertCircle, Copy, Phone, Mail, Globe, AtSign, Music, Trash2,
 } from 'lucide-react'
 import { toast, confirmar } from '../App'
 import ResetPasswordModal from '../components/ResetPasswordModal'
@@ -29,13 +33,14 @@ import EliminarEntidadModal from '../components/EliminarEntidadModal'
 
 const ESTADOS_VINC = ['pendiente', 'activa', 'rechazada']
 
+// Las pestañas de la ficha van con `PillTabs`, que espera { value, label, count }.
 const TABS = [
-  { id: 'resumen', label: 'Resumen', Icon: Users },
-  { id: 'riders', label: 'Riders', Icon: Truck },
-  { id: 'restaurantes', label: 'Restaurantes', Icon: Store },
-  { id: 'pedidos', label: 'Pedidos', Icon: ClipboardList },
-  { id: 'finanzas', label: 'Balances', Icon: Wallet },
-  { id: 'config', label: 'Configuración', Icon: Settings },
+  { value: 'resumen', label: 'Resumen' },
+  { value: 'riders', label: 'Riders' },
+  { value: 'restaurantes', label: 'Restaurantes' },
+  { value: 'pedidos', label: 'Pedidos' },
+  { value: 'finanzas', label: 'Balances' },
+  { value: 'config', label: 'Configuración' },
 ]
 
 export default function Socios() {
@@ -278,25 +283,37 @@ export default function Socios() {
   // ── Vista LISTADO ──
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
-        <h1 style={ds.h1}>Socios</h1>
-        <button onClick={() => setShowNuevo(true)} style={ds.primaryBtn}>
-          <Plus size={14} /> Nuevo socio
-        </button>
+      <div className="admin-page-header" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h1 style={{ ...ds.h1, marginBottom: 4 }}>Socios</h1>
+          <div style={{ ...type.body, color: colors.stone }}>
+            {socios.length} socio{socios.length === 1 ? '' : 's'} registrado{socios.length === 1 ? '' : 's'}
+            {sociosFiltered.length !== socios.length && ` · ${sociosFiltered.length} con los filtros actuales`}
+          </div>
+        </div>
+        <GlossyBtn onClick={() => setShowNuevo(true)}>
+          <Plus size={15} /> Nuevo socio
+        </GlossyBtn>
       </div>
 
-      {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 20 }}>
-        <StatCard label="Socios activos" value={stats.activos} />
-        <StatCard label="Marketplaces abiertos" value={stats.marketplaces} />
-        <StatCard label="Online ahora" value={stats.online} accent />
-        <StatCard label="Riders pendientes" value={stats.pendientes} warning={stats.pendientes > 0} />
+      {/* KPIs */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12, marginBottom: 20 }}>
+        <StatCard label="Socios activos" value={stats.activos} sub={`de ${socios.length} registrados`} icon={<Users size={16} />} />
+        <StatCard label="Marketplaces abiertos" value={stats.marketplaces} sub="Con tienda pública" icon={<Store size={16} />} />
+        <StatCard label="Online ahora" value={stats.online} sub="Con algún rider conectado" tone="sage" icon={<Truck size={16} />} />
+        <StatCard
+          label="Riders pendientes"
+          value={stats.pendientes}
+          sub={stats.pendientes > 0 ? 'Esperando aprobación' : 'Nada por aprobar'}
+          tone={stats.pendientes > 0 ? 'terracotta' : 'ink'}
+          icon={<AlertCircle size={16} />}
+        />
       </div>
 
       {/* Filtros */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ position: 'relative', flex: '1 1 240px', maxWidth: 320 }}>
-          <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: colors.textMute, pointerEvents: 'none' }} />
+          <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: colors.stone, pointerEvents: 'none' }} />
           <input
             value={buscar}
             onChange={e => setBuscar(e.target.value)}
@@ -320,23 +337,26 @@ export default function Socios() {
         </select>
       </div>
 
-      <div style={ds.table}>
-        <div style={ds.tableHeader}>
-          <span style={{ flex: 1 }}>Socio</span>
-          <span data-tablet-hide="true" style={{ width: 130 }}>Slug</span>
-          <span style={{ width: 90, textAlign: 'center' }}>Riders</span>
-          <span data-tablet-sm-hide="true" style={{ width: 90, textAlign: 'center' }}>Online</span>
-          <span data-tablet-sm-hide="true" style={{ width: 90, textAlign: 'center' }}>Rests.</span>
-          <span data-tablet-hide="true" style={{ width: 110, textAlign: 'right' }}>Esta semana</span>
-          <span style={{ width: 60, textAlign: 'right' }}></span>
+      <div className="ds-table-stack" style={ds.table}>
+        <div className="ds-th" style={ds.tableHeader}>
+          <span style={{ flex: '3 1 180px', minWidth: 0 }}>Socio</span>
+          <span data-tablet-hide="true" style={{ width: 130, flexShrink: 0 }}>Slug</span>
+          <span style={{ width: 116, flexShrink: 0 }}>Riders</span>
+          <span data-tablet-sm-hide="true" style={{ width: 96, flexShrink: 0 }}>Restaurantes</span>
+          <span style={{ width: 110, flexShrink: 0, textAlign: 'right' }}>Esta semana</span>
+          <span style={{ width: 36, flexShrink: 0 }} />
         </div>
 
-        {loading && <div style={{ padding: 32, textAlign: 'center', color: colors.textMute, fontSize: 13 }}>Cargando…</div>}
+        {loading && <div style={{ padding: 32, textAlign: 'center', ...type.body, color: colors.stone }}>Cargando…</div>}
 
         {!loading && sociosFiltered.length === 0 && (
-          <div style={{ padding: 32, textAlign: 'center', color: colors.textMute, fontSize: 13 }}>
-            {socios.length === 0 ? 'Sin socios registrados.' : 'Sin resultados.'}
-          </div>
+          <Vacio
+            icon={<Users size={30} />}
+            titulo={socios.length === 0 ? 'Todavía no hay socios' : 'Sin resultados'}
+            texto={socios.length === 0
+              ? 'Cuando des de alta un socio aparecerá aquí con sus riders, sus restaurantes y lo que lleva ganado.'
+              : 'Prueba a quitar algún filtro o a cambiar el texto de búsqueda.'}
+          />
         )}
 
         {sociosFiltered.map(s => {
@@ -356,42 +376,51 @@ export default function Socios() {
               onMouseEnter={e => e.currentTarget.style.background = colors.surfaceHover}
               onMouseLeave={e => e.currentTarget.style.background = ''}
             >
-              <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+              <span data-col="nom" style={{ flex: '3 1 180px', display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                 {s.logo_url
-                  ? <img src={s.logo_url} alt="" style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover', background: colors.elev2, flexShrink: 0 }} />
-                  : <div style={{ width: 36, height: 36, borderRadius: 8, background: colors.elev2, display: 'grid', placeItems: 'center', fontSize: 14, fontWeight: 700, color: colors.textMute, flexShrink: 0 }}>
+                  ? <img src={s.logo_url} alt="" style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover', background: colors.cream2, flexShrink: 0 }} />
+                  : <span style={{ width: 36, height: 36, borderRadius: 8, background: colors.cream2, display: 'grid', placeItems: 'center', ...type.label, fontWeight: 700, color: colors.stone, flexShrink: 0 }}>
                       {(s.nombre_comercial || s.nombre || 'S').charAt(0).toUpperCase()}
-                    </div>}
+                    </span>}
                 <span style={{ minWidth: 0, lineHeight: 1.3 }}>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: colors.text, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    {s.nombre_comercial || s.nombre || '—'}
-                    {!s.activo && <span style={{ ...ds.badge, padding: '1px 6px', fontSize: 9 }}>INACTIVO</span>}
-                    {hasMarketplace && (
-                      <span title="Marketplace público abierto" style={{ width: 6, height: 6, borderRadius: '50%', background: colors.success }} />
-                    )}
-                  </div>
-                  <div style={{ fontSize: 11, color: colors.textMute, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <span style={{ fontWeight: 700, color: colors.text, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {s.nombre_comercial || s.nombre || '—'}
+                    </span>
+                    {!s.activo && <Chip tono="neutral">Inactivo</Chip>}
+                    {hasMarketplace && <Chip tono="sage" dot title="Marketplace público abierto">Tienda</Chip>}
+                  </span>
+                  <span style={{ display: 'block', ...type.caption, letterSpacing: 0, color: colors.stone, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {s.email || s.telefono || '—'}
-                  </div>
+                  </span>
                 </span>
               </span>
-              <span data-tablet-hide="true" style={{ width: 130, fontSize: 11.5, color: colors.textDim, fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span data-col="cod" data-tablet-hide="true" style={{ width: 130, flexShrink: 0, ...type.mono, fontSize: 13, color: colors.stone, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {s.slug ? `/${s.slug}` : '—'}
               </span>
-              <span style={{ width: 90, textAlign: 'center', fontSize: 13, fontWeight: 700, color: colors.text }}>
-                {ridersActivos.length}
+              <span data-col="est" style={{ width: 116, flexShrink: 0 }}>
+                <Chip
+                  tono={ridersOnline > 0 ? 'sage' : 'neutral'}
+                  dot={ridersActivos.length > 0}
+                  title={`${ridersOnline} de ${ridersActivos.length} riders activos conectados ahora`}
+                >
+                  {ridersActivos.length === 0 ? 'Sin riders' : `${ridersOnline}/${ridersActivos.length} online`}
+                </Chip>
               </span>
-              <span data-tablet-sm-hide="true" style={{ width: 90, textAlign: 'center' }}>
-                <OnlineDot online={ridersOnline > 0} count={ridersOnline} total={ridersActivos.length} />
+              <span data-col="pag" data-tablet-sm-hide="true" style={{ width: 96, flexShrink: 0 }}>
+                <Chip tono="neutral" title="Restaurantes vinculados y activos">{countsRest[s.id] || 0} rest.</Chip>
               </span>
-              <span data-tablet-sm-hide="true" style={{ width: 90, textAlign: 'center', fontSize: 13, fontWeight: 700, color: colors.text }}>
-                {countsRest[s.id] || 0}
+              <span
+                data-col="tot"
+                style={{ width: 110, flexShrink: 0, textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: ganadoSemana > 0 ? colors.text : colors.stone }}
+                title="Ganado esta semana (envío + 10% del subtotal + propina)"
+              >
+                {ganadoSemana > 0 ? fmtEUR(ganadoSemana) : '—'}
               </span>
-              <span data-tablet-hide="true" style={{ width: 110, textAlign: 'right', fontSize: 12.5, fontWeight: 700, color: ganadoSemana > 0 ? colors.text : colors.textMute }} title="Ganado esta semana (envío + 10% + propina)">
-                {ganadoSemana > 0 ? `${ganadoSemana.toFixed(2)} €` : '—'}
-              </span>
-              <span style={{ width: 60, textAlign: 'right' }}>
-                <ChevronRight size={16} color={colors.textMute} />
+              {/* La flecha solo tiene sentido en escritorio: en móvil la ficha
+                  entera es el área táctil y una fila propia para un chevron sobra */}
+              <span className="ds-col-hueco" style={{ width: 36, flexShrink: 0, textAlign: 'right' }}>
+                <ChevronRight size={16} color={colors.stone2} />
               </span>
             </div>
           )
@@ -440,89 +469,83 @@ function SocioDetalle({
       </button>
 
       {/* Hero */}
-      <div style={{ ...ds.card, padding: 20, marginBottom: 20 }}>
+      <Card pad={20} style={{ marginBottom: 20 }}>
         <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
           {socio.logo_url
-            ? <img src={socio.logo_url} alt="" style={{ width: 64, height: 64, borderRadius: 12, objectFit: 'cover', background: colors.elev2, flexShrink: 0 }} />
-            : <div style={{ width: 64, height: 64, borderRadius: 12, background: colors.elev2, display: 'grid', placeItems: 'center', fontSize: 24, fontWeight: 800, color: colors.textMute, flexShrink: 0 }}>
+            ? <img src={socio.logo_url} alt="" style={{ width: 64, height: 64, borderRadius: 12, objectFit: 'cover', background: colors.cream2, flexShrink: 0 }} />
+            : <div style={{ width: 64, height: 64, borderRadius: 12, background: colors.cream2, display: 'grid', placeItems: 'center', ...type.h2, color: colors.stone, flexShrink: 0 }}>
                 {(socio.nombre_comercial || socio.nombre || 'S').charAt(0).toUpperCase()}
               </div>}
 
           <div style={{ flex: 1, minWidth: 220 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
               <h1 style={{ ...ds.h1, margin: 0 }}>{socio.nombre_comercial || socio.nombre || '—'}</h1>
-              {!socio.activo && <span style={{ ...ds.badge, background: colors.dangerSoft, color: colors.danger, borderColor: 'rgba(220,38,38,0.3)' }}>INACTIVO</span>}
-              {hasMarketplace && <span style={{ ...ds.badge, background: colors.successSoft, color: colors.success, borderColor: 'rgba(22,163,74,0.3)' }}>MARKETPLACE</span>}
-              <OnlineDot online={ridersOnline > 0} count={ridersOnline} total={ridersActivos.length} showLabel />
+              {!socio.activo && <Chip tono="danger">Inactivo</Chip>}
+              {hasMarketplace && <Chip tono="sage">Marketplace</Chip>}
+              <Chip tono={ridersOnline > 0 ? 'sage' : 'neutral'} dot={ridersActivos.length > 0}>
+                {ridersActivos.length === 0
+                  ? 'Sin riders'
+                  : ridersOnline > 0 ? `${ridersOnline}/${ridersActivos.length} online` : 'Riders offline'}
+              </Chip>
             </div>
-            <div style={{ fontSize: 13, color: colors.textDim, marginBottom: 8 }}>
+            <div style={{ ...type.body, color: colors.stone, marginBottom: 8 }}>
               {socio.nombre && socio.nombre !== socio.nombre_comercial ? socio.nombre : ''}
-              {socio.slug && <> · <span style={{ fontFamily: 'monospace', color: colors.textMute }}>/{socio.slug}</span></>}
+              {socio.slug && <> · <span style={{ ...type.mono, fontSize: 13 }}>/{socio.slug}</span></>}
             </div>
-            <div style={{ display: 'flex', gap: 14, fontSize: 12, color: colors.textMute, flexWrap: 'wrap' }}>
-              {socio.email && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Mail size={11} /> {socio.email}</span>}
-              {socio.telefono && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Phone size={11} /> {socio.telefono}</span>}
+            <div style={{ display: 'flex', gap: 14, ...type.label, color: colors.stone, flexWrap: 'wrap' }}>
+              {socio.email && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Mail size={13} /> {socio.email}</span>}
+              {socio.telefono && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Phone size={13} /> {socio.telefono}</span>}
               {hasMarketplace && (
                 <a href={`https://pidoo.es/s/${socio.slug}`} target="_blank" rel="noopener noreferrer"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: colors.primary, textDecoration: 'none' }}>
-                  <ExternalLink size={11} /> Ver tienda
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: colors.terracotta2, textDecoration: 'none', fontWeight: 600 }}>
+                  <ExternalLink size={13} /> Ver tienda
                 </a>
               )}
             </div>
           </div>
 
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button onClick={onEdit} style={ds.secondaryBtn}><Pencil size={13} /> Editar</button>
-            <button onClick={onResetPwd} disabled={!socio.user_id} title={socio.user_id ? 'Restablecer contraseña' : 'Sin cuenta auth'}
-              style={{ ...ds.secondaryBtn, opacity: socio.user_id ? 1 : 0.4 }}>
-              <KeyRound size={13} /> Contraseña
-            </button>
-            <button
-              onClick={onDelete}
-              title="Eliminar socio definitivamente"
-              style={{
-                ...ds.secondaryBtn,
-                color: '#B5564A',
-                borderColor: 'rgba(220,38,38,0.32)',
-                background: 'rgba(220,38,38,0.06)',
-              }}
+            <GhostBtn size="sm" onClick={onEdit}><Pencil size={13} /> Editar</GhostBtn>
+            <GhostBtn
+              size="sm"
+              onClick={onResetPwd}
+              disabled={!socio.user_id}
+              title={socio.user_id ? 'Restablecer contraseña' : 'Sin cuenta auth'}
+              style={{ opacity: socio.user_id ? 1 : 0.4 }}
             >
+              <KeyRound size={13} /> Contraseña
+            </GhostBtn>
+            <GhostBtn size="sm" danger onClick={onDelete} title="Eliminar socio definitivamente">
               <Trash2 size={13} /> Eliminar socio
-            </button>
+            </GhostBtn>
           </div>
         </div>
 
         {/* Toggles rápidos */}
-        <div style={{ display: 'flex', gap: 18, marginTop: 18, paddingTop: 14, borderTop: `1px solid ${colors.border}`, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 18, marginTop: 18, paddingTop: 14, borderTop: `1px solid ${colors.border}`, flexWrap: 'wrap', alignItems: 'center' }}>
           <ToggleRow label="Cuenta activa" on={!!socio.activo} onClick={onToggleActivo} />
           <ToggleRow label="Marketplace abierto" on={!!socio.marketplace_activo} onClick={onToggleMarketplace} />
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 16, fontSize: 12, color: colors.textMute }}>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 14, alignItems: 'center', ...type.label, color: colors.stone, flexWrap: 'wrap' }}>
             <span><b style={{ color: colors.text }}>{vinculaciones.filter(v => v.estado === 'activa').length}</b> rests. activos</span>
             <span><b style={{ color: colors.text }}>{ridersActivos.length}</b> riders activos</span>
             {(balance?.ganado_semana || 0) > 0 && (
-              <span style={{ color: colors.warning, fontWeight: 700 }}>
-                {Number(balance.ganado_semana).toFixed(2)} € esta semana
-              </span>
+              <Chip tono="warning">{fmtEUR(balance.ganado_semana)} esta semana</Chip>
             )}
           </div>
         </div>
-      </div>
+      </Card>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: `1px solid ${colors.border}`, overflowX: 'auto' }}>
-        {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
-            padding: '10px 14px', fontSize: 12.5, fontWeight: 600,
-            background: 'none', border: 'none',
-            borderBottom: tab === t.id ? `2px solid ${colors.primary}` : '2px solid transparent',
-            color: tab === t.id ? colors.primary : colors.textMute,
-            cursor: 'pointer', fontFamily: 'inherit',
-            display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
-          }}>
-            <t.Icon size={13} /> {t.label}
-          </button>
+      {/* Pestañas */}
+      <PillTabs
+        value={tab}
+        onChange={setTab}
+        style={{ marginBottom: 18 }}
+        options={TABS.map(t => (
+          t.value === 'riders' ? { ...t, count: riders.length }
+            : t.value === 'restaurantes' ? { ...t, count: vinculaciones.length }
+              : t
         ))}
-      </div>
+      />
 
       {tab === 'resumen' && <TabResumen socio={socio} balance={balance} />}
       {tab === 'riders' && <TabRiders socio={socio} riders={riders} riderStatus={riderStatus} onReload={onReload} />}
@@ -541,70 +564,55 @@ function TabResumen({ socio, balance }) {
   const redes = socio.redes || {}
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 18 }} className="admin-grid-2col-collapse">
-      <div style={{ ...ds.card, padding: 18 }}>
+      <Card pad={18}>
         <h3 style={ds.h2}>Datos comerciales</h3>
-        <DetailRow label="Descripción">
-          <span style={{ fontSize: 13, color: colors.textDim, lineHeight: 1.5 }}>{socio.descripcion || '—'}</span>
-        </DetailRow>
+        <DetailRow label="Descripción">{socio.descripcion || '—'}</DetailRow>
         <DetailRow label="Color primario">
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: colors.textDim }}>
-            <span style={{ display: 'inline-block', width: 14, height: 14, borderRadius: 3, background: socio.color_primario || '#C5562C', border: `1px solid ${colors.border}` }} />
-            <span style={{ fontFamily: 'monospace' }}>{socio.color_primario || '#C5562C'}</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ display: 'inline-block', width: 16, height: 16, borderRadius: 4, background: socio.color_primario || '#C5562C', border: `1px solid ${colors.border}` }} />
+            <span style={type.mono}>{socio.color_primario || '#C5562C'}</span>
           </span>
         </DetailRow>
         <DetailRow label="Redes">
           {redes && Object.keys(redes).length > 0 ? (
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 12.5 }}>
-              {redes.instagram && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: colors.textDim }}><AtSign size={12} /> {redes.instagram}</span>}
-              {redes.tiktok && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: colors.textDim }}><Music size={12} /> {redes.tiktok}</span>}
-              {redes.web && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: colors.textDim }}><Globe size={12} /> {redes.web}</span>}
-            </div>
-          ) : <span style={{ fontSize: 12.5, color: colors.textMute }}>—</span>}
+            <span style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              {redes.instagram && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><AtSign size={13} color={colors.stone} /> {redes.instagram}</span>}
+              {redes.tiktok && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Music size={13} color={colors.stone} /> {redes.tiktok}</span>}
+              {redes.web && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Globe size={13} color={colors.stone} /> {redes.web}</span>}
+            </span>
+          ) : <span style={{ color: colors.stone }}>—</span>}
         </DetailRow>
         <DetailRow label="Tarifa de envío">
-          <span style={{ fontSize: 13, color: colors.text }}>
-            {socio.tarifa_base != null ? `${Number(socio.tarifa_base).toFixed(2)} €` : '—'}
-            {' base · '}
-            <span style={{ color: colors.textMute }}>radio {socio.radio_km != null ? `${socio.radio_km} km` : '—'}</span>
-          </span>
+          {socio.tarifa_base != null ? fmtEUR(socio.tarifa_base) : '—'}
+          {' base · '}
+          <span style={{ color: colors.stone }}>radio {socio.radio_km != null ? `${socio.radio_km} km` : '—'}</span>
         </DetailRow>
-        <DetailRow label="Modo entrega">
-          <span style={{ fontSize: 12.5, color: colors.textDim }}>{socio.modo_entrega || '—'}</span>
+        <DetailRow label="Modo entrega">{socio.modo_entrega || '—'}</DetailRow>
+        <DetailRow label="Límite de restaurantes">
+          <b>{socio.limite_restaurantes ?? '—'}</b>
         </DetailRow>
-        <DetailRow label="Límite restaurantes">
-          <span style={{ fontSize: 12.5, color: colors.text, fontWeight: 700 }}>{socio.limite_restaurantes ?? '—'}</span>
-        </DetailRow>
-      </div>
+      </Card>
 
-      <div>
-        <div style={{ ...ds.card, padding: 16, marginBottom: 14 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: colors.textMute, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-            Ganancias del socio
-          </div>
-          {balance ? (
-            <div style={{ fontSize: 12.5, color: colors.textDim, lineHeight: 1.7 }}>
-              <div><b style={{ color: colors.text }}>Esta semana:</b> {Number(balance.ganado_semana || 0).toFixed(2)} €</div>
-              <div><b style={{ color: colors.text }}>Total entregado:</b> {Number(balance.ganado_total || 0).toFixed(2)} €</div>
-              <div style={{ fontSize: 11.5, color: colors.textMute, marginTop: 6 }}>
-                {balance.pedidos_count || 0} pedidos entregados<br />
-                envío + 10% subtotal + propina
-              </div>
-            </div>
-          ) : (
-            <div style={{ fontSize: 12, color: colors.textMute }}>Sin pedidos entregados aún.</div>
-          )}
-        </div>
-        <div style={{ ...ds.card, padding: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: colors.textMute, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-            Reseñas
-          </div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: colors.text }}>
-            {socio.rating != null ? Number(socio.rating).toFixed(1) : '—'}
-            <span style={{ fontSize: 11, color: colors.textMute, fontWeight: 500, marginLeft: 6 }}>
-              {socio.total_resenas > 0 ? `(${socio.total_resenas} reseñas)` : 'sin reseñas'}
-            </span>
-          </div>
-        </div>
+      <div style={{ display: 'grid', gap: 12, alignContent: 'start' }}>
+        {/* En una pantalla de dinero, "todavía no hay datos" y "0,00 €" NO son lo
+            mismo: si no hay balance se dice, no se pinta un cero que parece un
+            cálculo hecho. */}
+        <StatCard
+          label="Ganado esta semana"
+          value={balance ? fmtEUR(balance.ganado_semana || 0) : '—'}
+          sub={balance ? 'Envío + 10% subtotal + propina' : 'Sin pedidos entregados aún'}
+          tone={balance ? 'sage' : 'ink'}
+        />
+        <StatCard
+          label="Total entregado"
+          value={balance ? fmtEUR(balance.ganado_total || 0) : '—'}
+          sub={balance ? `${balance.pedidos_count || 0} pedidos entregados` : 'Sin histórico'}
+        />
+        <StatCard
+          label="Valoración"
+          value={socio.rating != null ? Number(socio.rating).toFixed(1) : '—'}
+          sub={socio.total_resenas > 0 ? `${socio.total_resenas} reseñas` : 'Sin reseñas todavía'}
+        />
       </div>
     </div>
   )
@@ -635,15 +643,13 @@ function TabRiders({ socio, riders, riderStatus }) {
   if (riders.length === 0) {
     return (
       <div>
-        <div style={{ ...ds.card, padding: 32, textAlign: 'center' }}>
-          <Truck size={32} color={colors.textMute} style={{ marginBottom: 10 }} />
-          <div style={{ fontSize: 14, fontWeight: 600, color: colors.text, marginBottom: 4 }}>
-            Este socio no tiene riders
-          </div>
-          <div style={{ fontSize: 12.5, color: colors.textMute, lineHeight: 1.5, maxWidth: 520, margin: '0 auto' }}>
-            Los riders se dan de alta desde la app del socio. Cuando el socio (o su equipo) se registre como repartidor, aparecerá aquí.
-          </div>
-        </div>
+        <Card pad={8}>
+          <Vacio
+            icon={<Truck size={30} />}
+            titulo="Este socio no tiene riders"
+            texto="Los riders se dan de alta desde la app del socio. Cuando el socio (o su equipo) se registre como repartidor, aparecerá aquí."
+          />
+        </Card>
         <ExplicacionRiders />
       </div>
     )
@@ -651,14 +657,10 @@ function TabRiders({ socio, riders, riderStatus }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: colors.text }}>
-            Riders del socio
-          </div>
-          <div style={{ fontSize: 11.5, color: colors.textMute, marginTop: 2 }}>
-            {ridersActivos.length} activo{ridersActivos.length === 1 ? '' : 's'} · {riders.length} en total
-          </div>
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ ...ds.h3 }}>Riders del socio</div>
+        <div style={{ ...type.label, color: colors.stone, marginTop: 2 }}>
+          {ridersActivos.length} activo{ridersActivos.length === 1 ? '' : 's'} · {riders.length} en total
         </div>
       </div>
 
@@ -666,49 +668,48 @@ function TabRiders({ socio, riders, riderStatus }) {
         {riders.map(r => {
           const st = riderStatus[r.id]
           const isOnline = !!st?.is_online
-          const estadoStyle = ESTADO_BADGE[r.estado] || ESTADO_BADGE.pendiente
           return (
-            <div key={r.id} style={{ ...ds.card, padding: 14, opacity: r.activa === false ? 0.6 : 1 }}>
+            <Card key={r.id} pad={14} style={{ opacity: r.activa === false ? 0.6 : 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                 <div style={{ position: 'relative', flexShrink: 0 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 10, background: colors.elev2, display: 'grid', placeItems: 'center', fontWeight: 700, color: colors.textDim, fontSize: 14 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: colors.cream2, display: 'grid', placeItems: 'center', ...type.num, fontSize: 15, color: colors.stone }}>
                     {(r.nombre || 'R').charAt(0).toUpperCase()}
                   </div>
                   {r.estado === 'activa' && r.activa !== false && (
                     <span style={{
                       position: 'absolute', bottom: -1, right: -1,
                       width: 12, height: 12, borderRadius: '50%',
-                      background: isOnline ? colors.success : colors.textFaint,
-                      border: `2px solid ${colors.surface}`,
+                      background: isOnline ? colors.sage : colors.stone2,
+                      border: `2px solid ${colors.paper}`,
                     }} />
                   )}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 700, color: colors.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ ...type.body, fontWeight: 700, color: colors.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {r.nombre || '—'}
                   </div>
-                  <div style={{ fontSize: 11, color: colors.textMute, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ ...type.caption, letterSpacing: 0, color: colors.stone, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {r.email || r.telefono || '—'}
                   </div>
                 </div>
-                <span style={{ ...ds.badge, ...estadoStyle }}>{r.activa === false ? 'inactivo' : r.estado}</span>
+                <EstadoBadge estado={r.activa === false ? 'inactivo' : r.estado} />
               </div>
 
-              <div style={{ fontSize: 11.5, color: colors.textMute, lineHeight: 1.6 }}>
+              <div style={{ ...type.label, color: colors.stone, lineHeight: 1.6 }}>
                 {r.estado === 'activa' && r.activa !== false && (
                   <div>
-                    <b style={{ color: isOnline ? colors.success : colors.textDim }}>{isOnline ? 'Online' : 'Offline'}</b>
+                    <b style={{ color: isOnline ? colors.onSageSoft : colors.ink2 }}>{isOnline ? 'Online' : 'Offline'}</b>
                     {st?.last_checked && <span> · revisado {fmtRelative(st.last_checked)}</span>}
                   </div>
                 )}
                 {st?.last_error && (
-                  <div style={{ color: colors.danger, fontSize: 11, marginTop: 2 }}>
-                    <AlertCircle size={10} style={{ display: 'inline', verticalAlign: 'middle' }} /> {st.last_error}
+                  <div style={{ color: colors.onDangerSoft, marginTop: 2 }}>
+                    <AlertCircle size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> {st.last_error}
                   </div>
                 )}
                 <div>Pedidos entregados: <b style={{ color: colors.text }}>{pedidosCount[r.id] || 0}</b></div>
               </div>
-            </div>
+            </Card>
           )
         })}
       </div>
@@ -720,16 +721,16 @@ function TabRiders({ socio, riders, riderStatus }) {
 
 function ExplicacionRiders() {
   return (
-    <div style={{ ...ds.card, padding: 14, marginTop: 14, background: 'transparent' }}>
-      <div style={{ fontSize: 12, fontWeight: 700, color: colors.text, marginBottom: 6 }}>
+    <Card pad={14} style={{ marginTop: 14, background: colors.cream2, boxShadow: 'none' }}>
+      <div style={{ ...type.label, fontWeight: 700, color: colors.text, marginBottom: 6 }}>
         Cómo funcionan los riders del socio
       </div>
-      <div style={{ fontSize: 12, color: colors.textMute, lineHeight: 1.55 }}>
+      <div style={{ ...type.label, color: colors.onCream2, lineHeight: 1.6 }}>
         El reparto lo gestiona el dispatcher propio de Pidoo. Cada rider se registra desde la app del socio
         y aparece aquí con su estado online/offline en vivo. Pidoo asigna automáticamente cada pedido
         delivery al rider disponible más cercano.
       </div>
-    </div>
+    </Card>
   )
 }
 
@@ -754,57 +755,65 @@ function TabRestaurantes({ socio, vinculaciones, onReload }) {
 
   if (vinculaciones.length === 0) {
     return (
-      <div style={{ ...ds.card, padding: 32, textAlign: 'center' }}>
-        <Store size={32} color={colors.textMute} style={{ marginBottom: 10 }} />
-        <div style={{ fontSize: 14, fontWeight: 600, color: colors.text, marginBottom: 4 }}>Sin restaurantes vinculados</div>
-        <div style={{ fontSize: 12.5, color: colors.textMute }}>El socio aún no ha solicitado vinculación con ningún restaurante.</div>
-      </div>
+      <Card pad={8}>
+        <Vacio
+          icon={<Store size={30} />}
+          titulo="Sin restaurantes vinculados"
+          texto="El socio aún no ha solicitado vinculación con ningún restaurante."
+        />
+      </Card>
     )
   }
 
   return (
-    <div style={ds.table}>
-      <div style={ds.tableHeader}>
-        <span style={{ flex: 1 }}>Restaurante</span>
-        <span style={{ width: 130 }}>Estado</span>
-        <span data-tablet-hide="true" style={{ width: 110 }}>Solicitado</span>
-        <span data-tablet-hide="true" style={{ width: 110 }}>Aceptado</span>
-        <span style={{ width: 90, textAlign: 'center' }}>Destacado</span>
-        <span style={{ width: 200, textAlign: 'right' }}>Acciones</span>
+    <div className="ds-table-stack" style={ds.table}>
+      <div className="ds-th" style={ds.tableHeader}>
+        <span style={{ flex: '3 1 180px', minWidth: 0 }}>Restaurante</span>
+        <span style={{ width: 130, flexShrink: 0 }}>Estado</span>
+        <span data-tablet-hide="true" style={{ width: 200, flexShrink: 0 }}>Fechas</span>
+        <span style={{ width: 96, flexShrink: 0, textAlign: 'center' }}>Destacado</span>
+        <span style={{ width: 210, flexShrink: 0, textAlign: 'right' }}>Acciones</span>
       </div>
       {vinculaciones.map(v => (
-        <div key={v.id} style={ds.tableRow}>
-          <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+        <div key={v.id} className="ds-row-touch" style={ds.tableRow}>
+          <span data-col="nom" style={{ flex: '3 1 180px', display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
             {v.establecimientos?.logo_url
               ? <img src={v.establecimientos.logo_url} alt="" style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
-              : <div style={{ width: 28, height: 28, borderRadius: 6, background: colors.elev2 }} />}
-            <span style={{ fontSize: 13, fontWeight: 600, color: colors.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              : <span style={{ width: 28, height: 28, borderRadius: 6, background: colors.cream2, flexShrink: 0 }} />}
+            <span style={{ fontWeight: 600, color: colors.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {v.establecimientos?.nombre || '—'}
             </span>
-            {v.exclusivo && <span style={{ ...ds.badge, fontSize: 9, padding: '1px 5px' }}>EXCL</span>}
-            {v.es_captador && <span style={{ ...ds.badge, fontSize: 9, padding: '1px 5px', background: colors.primarySoft, color: colors.primary, borderColor: colors.primaryBorder }}>CAPTADOR</span>}
+            {v.exclusivo && <Chip tono="neutral">Exclusivo</Chip>}
+            {v.es_captador && <Chip tono="terracotta">Captador</Chip>}
           </span>
-          <span style={{ width: 130 }}>
+          <span data-col="est" style={{ width: 130, flexShrink: 0 }}>
             <EstadoBadge estado={v.estado} />
           </span>
-          <span data-tablet-hide="true" style={{ width: 110, fontSize: 11.5, color: colors.textMute }}>{fmtDate(v.solicitado_at)}</span>
-          <span data-tablet-hide="true" style={{ width: 110, fontSize: 11.5, color: colors.textMute }}>{fmtDate(v.aceptado_at)}</span>
-          <span style={{ width: 90, textAlign: 'center' }}>
-            <button onClick={() => toggleDestacado(v)} title={v.destacado ? 'Quitar destacado' : 'Destacar'}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: v.destacado ? colors.primary : colors.textMute }}>★</button>
+          {/* Las dos fechas van juntas y con su etiqueta: en móvil la cabecera
+              desaparece y dos fechas sueltas no dicen cuál es cuál */}
+          <span data-col="ale" data-tablet-hide="true" style={{ width: 200, flexShrink: 0, ...type.label, color: colors.stone }}>
+            Solicitado {fmtDate(v.solicitado_at)}
+            {v.aceptado_at && ` · aceptado ${fmtDate(v.aceptado_at)}`}
           </span>
-          <span style={{ width: 200, textAlign: 'right', display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+          <span data-col="pag" style={{ width: 96, flexShrink: 0, textAlign: 'center' }}>
+            <button
+              onClick={() => toggleDestacado(v)}
+              title={v.destacado ? 'Quitar destacado' : 'Destacar'}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 17, lineHeight: 1, padding: 2, color: v.destacado ? colors.terracotta : colors.stone2 }}
+            >★</button>
+          </span>
+          <span data-col="acc" style={{ width: 210, flexShrink: 0, display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
             {(v.estado === 'pendiente' || v.estado === 'solicitada') && (
               <>
-                <button onClick={() => setEstado(v, 'activa')} style={{ ...ds.actionBtn, color: colors.success, borderColor: 'rgba(22,163,74,0.3)' }}><Check size={11} /> Aprobar</button>
-                <button onClick={() => setEstado(v, 'rechazada')} style={{ ...ds.actionBtn, color: colors.danger, borderColor: 'rgba(220,38,38,0.3)' }}><X size={11} /> Rechazar</button>
+                <MiniBtn onClick={() => setEstado(v, 'activa')}><Check size={12} /> Aprobar</MiniBtn>
+                <MiniBtn danger onClick={() => setEstado(v, 'rechazada')}><X size={12} /> Rechazar</MiniBtn>
               </>
             )}
             {v.estado === 'activa' && (
-              <button onClick={() => setEstado(v, 'rechazada')} style={ds.actionBtn}><X size={11} /> Desvincular</button>
+              <MiniBtn danger onClick={() => setEstado(v, 'rechazada')}><X size={12} /> Desvincular</MiniBtn>
             )}
             {v.estado === 'rechazada' && (
-              <button onClick={() => setEstado(v, 'activa')} style={{ ...ds.actionBtn, color: colors.primary, borderColor: colors.primaryBorder }}>Reactivar</button>
+              <MiniBtn onClick={() => setEstado(v, 'activa')}>Reactivar</MiniBtn>
             )}
           </span>
         </div>
@@ -858,62 +867,60 @@ function TabPedidos({ socio, riders }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
-        {[
-          { id: 'hoy', l: 'Hoy' },
-          { id: 'semana', l: 'Última semana' },
-          { id: 'mes', l: 'Último mes' },
-        ].map(p => (
-          <button key={p.id} onClick={() => setPeriodo(p.id)} style={{
-            ...ds.filterBtn,
-            background: periodo === p.id ? colors.primarySoft : colors.surface,
-            color: periodo === p.id ? colors.primary : colors.textDim,
-            borderColor: periodo === p.id ? colors.primaryBorder : colors.border,
-          }}>{p.l}</button>
-        ))}
-      </div>
+      <Segmented
+        value={periodo}
+        onChange={setPeriodo}
+        style={{ marginBottom: 14 }}
+        options={[
+          { value: 'hoy', label: 'Hoy' },
+          { value: 'semana', label: 'Última semana' },
+          { value: 'mes', label: 'Último mes' },
+        ]}
+      />
 
-      <div style={ds.table}>
-        <div style={ds.tableHeader}>
-          <span style={{ width: 90 }}>Código</span>
-          <span data-tablet-hide="true" style={{ width: 130 }}>Fecha</span>
-          <span style={{ flex: 1 }}>Restaurante</span>
-          <span data-tablet-sm-hide="true" style={{ flex: 1 }}>Rider</span>
-          <span style={{ width: 90 }}>Estado</span>
-          <span data-tablet-sm-hide="true" style={{ width: 80 }}>Pago</span>
-          <span style={{ width: 80, textAlign: 'right' }}>Total</span>
+      <div className="ds-table-stack" style={ds.table}>
+        <div className="ds-th" style={ds.tableHeader}>
+          <span style={{ width: 104, flexShrink: 0 }}>Código</span>
+          <span style={{ flex: '3 1 150px', minWidth: 0 }}>Restaurante</span>
+          <span style={{ width: 96, flexShrink: 0 }}>Estado</span>
+          <span data-tablet-sm-hide="true" style={{ width: 96, flexShrink: 0 }}>Pago</span>
+          <span data-tablet-sm-hide="true" style={{ flex: '1 1 110px', minWidth: 0 }}>Rider</span>
+          <span data-tablet-hide="true" style={{ width: 120, flexShrink: 0 }}>Fecha</span>
+          <span style={{ width: 90, flexShrink: 0, textAlign: 'right' }}>Total</span>
         </div>
-        {loading && <div style={{ padding: 24, textAlign: 'center', color: colors.textMute, fontSize: 13 }}>Cargando…</div>}
+        {loading && <div style={{ padding: 24, textAlign: 'center', ...type.body, color: colors.stone }}>Cargando…</div>}
         {!loading && pedidos.length === 0 && (
-          <div style={{ padding: 24, textAlign: 'center', color: colors.textMute, fontSize: 13 }}>Sin pedidos en este periodo.</div>
+          <Vacio titulo="Sin pedidos en este periodo" texto="Cambia el periodo de arriba para ver más histórico." />
         )}
         {pedidos.map(p => (
-          <div key={p.id} style={ds.tableRow}>
-            <span style={{ width: 90, fontSize: 12, fontFamily: 'monospace', fontWeight: 700, color: colors.text }}>{p.codigo}</span>
-            <span data-tablet-hide="true" style={{ width: 130, fontSize: 11.5, color: colors.textMute }}>{fmtDateTime(p.created_at)}</span>
-            <span style={{ flex: 1, fontSize: 12.5, color: colors.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div key={p.id} className="ds-row-touch" style={ds.tableRow}>
+            <span data-col="cod" style={{ width: 104, flexShrink: 0, ...type.mono, fontSize: 13, fontWeight: 700, color: colors.text }}>{p.codigo}</span>
+            <span data-col="nom" style={{ flex: '3 1 150px', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.establecimientos?.nombre || ''}>
               {p.establecimientos?.nombre || '—'}
             </span>
-            <span data-tablet-sm-hide="true" style={{ flex: 1, fontSize: 12.5, color: colors.textDim, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {ridersMap[p.rider_account_id] || (p.rider_account_id ? '(externo)' : '—')}
-            </span>
-            <span style={{ width: 90 }}>
+            <span data-col="est" style={{ width: 96, flexShrink: 0 }}>
               <EstadoBadge estado={p.estado} />
             </span>
-            <span data-tablet-sm-hide="true" style={{ width: 80, fontSize: 11.5, color: colors.textMute, textTransform: 'capitalize' }}>
-              {p.metodo_pago || '—'}
+            <span data-col="pag" data-tablet-sm-hide="true" style={{ width: 96, flexShrink: 0 }}>
+              <Chip tono={p.metodo_pago === 'tarjeta' ? 'info' : 'warning'}>
+                {p.metodo_pago === 'tarjeta' ? 'Tarjeta' : p.metodo_pago === 'datafono' ? 'Datáfono' : p.metodo_pago === 'efectivo' ? 'Efectivo' : (p.metodo_pago || '—')}
+              </Chip>
             </span>
-            <span style={{ width: 80, textAlign: 'right', fontSize: 12.5, fontWeight: 700, color: colors.text }}>
-              {Number(p.total || 0).toFixed(2)} €
+            <span data-col="ori" data-tablet-sm-hide="true" style={{ flex: '1 1 110px', minWidth: 0, ...type.label, color: colors.stone, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {ridersMap[p.rider_account_id] || (p.rider_account_id ? '(externo)' : '—')}
+            </span>
+            <span data-col="fec" data-tablet-hide="true" style={{ width: 120, flexShrink: 0, ...type.label, color: colors.stone }}>{fmtDateTime(p.created_at)}</span>
+            <span data-col="tot" style={{ width: 90, flexShrink: 0, textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: colors.text }}>
+              {fmtEUR(p.total)}
             </span>
           </div>
         ))}
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12, fontSize: 12, color: colors.textMute }}>
-        <button onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0} style={{ ...ds.actionBtn, opacity: page === 0 ? 0.4 : 1 }}>Anterior</button>
-        <span style={{ alignSelf: 'center' }}>Página {page + 1}</span>
-        <button onClick={() => setPage(page + 1)} disabled={pedidos.length < PER_PAGE} style={{ ...ds.actionBtn, opacity: pedidos.length < PER_PAGE ? 0.4 : 1 }}>Siguiente</button>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10, marginTop: 12, ...type.label, color: colors.stone }}>
+        <GhostBtn size="sm" onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0} style={{ opacity: page === 0 ? 0.4 : 1 }}>Anterior</GhostBtn>
+        <span>Página {page + 1}</span>
+        <GhostBtn size="sm" onClick={() => setPage(page + 1)} disabled={pedidos.length < PER_PAGE} style={{ opacity: pedidos.length < PER_PAGE ? 0.4 : 1 }}>Siguiente</GhostBtn>
       </div>
     </div>
   )
@@ -958,36 +965,40 @@ function TabFinanzas({ socio }) {
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 8 }}>
-        <StatCard label="Esta semana" value={`${stats.semana.toFixed(2)} €`} warning={stats.semana > 0} />
-        <StatCard label="Este mes" value={`${stats.mes.toFixed(2)} €`} />
-        <StatCard label="Total entregado" value={`${stats.total.toFixed(2)} €`} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12, marginBottom: 10 }}>
+        <StatCard label="Esta semana" value={fmtEUR(stats.semana)} sub="Pendiente del corte del lunes" tone={stats.semana > 0 ? 'terracotta' : 'ink'} />
+        <StatCard label="Este mes" value={fmtEUR(stats.mes)} sub="Desde el día 1" />
+        <StatCard label="Total entregado" value={fmtEUR(stats.total)} sub={`${pedidos.length} pedidos entregados`} tone="sage" />
       </div>
-      <div style={{ fontSize: 11.5, color: colors.textMute, marginBottom: 16 }}>
+      <div style={{ ...type.label, color: colors.stone, marginBottom: 16, lineHeight: 1.5 }}>
         Cálculo en vivo: por cada pedido entregado el socio cobra envío + 10% del subtotal + propina. La liquidación se paga los lunes.
       </div>
 
-      <div style={ds.table}>
-        <div style={ds.tableHeader}>
-          <span style={{ width: 110 }}>Código</span>
-          <span style={{ flex: 1 }}>Fecha</span>
-          <span data-tablet-sm-hide="true" style={{ width: 90, textAlign: 'right' }}>Envío</span>
-          <span data-tablet-sm-hide="true" style={{ width: 90, textAlign: 'right' }}>Subtotal</span>
-          <span data-tablet-hide="true" style={{ width: 90, textAlign: 'right' }}>Propina</span>
-          <span style={{ width: 100, textAlign: 'right' }}>Ganado</span>
+      <div className="ds-table-stack" style={ds.table}>
+        <div className="ds-th" style={ds.tableHeader}>
+          <span style={{ width: 110, flexShrink: 0 }}>Código</span>
+          <span data-tablet-hide="true" style={{ width: 110, flexShrink: 0 }}>Fecha</span>
+          <span style={{ flex: '2 1 220px', minWidth: 0 }}>Desglose</span>
+          <span style={{ width: 110, flexShrink: 0, textAlign: 'right' }}>Ganado</span>
         </div>
-        {loading && <div style={{ padding: 24, textAlign: 'center', color: colors.textMute, fontSize: 13 }}>Cargando…</div>}
+        {loading && <div style={{ padding: 24, textAlign: 'center', ...type.body, color: colors.stone }}>Cargando…</div>}
         {!loading && pedidos.length === 0 && (
-          <div style={{ padding: 24, textAlign: 'center', color: colors.textMute, fontSize: 13 }}>Sin pedidos entregados aún.</div>
+          <Vacio titulo="Sin pedidos entregados aún" texto="En cuanto el socio entregue su primer pedido verás aquí el desglose de lo que cobra." />
         )}
         {pedidos.map(p => (
-          <div key={p.id} style={ds.tableRow}>
-            <span style={{ width: 110, fontFamily: 'monospace', fontSize: 12, fontWeight: 700, color: colors.text }}>{p.codigo}</span>
-            <span style={{ flex: 1, fontSize: 12, color: colors.textMute }}>{new Date(p.created_at).toLocaleDateString('es-ES')}</span>
-            <span data-tablet-sm-hide="true" style={{ width: 90, textAlign: 'right', fontSize: 12, color: colors.textMute }}>{(Number(p.coste_envio) || 0).toFixed(2)} €</span>
-            <span data-tablet-sm-hide="true" style={{ width: 90, textAlign: 'right', fontSize: 12, color: colors.textMute }}>{(Number(p.subtotal) || 0).toFixed(2)} €</span>
-            <span data-tablet-hide="true" style={{ width: 90, textAlign: 'right', fontSize: 12, color: colors.textMute }}>{(Number(p.propina) || 0).toFixed(2)} €</span>
-            <span style={{ width: 100, textAlign: 'right', fontSize: 13, fontWeight: 700, color: colors.text }}>{ganadoDe(p).toFixed(2)} €</span>
+          <div key={p.id} className="ds-row-touch" style={ds.tableRow}>
+            <span data-col="nom" style={{ width: 110, flexShrink: 0, ...type.mono, fontSize: 13, fontWeight: 700, color: colors.text }}>{p.codigo}</span>
+            <span data-col="fec" data-tablet-hide="true" style={{ width: 110, flexShrink: 0, ...type.label, color: colors.stone }}>
+              {new Date(p.created_at).toLocaleDateString('es-ES')}
+            </span>
+            {/* Envío, subtotal y propina en una sola celda: cada uno con su
+                etiqueta, que en móvil la cabecera de la tabla ya no está */}
+            <span data-col="ale" style={{ flex: '2 1 220px', minWidth: 0, ...type.label, color: colors.stone, fontVariantNumeric: 'tabular-nums' }}>
+              Envío {fmtEUR(p.coste_envio)} · Subtotal {fmtEUR(p.subtotal)} · Propina {fmtEUR(p.propina)}
+            </span>
+            <span data-col="tot" style={{ width: 110, flexShrink: 0, textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: colors.text }}>
+              {fmtEUR(ganadoDe(p))}
+            </span>
           </div>
         ))}
       </div>
@@ -1017,54 +1028,52 @@ function TabConfig({ socio, riders, riderStatus }) {
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }} className="admin-grid-2col-collapse">
-      <div style={{ ...ds.card, padding: 18 }}>
+      <Card pad={18}>
         <h3 style={ds.h2}>Datos de reparto del socio</h3>
         <DetailRow label="API key">
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <span style={{ fontSize: 12, fontFamily: 'monospace', color: colors.textDim, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <span style={{ ...type.mono, fontSize: 13, color: colors.stone, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {socio.shipday_api_key
                 ? (showKey ? socio.shipday_api_key : `${socio.shipday_api_key.slice(0, 6)}•••••${socio.shipday_api_key.slice(-4)}`)
                 : '—'}
             </span>
             {socio.shipday_api_key && (
               <>
-                <button onClick={() => setShowKey(!showKey)} style={{ ...ds.actionBtn, padding: '0 6px', height: 24 }}>
-                  {showKey ? <EyeOff size={11} /> : <Eye size={11} />}
-                </button>
-                <button onClick={() => copy(socio.shipday_api_key)} style={{ ...ds.actionBtn, padding: '0 6px', height: 24 }}>
-                  <Copy size={11} />
-                </button>
+                <MiniBtn onClick={() => setShowKey(!showKey)} title={showKey ? 'Ocultar' : 'Mostrar'} style={{ padding: '5px 8px' }}>
+                  {showKey ? <EyeOff size={13} /> : <Eye size={13} />}
+                </MiniBtn>
+                <MiniBtn onClick={() => copy(socio.shipday_api_key)} title="Copiar" style={{ padding: '5px 8px' }}>
+                  <Copy size={13} />
+                </MiniBtn>
               </>
             )}
-          </div>
-        </DetailRow>
-        <DetailRow label="Carrier ID">
-          <span style={{ fontSize: 12, fontFamily: 'monospace', color: colors.textDim }}>{socio.shipday_carrier_id || '—'}</span>
-        </DetailRow>
-        <DetailRow label="Última sync rider_status">
-          <span style={{ fontSize: 12, color: colors.textDim }}>{ultimaSync ? fmtRelative(ultimaSync) : 'Sin datos'}</span>
-        </DetailRow>
-      </div>
-
-      <div style={{ ...ds.card, padding: 18 }}>
-        <h3 style={ds.h2}>Datos fiscales</h3>
-        <DetailRow label="Razón social"><span style={{ fontSize: 12.5, color: colors.textDim }}>{socio.razon_social || '—'}</span></DetailRow>
-        <DetailRow label="NIF"><span style={{ fontSize: 12.5, fontFamily: 'monospace', color: colors.textDim }}>{socio.nif || '—'}</span></DetailRow>
-        <DetailRow label="Dirección fiscal">
-          <span style={{ fontSize: 12.5, color: colors.textDim }}>
-            {[socio.direccion_fiscal, socio.codigo_postal, socio.ciudad, socio.provincia].filter(Boolean).join(', ') || '—'}
           </span>
         </DetailRow>
-        <DetailRow label="IBAN"><span style={{ fontSize: 12.5, fontFamily: 'monospace', color: colors.textDim }}>{socio.iban || '—'}</span></DetailRow>
-      </div>
+        <DetailRow label="Carrier ID">
+          <span style={type.mono}>{socio.shipday_carrier_id || '—'}</span>
+        </DetailRow>
+        <DetailRow label="Última sync rider_status">
+          {ultimaSync ? fmtRelative(ultimaSync) : 'Sin datos'}
+        </DetailRow>
+      </Card>
 
-      <div style={{ ...ds.card, padding: 18 }}>
+      <Card pad={18}>
+        <h3 style={ds.h2}>Datos fiscales</h3>
+        <DetailRow label="Razón social">{socio.razon_social || '—'}</DetailRow>
+        <DetailRow label="NIF"><span style={type.mono}>{socio.nif || '—'}</span></DetailRow>
+        <DetailRow label="Dirección fiscal">
+          {[socio.direccion_fiscal, socio.codigo_postal, socio.ciudad, socio.provincia].filter(Boolean).join(', ') || '—'}
+        </DetailRow>
+        <DetailRow label="IBAN"><span style={type.mono}>{socio.iban || '—'}</span></DetailRow>
+      </Card>
+
+      <Card pad={18}>
         <h3 style={ds.h2}>Stripe Connect</h3>
-        <div style={{ fontSize: 12.5, color: colors.textMute, lineHeight: 1.6 }}>
+        <div style={{ ...type.body, color: colors.stone, lineHeight: 1.6 }}>
           La suscripción y el onboarding Connect se gestionan desde el panel del socio.
-          Para liquidaciones automáticas, ver edge functions <code>liquidacion-semanal</code> y <code>stripe-connect-onboarding</code>.
+          Para liquidaciones automáticas, ver edge functions <code style={type.mono}>liquidacion-semanal</code> y <code style={type.mono}>stripe-connect-onboarding</code>.
         </div>
-      </div>
+      </Card>
     </div>
   )
 }
@@ -1072,73 +1081,15 @@ function TabConfig({ socio, riders, riderStatus }) {
 // ──────────────────────────────────────────────────────────────────────────────
 // Helpers de UI
 // ──────────────────────────────────────────────────────────────────────────────
-const ESTADO_BADGE = {
-  activa: { background: colors.successSoft, color: colors.success, borderColor: 'rgba(22,163,74,0.3)' },
-  pendiente: { background: colors.warningSoft, color: colors.warning, borderColor: 'rgba(217,119,6,0.3)' },
-  rechazada: { background: colors.dangerSoft, color: colors.danger, borderColor: 'rgba(220,38,38,0.3)' },
-  solicitada: { background: colors.warningSoft, color: colors.warning, borderColor: 'rgba(217,119,6,0.3)' },
-  pagado: { background: colors.successSoft, color: colors.success, borderColor: 'rgba(22,163,74,0.3)' },
-  entregado: { background: colors.successSoft, color: colors.success, borderColor: 'rgba(22,163,74,0.3)' },
-  cancelado: { background: colors.dangerSoft, color: colors.danger, borderColor: 'rgba(220,38,38,0.3)' },
-  nuevo: { background: colors.infoSoft, color: colors.info, borderColor: 'rgba(37,99,235,0.3)' },
-  preparando: { background: colors.infoSoft, color: colors.info, borderColor: 'rgba(37,99,235,0.3)' },
-  listo: { background: colors.infoSoft, color: colors.info, borderColor: 'rgba(37,99,235,0.3)' },
-  recogido: { background: colors.infoSoft, color: colors.info, borderColor: 'rgba(37,99,235,0.3)' },
-  en_camino: { background: colors.infoSoft, color: colors.info, borderColor: 'rgba(37,99,235,0.3)' },
-}
-
-function EstadoBadge({ estado }) {
-  const st = ESTADO_BADGE[estado] || { background: colors.elev2, color: colors.textMute, borderColor: colors.border }
-  return <span style={{ ...ds.badge, ...st }}>{estado || '—'}</span>
-}
-
-function OnlineDot({ online, count, total, showLabel }) {
-  const color = online ? colors.success : colors.textFaint
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11.5, fontWeight: 600, color: online ? colors.success : colors.textMute }}>
-      <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, boxShadow: online ? `0 0 0 3px ${colors.successSoft}` : 'none' }} />
-      {showLabel && (online ? `${count}/${total} online` : (total > 0 ? 'Offline' : 'Sin riders'))}
-      {!showLabel && total > 0 && <span style={{ color: colors.textMute }}>{count}/{total}</span>}
-    </span>
-  )
-}
+// `EstadoBadge`, `Chip`, `StatCard` y `Toggle` vivían aquí duplicados (con un
+// mapa de estados propio que pintaba el valor crudo de la columna, "en_camino",
+// y una tarjeta de cifra con su propio tamaño). Ahora salen de `lib/ui.jsx`.
 
 function ToggleRow({ label, on, onClick }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      <Toggle on={on} onClick={onClick} />
-      <span style={{ fontSize: 12.5, color: colors.textDim, fontWeight: 600 }}>{label}</span>
-    </div>
-  )
-}
-
-function Toggle({ on, onClick }) {
-  return (
-    <button onClick={onClick} style={{
-      width: 34, height: 20, borderRadius: 999,
-      background: on ? colors.primary : colors.elev2,
-      border: `1px solid ${on ? colors.primaryBorder : colors.border}`,
-      position: 'relative', cursor: 'pointer',
-      transition: 'background 0.15s',
-    }}>
-      <span style={{
-        position: 'absolute',
-        top: 1, left: on ? 15 : 1,
-        width: 16, height: 16, borderRadius: '50%',
-        background: '#fff',
-        boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
-        transition: 'left 0.15s',
-      }} />
-    </button>
-  )
-}
-
-function StatCard({ label, value, accent, warning }) {
-  const color = warning ? colors.warning : (accent ? colors.success : colors.text)
-  return (
-    <div style={{ ...ds.card, padding: '14px 18px' }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: colors.textMute, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 24, fontWeight: 800, color, letterSpacing: '-0.5px' }}>{value}</div>
+      <Toggle on={on} onChange={onClick} size="sm" aria-label={label} />
+      <span style={{ ...type.label, fontWeight: 600, color: colors.text }}>{label}</span>
     </div>
   )
 }
@@ -1146,8 +1097,8 @@ function StatCard({ label, value, accent, warning }) {
 function DetailRow({ label, children }) {
   return (
     <div style={{ marginBottom: 12 }}>
-      <div style={{ fontSize: 10.5, fontWeight: 700, color: colors.textMute, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{label}</div>
-      <div>{children}</div>
+      <div style={{ ...type.caption, color: colors.stone, textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>{label}</div>
+      <div style={{ ...type.body, color: colors.text, lineHeight: 1.5 }}>{children}</div>
     </div>
   )
 }
@@ -1226,9 +1177,9 @@ function EditSocioModal({ socio, onClose, onSaved }) {
     <div style={ds.modal} onClick={onClose}>
       <div className="admin-modal-content" style={{ ...ds.modalContent, maxWidth: 640 }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-          <Pencil size={18} color={colors.primary} />
-          <h2 style={{ fontSize: 17, fontWeight: 700, color: colors.text, flex: 1, margin: 0 }}>Editar socio</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: colors.textMute, cursor: 'pointer' }}><X size={18} /></button>
+          <Pencil size={18} color={colors.terracotta} />
+          <h2 style={{ ...ds.h3, flex: 1, margin: 0 }}>Editar socio</h2>
+          <button onClick={onClose} aria-label="Cerrar" style={{ background: 'none', border: 'none', color: colors.stone, cursor: 'pointer', display: 'flex', padding: 2 }}><X size={18} /></button>
         </div>
 
         <div style={{ display: 'grid', gap: 12 }}>
@@ -1267,7 +1218,7 @@ function EditSocioModal({ socio, onClose, onSaved }) {
                 <input type="color" value={colorPrimario} onChange={e => setColorPrimario(e.target.value)}
                   style={{ width: 38, height: 36, border: `1px solid ${colors.border}`, borderRadius: 6, padding: 2 }} />
                 <input value={colorPrimario} onChange={e => setColorPrimario(e.target.value)}
-                  style={{ ...ds.formInput, fontFamily: 'monospace' }} />
+                  style={{ ...ds.formInput, ...type.mono, fontSize: ds.formInput.fontSize }} />
               </div>
             </div>
             <div>
@@ -1290,7 +1241,7 @@ function EditSocioModal({ socio, onClose, onSaved }) {
           <div>
             <label style={ds.label}>Shipday API key</label>
             <input value={shipdayKey} onChange={e => setShipdayKey(e.target.value)}
-              style={{ ...ds.formInput, fontFamily: 'monospace', fontSize: 12 }} placeholder="(opcional)" />
+              style={{ ...ds.formInput, ...type.mono, fontSize: 13 }} placeholder="(opcional)" />
           </div>
 
           <div>
@@ -1303,21 +1254,21 @@ function EditSocioModal({ socio, onClose, onSaved }) {
           </div>
 
           <div style={{ borderTop: `1px solid ${colors.border}`, paddingTop: 12 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: colors.textDim, cursor: 'pointer' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, ...type.body, color: colors.text, cursor: 'pointer' }}>
               <input type="checkbox" checked={confirmSlug} onChange={e => setConfirmSlug(e.target.checked)} />
               Cambiar slug (con cuidado, rompe URL pública)
             </label>
             {confirmSlug && (
               <input value={slug} onChange={e => setSlug(e.target.value.replace(/[^a-z0-9-]/gi, '').toLowerCase())}
-                style={{ ...ds.formInput, marginTop: 6, fontFamily: 'monospace' }} />
+                style={{ ...ds.formInput, ...type.mono, fontSize: ds.formInput.fontSize, marginTop: 6 }} />
             )}
           </div>
 
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <button onClick={onClose} style={ds.secondaryBtn}>Cancelar</button>
-            <button onClick={guardar} disabled={saving} style={{ ...ds.primaryBtn, flex: 1, opacity: saving ? 0.5 : 1 }}>
-              <Save size={13} /> {saving ? 'Guardando…' : 'Guardar cambios'}
-            </button>
+            <GhostBtn onClick={onClose}>Cancelar</GhostBtn>
+            <GlossyBtn accent onClick={guardar} disabled={saving} style={{ flex: 1, opacity: saving ? 0.5 : 1 }}>
+              <Save size={14} /> {saving ? 'Guardando…' : 'Guardar cambios'}
+            </GlossyBtn>
           </div>
         </div>
       </div>
@@ -1397,16 +1348,16 @@ function NuevoSocioModal({ onClose, onSaved }) {
     <div style={ds.modal} onClick={onClose}>
       <div className="admin-modal-content" style={{ ...ds.modalContent, maxWidth: 560 }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-          <Users size={18} color={colors.primary} />
-          <h2 style={{ fontSize: 17, fontWeight: 700, color: colors.text, flex: 1, margin: 0 }}>Nuevo socio</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: colors.textMute, cursor: 'pointer' }}><X size={18} /></button>
+          <Users size={18} color={colors.terracotta} />
+          <h2 style={{ ...ds.h3, flex: 1, margin: 0 }}>Nuevo socio</h2>
+          <button onClick={onClose} aria-label="Cerrar" style={{ background: 'none', border: 'none', color: colors.stone, cursor: 'pointer', display: 'flex', padding: 2 }}><X size={18} /></button>
         </div>
 
         <div style={{ display: 'grid', gap: 12 }}>
           <div>
             <label style={ds.label}>Email del usuario existente *</label>
             <input value={email} onChange={e => setEmail(e.target.value)} placeholder="socio@email.com" style={ds.formInput} />
-            <div style={{ fontSize: 10.5, color: colors.textMute, marginTop: 4 }}>
+            <div style={{ ...type.caption, letterSpacing: 0, color: colors.stone, marginTop: 4 }}>
               Debe existir en `usuarios`. Se le cambiará el rol a `socio`.
             </div>
           </div>
@@ -1428,10 +1379,10 @@ function NuevoSocioModal({ onClose, onSaved }) {
               value={slug}
               onChange={e => setSlug(e.target.value.replace(/[^a-z0-9-]/gi, '').toLowerCase())}
               placeholder="mi-slug"
-              style={{ ...ds.formInput, fontFamily: 'monospace' }}
+              style={{ ...ds.formInput, ...type.mono, fontSize: ds.formInput.fontSize }}
             />
             {slug && (
-              <div style={{ fontSize: 11, marginTop: 4, color: slugStatus === 'taken' ? colors.danger : slugStatus === 'free' ? colors.success : colors.textMute }}>
+              <div style={{ ...type.label, marginTop: 4, color: slugStatus === 'taken' ? colors.onDangerSoft : slugStatus === 'free' ? colors.onSageSoft : colors.stone }}>
                 {slugStatus === 'checking' && 'Comprobando…'}
                 {slugStatus === 'free' && `✓ Disponible — pidoo.es/s/${slug}`}
                 {slugStatus === 'taken' && '✗ Ya está en uso'}
@@ -1452,7 +1403,7 @@ function NuevoSocioModal({ onClose, onSaved }) {
 
           <div>
             <label style={ds.label}>Shipday API key</label>
-            <input value={shipdayApiKey} onChange={e => setShipdayApiKey(e.target.value)} placeholder="(opcional)" style={{ ...ds.formInput, fontFamily: 'monospace', fontSize: 12 }} />
+            <input value={shipdayApiKey} onChange={e => setShipdayApiKey(e.target.value)} placeholder="(opcional)" style={{ ...ds.formInput, ...type.mono, fontSize: 13 }} />
           </div>
 
           <div className="admin-grid-2col-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -1467,10 +1418,10 @@ function NuevoSocioModal({ onClose, onSaved }) {
           </div>
 
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <button onClick={onClose} style={ds.secondaryBtn}>Cancelar</button>
-            <button onClick={guardar} disabled={saving} style={{ ...ds.primaryBtn, flex: 1, opacity: saving ? 0.5 : 1 }}>
+            <GhostBtn onClick={onClose}>Cancelar</GhostBtn>
+            <GlossyBtn accent onClick={guardar} disabled={saving} style={{ flex: 1, opacity: saving ? 0.5 : 1 }}>
               {saving ? 'Creando…' : 'Crear socio'}
-            </button>
+            </GlossyBtn>
           </div>
         </div>
       </div>

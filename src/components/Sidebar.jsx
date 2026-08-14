@@ -5,32 +5,63 @@ import {
   Activity, Scale, Video,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { colors } from '../lib/darkStyles'
+import { colors, type, radius } from '../lib/darkStyles'
 
-// Bundle s6-admin → AdminSidebar: nav plana (sin grupos), dark ink, badge NUEVO terracotta.
-// Mantenemos los ítems extra que la web ya tenía (mapa, soporte rider, landing, etc.)
-//
 // 24 jul 2026: se elimina la página "Aprobaciones". Todo lo que hacía se puede hacer ya en la
 // ficha del establecimiento (vinculaciones y tarifas en "Socios vinculados", verificar el alta
 // en "Horario y estado"); su cola de riders llevaba muerta desde que se retiró Shipday.
 // Lo único que aportaba de verdad era AVISAR, así que ese contador vive ahora aquí.
-const menuItems = [
-  { id: 'dashboard',          label: 'Dashboard',          Icon: BarChart3 },
-  { id: 'establecimientos',   label: 'Establecimientos',   Icon: Store },
-  { id: 'socios',             label: 'Socios',             Icon: Users },
-  { id: 'usuarios',           label: 'Usuarios',           Icon: User },
-  { id: 'pedidos',            label: 'Pedidos',            Icon: ClipboardList },
-  { id: 'mapa',               label: 'Mapa en vivo',       Icon: Map },
-  { id: 'reembolsos',         label: 'Reembolsos',         Icon: RotateCcw },
-  { id: 'liquidaciones',      label: 'Liquidaciones',      Icon: Receipt },
-  { id: 'cargos',             label: 'Cargos',             Icon: Scale },
-  { id: 'creadores',          label: 'Creadores',          Icon: Video },
-  { id: 'notificaciones',     label: 'Notificaciones',     Icon: Bell },
-  { id: 'soporte',            label: 'Soporte',            Icon: MessageCircle },
-  { id: 'soporte-rider',      label: 'Soporte rider',      Icon: Truck },
-  { id: 'landing-riders',     label: 'Landing Riders',     Icon: FileText },
-  { id: 'salud',              label: 'Salud del sistema',  Icon: Activity },
-  { id: 'config',             label: 'Configuración',      Icon: Settings },
+//
+// 14 ago 2026: la barra deja de ser oscura y deja de ser una lista plana de 16 enlaces.
+// - Fondo en papel, como las tarjetas del panel: el resto del ecosistema Pidoo (app,
+//   panel del restaurante y panel del socio) es claro, y aquí el bloque oscuro era lo
+//   único que no pertenecía a esa familia.
+// - Los 16 enlaces se agrupan en 5 bloques por lo que haces en cada uno. Con la lista
+//   plana, "Liquidaciones" quedaba pegada a "Mapa en vivo" y "Cargos" a "Creadores":
+//   nada indicaba cuáles mueven dinero.
+// Los `id` NO cambian: son las claves de la navegación en App.jsx.
+const grupos = [
+  {
+    titulo: 'Operación',
+    items: [
+      { id: 'dashboard',        label: 'Dashboard',         Icon: BarChart3 },
+      { id: 'pedidos',          label: 'Pedidos',           Icon: ClipboardList },
+      { id: 'mapa',             label: 'Mapa en vivo',      Icon: Map },
+    ],
+  },
+  {
+    titulo: 'Negocio',
+    items: [
+      { id: 'establecimientos', label: 'Establecimientos',  Icon: Store },
+      { id: 'socios',           label: 'Socios',            Icon: Users },
+      { id: 'usuarios',         label: 'Usuarios',          Icon: User },
+      { id: 'creadores',        label: 'Creadores',         Icon: Video },
+    ],
+  },
+  {
+    titulo: 'Dinero',
+    items: [
+      { id: 'liquidaciones',    label: 'Liquidaciones',     Icon: Receipt },
+      { id: 'cargos',           label: 'Cargos',            Icon: Scale },
+      { id: 'reembolsos',       label: 'Reembolsos',        Icon: RotateCcw },
+    ],
+  },
+  {
+    titulo: 'Atención',
+    items: [
+      { id: 'soporte',          label: 'Soporte',           Icon: MessageCircle },
+      { id: 'soporte-rider',    label: 'Soporte rider',     Icon: Truck },
+      { id: 'notificaciones',   label: 'Notificaciones',    Icon: Bell },
+    ],
+  },
+  {
+    titulo: 'Sistema',
+    items: [
+      { id: 'salud',            label: 'Salud del sistema', Icon: Activity },
+      { id: 'landing-riders',   label: 'Landing Riders',    Icon: FileText },
+      { id: 'config',           label: 'Configuración',     Icon: Settings },
+    ],
+  },
 ]
 
 export default function Sidebar({ active, onChange, onLogout, user, mobile = false, onClose }) {
@@ -98,9 +129,9 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
   const sidebarStyle = {
     width: mobile ? 260 : 240,
     minHeight: '100vh',
-    background: colors.ink,
-    color: colors.cream,
-    borderRight: '1px solid #3A3530',
+    background: colors.paper,
+    color: colors.text,
+    borderRight: `1px solid ${colors.border}`,
     display: 'flex',
     flexDirection: 'column',
     position: 'fixed',
@@ -109,7 +140,7 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
     overflow: 'hidden',
     padding: '20px 12px',
     zIndex: mobile ? 999 : 'auto',
-    boxShadow: mobile ? '2px 0 20px rgba(0,0,0,0.35)' : 'none',
+    boxShadow: mobile ? '2px 0 20px rgba(26,24,21,0.18)' : 'none',
     animation: mobile ? 'slide-in-left 0.18s ease' : 'none',
   }
 
@@ -128,7 +159,8 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
           width: 32,
           height: 32,
           borderRadius: 9,
-          background: `linear-gradient(135deg, ${colors.terracotta} 0%, ${colors.terracotta2} 100%)`,
+          // El degradado arrancaba en terracotta y dejaba la "P" blanca en 4,43:1
+          background: `linear-gradient(135deg, ${colors.terracotta2} 0%, #8F3A18 100%)`,
           display: 'grid',
           placeItems: 'center',
           color: '#fff',
@@ -137,17 +169,18 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
           boxShadow: '0 0 0 1px rgba(197,86,44,0.35), 0 8px 20px -6px rgba(197,86,44,0.45)',
           flexShrink: 0,
         }}>P</div>
-        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1, flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15, flex: 1, minWidth: 0 }}>
           <span style={{
-            fontSize: 17,
+            fontSize: 18,
             fontWeight: 800,
-            color: colors.cream,
-            letterSpacing: '-0.3px',
-          }}>pidoo</span>
+            color: colors.ink,
+            letterSpacing: '-0.03em',
+            // terracotta a 18px se queda en 4,18:1 sobre papel; terracotta2 sube a 5,5:1
+          }}>pid<span style={{ color: colors.terracotta2 }}>oo</span></span>
           <span style={{
-            fontSize: 9,
-            color: colors.stone2,
-            fontWeight: 700,
+            ...type.caption,
+            color: colors.stone,
+            fontWeight: 600,
             letterSpacing: '0.1em',
             textTransform: 'uppercase',
           }}>Super admin</span>
@@ -161,7 +194,7 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
               display: 'grid', placeItems: 'center',
               borderRadius: 8,
               background: 'transparent',
-              color: '#A8A29E',
+              color: colors.stone,
               cursor: 'pointer',
               border: 'none',
               flexShrink: 0,
@@ -172,100 +205,97 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
         )}
       </div>
 
-      {/* Nav items (flat, no groups) */}
+      {/* Navegación agrupada */}
       <nav style={{
         flex: 1,
-        marginTop: 20,
+        marginTop: 16,
         display: 'flex',
         flexDirection: 'column',
         gap: 2,
         overflowY: 'auto',
       }}>
-        {menuItems.map(item => {
-          const isActive = active === item.id
-          const dynamicBadge =
-            item.id === 'establecimientos' ? pendientes :
-            item.id === 'soporte-rider' ? unreadRider :
-            item.id === 'creadores' ? creadoresPend :
-            0
+        {grupos.map((grupo, i) => (
+          <div key={grupo.titulo} style={{ marginTop: i === 0 ? 0 : 14 }}>
+            <div style={{
+              ...type.caption,
+              color: colors.stone,
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              padding: '0 10px',
+              marginBottom: 4,
+            }}>{grupo.titulo}</div>
 
-          return (
-            <button
-              key={item.id}
-              onClick={() => onChange(item.id)}
-              onMouseEnter={e => {
-                if (!isActive) {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
-                  e.currentTarget.style.color = colors.cream
-                }
-              }}
-              onMouseLeave={e => {
-                if (!isActive) {
-                  e.currentTarget.style.background = 'transparent'
-                  e.currentTarget.style.color = '#A8A29E'
-                }
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                padding: mobile ? '12px 10px' : '9px 10px',
-                borderRadius: 8,
-                cursor: 'pointer',
-                background: isActive ? 'rgba(255,255,255,0.08)' : 'transparent',
-                color: isActive ? colors.cream : '#A8A29E',
-                fontWeight: isActive ? 600 : 500,
-                fontSize: mobile ? 14 : 14,
-                border: 'none',
-                textAlign: 'left',
-                width: '100%',
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
-                transition: 'background 0.12s, color 0.12s',
-              }}
-            >
-              <item.Icon size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
-              <span style={{ flex: 1 }}>{item.label}</span>
+            {grupo.items.map(item => {
+              const isActive = active === item.id
+              const dynamicBadge =
+                item.id === 'establecimientos' ? pendientes :
+                item.id === 'soporte-rider' ? unreadRider :
+                item.id === 'creadores' ? creadoresPend :
+                0
 
-              {/* Badge estático "NUEVO" terracotta */}
-              {item.badge && (
-                <span style={{
-                  fontSize: 9,
-                  fontWeight: 700,
-                  padding: '1px 6px',
-                  borderRadius: 999,
-                  background: colors.terracotta,
-                  color: '#fff',
-                  letterSpacing: '0.04em',
-                  textTransform: 'uppercase',
-                  flexShrink: 0,
-                }}>{item.badge}</span>
-              )}
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => onChange(item.id)}
+                  onMouseEnter={e => {
+                    if (!isActive) e.currentTarget.style.background = colors.cream2
+                  }}
+                  onMouseLeave={e => {
+                    if (!isActive) e.currentTarget.style.background = 'transparent'
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: mobile ? '11px 10px' : '8px 10px',
+                    borderRadius: radius.sm,
+                    cursor: 'pointer',
+                    background: isActive ? colors.terracottaSoft : 'transparent',
+                    color: isActive ? colors.onTerracottaSoft : colors.stone,
+                    fontWeight: isActive ? 600 : 500,
+                    fontSize: 14,
+                    border: 'none',
+                    textAlign: 'left',
+                    width: '100%',
+                    fontFamily: type.family,
+                    transition: 'background 0.12s, color 0.12s',
+                  }}
+                >
+                  <item.Icon size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+                  <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
 
-              {/* Badge dinámico (contadores live) */}
-              {dynamicBadge > 0 && (
-                <span style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  padding: '1px 6px',
-                  borderRadius: 999,
-                  background: colors.terracotta,
-                  color: '#fff',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  flexShrink: 0,
-                }}>
-                  <span style={{
-                    width: 5, height: 5, borderRadius: '50%',
-                    background: '#fff',
-                    animation: 'pulse-p 1.8s infinite',
-                  }} />
-                  {dynamicBadge}
-                </span>
-              )}
-            </button>
-          )
-        })}
+                  {/* Contador en vivo: vinculaciones y altas pendientes, soporte del
+                      rider sin leer, y vídeos de Creadores sin revisar en 24 h */}
+                  {dynamicBadge > 0 && (
+                    <span
+                      title={`${dynamicBadge} pendiente${dynamicBadge === 1 ? '' : 's'}`}
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        padding: '1px 7px',
+                        borderRadius: radius.full,
+                        // terracotta2 y no terracotta: el blanco encima sube de 4,43:1 a 5,9:1
+                        background: colors.terracotta2,
+                        color: '#fff',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        flexShrink: 0,
+                      }}
+                    >
+                      <span style={{
+                        width: 5, height: 5, borderRadius: '50%',
+                        background: '#fff',
+                        animation: 'pulse-p 1.8s infinite',
+                      }} />
+                      {dynamicBadge}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        ))}
       </nav>
 
       {/* Footer: avatar + name + logout */}
@@ -275,7 +305,7 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
         gap: 10,
         padding: '10px 10px',
         borderRadius: 8,
-        background: 'rgba(255,255,255,0.05)',
+        background: colors.cream2,
       }}>
         <div style={{
           width: 32, height: 32,
@@ -292,30 +322,31 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
         }}>{userInitial}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
-            fontSize: 13,
+            ...type.label,
             fontWeight: 600,
-            color: colors.cream,
+            color: colors.text,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
           }}>{userName}</div>
-          <div style={{ fontSize: 11, color: '#A8A29E' }}>Super admin</div>
+          <div style={{ ...type.caption, color: colors.stone, letterSpacing: 0 }}>Super admin</div>
         </div>
         <button
           onClick={onLogout}
           title="Cerrar sesión"
+          aria-label="Cerrar sesión"
           style={{
-            width: 28, height: 28,
-            borderRadius: 7,
+            width: 30, height: 30,
+            borderRadius: radius.sm,
             display: 'grid', placeItems: 'center',
-            color: '#A8A29E',
+            color: colors.stone,
             background: 'transparent',
             border: 'none',
             cursor: 'pointer',
             flexShrink: 0,
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = colors.cream }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#A8A29E' }}
+          onMouseEnter={e => { e.currentTarget.style.background = colors.paper; e.currentTarget.style.color = colors.danger }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = colors.stone }}
         >
           <LogOut size={15} strokeWidth={1.8} />
         </button>
