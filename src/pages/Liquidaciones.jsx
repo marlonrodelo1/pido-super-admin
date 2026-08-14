@@ -207,12 +207,22 @@ export default function Liquidaciones() {
         <StatCard label="Comisión Pidoo (total)" value={euro(totComision)} sub="En el periodo mostrado" />
       </div>
 
-      {/* Aviso Stripe Connect no activo */}
+      {/* Stripe Connect. Iba en rojo diciendo que "el pago automático no se
+          ejecutará", y eso confundía: el cobro automático (cron
+          'pagar-liquidaciones-lunes', jobid 34) está APAGADO a propósito y
+          todas las transferencias se hacen a mano. Que a un restaurante le
+          falte Connect no bloquea nada hoy; solo importaría el día que se
+          encienda el pago automático. Por eso es un aviso informativo. */}
       {sinConnect.length > 0 && (
-        <Card pad={14} style={{ marginBottom: 16, background: colors.dangerSoft, borderColor: colors.danger }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, color: colors.onDangerSoft, ...type.label, lineHeight: 1.5 }}>
+        <Card pad={14} style={{ marginBottom: 16, background: colors.infoSoft, borderColor: colors.info }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, color: colors.onInfoSoft, ...type.label, lineHeight: 1.5 }}>
             <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
-            <span><b>{sinConnect.length} restaurante(s)</b> con liquidación pendiente a su favor NO tienen Stripe Connect activo. El pago automático no se ejecutará hasta que completen el onboarding. Genera el enlace en cada fila marcada y envíaselo.</span>
+            <span>
+              Las transferencias las haces tú a mano, así que esto no bloquea nada.
+              Para cuando quieras automatizarlo: <b>{sinConnect.length} restaurante{sinConnect.length === 1 ? '' : 's'}</b> con
+              liquidación a su favor {sinConnect.length === 1 ? 'no tiene' : 'no tienen'} Stripe Connect activo. El enlace de alta
+              está en su fila.
+            </span>
           </div>
         </Card>
       )}
