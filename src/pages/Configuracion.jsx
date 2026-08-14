@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { ds } from '../lib/darkStyles'
-import { Trash2, Truck, DollarSign, MapPin, Zap } from 'lucide-react'
+import { ds, colors, type, radius } from '../lib/darkStyles'
+import { Card, Chip, GlossyBtn, GhostBtn, SectionLabel, Toggle, Vacio, fmtEUR } from '../lib/ui'
+import { Trash2, Truck, DollarSign, MapPin, Zap, Tags, FileText, ChevronLeft, Plus, Check } from 'lucide-react'
 
 // Sanitizar HTML para prevenir XSS (mismo patron que PaginaLegal.jsx)
 function sanitizeHtml(html) {
@@ -130,119 +131,122 @@ export default function Configuracion() {
     return cost.toFixed(2)
   }
 
+  const errorAlGuardar = !!configMsg && configMsg.includes('Error')
+
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h1 style={ds.h1}>Configuración</h1>
+      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h1 style={{ ...ds.h1, marginBottom: 4 }}>Configuración</h1>
+          <div style={{ ...type.body, color: colors.textMute }}>
+            Tarifas, comisiones y cobertura de la plataforma. Afecta a todos los restaurantes.
+          </div>
+        </div>
       </div>
 
       {configLoading ? (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--c-muted)' }}>Cargando configuración...</div>
+        <Card><div style={{ padding: 24, textAlign: 'center', ...type.body, color: colors.textMute }}>Cargando configuración…</div></Card>
       ) : (
         <>
           {/* ==================== TARIFAS DE ENVÍO ==================== */}
-          <div style={styles.section}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-              <Truck size={18} color="#C5562C" />
-              <h2 style={styles.sectionTitle}>Tarifas de envío (canal Pido)</h2>
-            </div>
-            <p style={{ fontSize: 12, color: 'var(--c-muted)', marginBottom: 20, marginTop: -8 }}>
-              Estas tarifas se aplican cuando un cliente pide desde la app principal (pidoo.es). Los socios configuran sus propias tarifas desde su panel.
-            </p>
-
+          <Seccion
+            icono={<Truck size={18} color={colors.terracotta} />}
+            titulo="Tarifas de envío (canal Pido)"
+            texto="Estas tarifas se aplican cuando un cliente pide desde la app principal (pidoo.es). Los socios configuran sus propias tarifas desde su panel."
+          >
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 20 }}>
               <div>
                 <label style={ds.label}>Tarifa base (€)</label>
                 <input type="number" step="0.10" min="0" value={config.envio_tarifa_base ?? '2.50'}
                   onChange={e => setConfigVal('envio_tarifa_base', e.target.value)} style={ds.formInput} />
-                <div style={styles.hint}>Coste mínimo de envío</div>
+                <div style={hint}>Coste mínimo de envío</div>
               </div>
               <div>
                 <label style={ds.label}>Radio base (km)</label>
                 <input type="number" step="0.5" min="0.5" value={config.envio_radio_base_km ?? '2'}
                   onChange={e => setConfigVal('envio_radio_base_km', e.target.value)} style={ds.formInput} />
-                <div style={styles.hint}>Distancia cubierta por la tarifa base</div>
+                <div style={hint}>Distancia cubierta por la tarifa base</div>
               </div>
               <div>
                 <label style={ds.label}>€ por km adicional</label>
                 <input type="number" step="0.10" min="0" value={config.envio_precio_km_adicional ?? '0.50'}
                   onChange={e => setConfigVal('envio_precio_km_adicional', e.target.value)} style={ds.formInput} />
-                <div style={styles.hint}>Cada km fuera del radio base</div>
+                <div style={hint}>Cada km fuera del radio base</div>
               </div>
               <div>
                 <label style={ds.label}>Tarifa máxima (€)</label>
                 <input type="number" step="0.50" min="0" value={config.envio_tarifa_maxima ?? '15.00'}
                   onChange={e => setConfigVal('envio_tarifa_maxima', e.target.value)} style={ds.formInput} />
-                <div style={styles.hint}>Tope máximo que paga el cliente</div>
+                <div style={hint}>Tope máximo que paga el cliente</div>
               </div>
             </div>
 
-            {/* Simulador */}
-            <div style={{ background: 'rgba(255,107,44,0.08)', borderRadius: 12, padding: 16, border: '1px solid rgba(255,107,44,0.15)' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#C5562C', marginBottom: 10 }}>Vista previa de tarifas</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+            {/* Simulador. Iba en un tinte naranja con las cifras en gris claro:
+                el número, que es lo único que se viene a mirar, era lo que menos
+                se veía. Ahora cada tramo es una fichita de papel sobre crema. */}
+            <div style={{ background: colors.cream2, borderRadius: radius.md, padding: 16, border: `1px solid ${colors.border}` }}>
+              <SectionLabel style={{ marginBottom: 10 }}>Vista previa de tarifas</SectionLabel>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                 {[1, 2, 3, 5, 8, 10, 15].map(km => (
-                  <div key={km} style={{ background: 'var(--c-surface2)', borderRadius: 8, padding: '8px 14px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>{km} km</div>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--c-text)' }}>€{ejemploEnvio(km)}</div>
+                  <div key={km} style={{
+                    background: colors.paper, border: `1px solid ${colors.border}`,
+                    borderRadius: radius.sm, padding: '8px 14px', textAlign: 'center', minWidth: 72,
+                  }}>
+                    <div style={{ ...type.caption, color: colors.textMute }}>{km} km</div>
+                    <div style={{ ...type.num, fontSize: type.h3.fontSize, color: colors.ink, marginTop: 2 }}>{fmtEUR(ejemploEnvio(km))}</div>
                   </div>
                 ))}
               </div>
             </div>
-          </div>
+          </Seccion>
 
           {/* ==================== COMISIONES ==================== */}
-          <div style={styles.section}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-              <DollarSign size={18} color="#C5562C" />
-              <h2 style={styles.sectionTitle}>Porcentajes de comisiones</h2>
-            </div>
+          <Seccion
+            icono={<DollarSign size={18} color={colors.terracotta} />}
+            titulo="Porcentajes de comisiones"
+          >
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
               <div>
                 <label style={ds.label}>Comisión plataforma (%)</label>
                 <input type="number" min={0} max={50} value={config.comision_plataforma ?? '10'}
                   onChange={e => setConfigVal('comision_plataforma', e.target.value)} style={ds.formInput} />
-                <div style={styles.hint}>Se cobra al restaurante por cada pedido</div>
+                <div style={hint}>Se cobra al restaurante por cada pedido</div>
               </div>
             </div>
-          </div>
+          </Seccion>
 
           {/* ==================== ALGORITMO DE ASIGNACIÓN Y COMISIONES ==================== */}
-          <div style={styles.section}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-              <Zap size={18} color="#C5562C" />
-              <h2 style={styles.sectionTitle}>Algoritmo de asignación y comisiones</h2>
-            </div>
-            <p style={{ fontSize: 12, color: 'var(--c-muted)', marginBottom: 20, marginTop: -8 }}>
-              Define cómo se asignan los pedidos a los riders y cómo se reparte el dinero entre Pidoo, rider y restaurante.
-            </p>
-
+          <Seccion
+            icono={<Zap size={18} color={colors.terracotta} />}
+            titulo="Algoritmo de asignación y comisiones"
+            texto="Define cómo se asignan los pedidos a los riders y cómo se reparte el dinero entre Pidoo, rider y restaurante."
+          >
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, marginBottom: 16 }}>
               <div>
                 <label style={ds.label}>Algoritmo de asignación por defecto</label>
                 <select
                   value={config.default_algoritmo_asignacion ?? 'nearest'}
                   onChange={e => setConfigVal('default_algoritmo_asignacion', e.target.value)}
-                  style={ds.formInput}
+                  style={ds.select}
                 >
                   <option value="nearest">Más cercano</option>
                   <option value="fewest_orders">Menos pedidos activos</option>
                   <option value="same_area">Misma zona</option>
                   <option value="broadcast_all">Difundir a todos</option>
                 </select>
-                <div style={styles.hint}>Se aplica cuando un restaurante acepta un pedido delivery</div>
+                <div style={hint}>Se aplica cuando un restaurante acepta un pedido delivery</div>
               </div>
               <div>
                 <label style={ds.label}>Envío al rider</label>
                 <select
                   value={config.default_timing_envio_rider ?? 'on_accept'}
                   onChange={e => setConfigVal('default_timing_envio_rider', e.target.value)}
-                  style={ds.formInput}
+                  style={ds.select}
                 >
                   <option value="on_accept">Al aceptar el pedido</option>
                   <option value="on_ready">Cuando esté listo para recoger</option>
                 </select>
-                <div style={styles.hint}>Momento en que se asigna la orden de reparto al rider</div>
+                <div style={hint}>Momento en que se asigna la orden de reparto al rider</div>
               </div>
             </div>
 
@@ -259,158 +263,216 @@ export default function Configuracion() {
               />
             </div>
 
+            {/* El texto del modelo iba en terracota puro sobre su propio tinte:
+                2,x:1 de contraste. El token onTerracottaSoft es el que se lee. */}
             <div style={{
-              background: 'rgba(197,86,44,0.06)',
-              border: '1px solid rgba(197,86,44,0.15)',
-              borderRadius: 12, padding: 14,
-              fontSize: 12, color: 'var(--c-muted)', lineHeight: 1.55,
+              background: colors.terracottaSoft,
+              border: `1px solid ${colors.terracotta}`,
+              borderRadius: radius.md, padding: 14,
+              ...type.label, color: colors.onTerracottaSoft, lineHeight: 1.55,
             }}>
-              <span style={{ fontWeight: 700, color: '#C5562C' }}>Modelo Pidoo:</span>{' '}
+              <span style={{ fontWeight: 700 }}>Modelo Pidoo:</span>{' '}
               Pidoo cobra el <strong>10% del subtotal</strong> de cada pedido. El restaurante se queda el 80% del subtotal.
               El socio/rider cobra el envío + 10% del subtotal + el 100% de la propina. El alta son 150€ únicos en efectivo (fuera de plataforma). <strong>No hay cuota mensual.</strong>
             </div>
-          </div>
+          </Seccion>
 
           {/* ==================== RADIO DEFAULT ==================== */}
-          <div style={styles.section}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-              <MapPin size={18} color="#C5562C" />
-              <h2 style={styles.sectionTitle}>Radio de cobertura por defecto</h2>
-            </div>
+          <Seccion
+            icono={<MapPin size={18} color={colors.terracotta} />}
+            titulo="Radio de cobertura por defecto"
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <input type="range" min={1} max={30} value={config.radio_cobertura_default ?? '10'}
-                onChange={e => setConfigVal('radio_cobertura_default', e.target.value)} style={{ flex: 1, maxWidth: 400 }} />
-              <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-text)', minWidth: 60 }}>{config.radio_cobertura_default ?? 10} km</span>
+                aria-label="Radio de cobertura por defecto en kilómetros"
+                onChange={e => setConfigVal('radio_cobertura_default', e.target.value)}
+                style={{ flex: 1, maxWidth: 400, accentColor: colors.terracotta }} />
+              <span style={{ ...type.num, fontSize: type.h2.fontSize, color: colors.ink, minWidth: 68 }}>{config.radio_cobertura_default ?? 10} km</span>
             </div>
-            <div style={styles.hint}>Radio que se asigna a nuevos establecimientos por defecto (cobertura delivery)</div>
-          </div>
+            <div style={hint}>Radio que se asigna a nuevos establecimientos por defecto (cobertura delivery)</div>
+          </Seccion>
 
           {/* ==================== RADIO DESCUBRIMIENTO ==================== */}
-          <div style={styles.section}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-              <MapPin size={18} color="#C5562C" />
-              <h2 style={styles.sectionTitle}>Radio de descubrimiento (visibilidad)</h2>
-            </div>
+          <Seccion
+            icono={<MapPin size={18} color={colors.terracotta} />}
+            titulo="Radio de descubrimiento (visibilidad)"
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <input type="range" min={1} max={100} value={config.radio_descubrimiento_km ?? '15'}
-                onChange={e => setConfigVal('radio_descubrimiento_km', e.target.value)} style={{ flex: 1, maxWidth: 400 }} />
-              <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-text)', minWidth: 60 }}>{config.radio_descubrimiento_km ?? 15} km</span>
+                aria-label="Radio de descubrimiento en kilómetros"
+                onChange={e => setConfigVal('radio_descubrimiento_km', e.target.value)}
+                style={{ flex: 1, maxWidth: 400, accentColor: colors.terracotta }} />
+              <span style={{ ...type.num, fontSize: type.h2.fontSize, color: colors.ink, minWidth: 68 }}>{config.radio_descubrimiento_km ?? 15} km</span>
             </div>
-            <div style={styles.hint}>
+            <div style={hint}>
               Distancia máxima desde la ubicación del cliente para que un restaurante aparezca en el listado de la app y en el mapa.
               Si el cliente no comparte ubicación, no se filtra. Cada socio puede definir su propio radio en su marketplace.
             </div>
-          </div>
+          </Seccion>
 
           {/* Botón guardar toda la configuración */}
-          <div style={{ marginBottom: 24 }}>
-            <button onClick={guardarConfig} disabled={configSaving} style={{ ...ds.primaryBtn, padding: '14px 40px', fontSize: 15 }}>
-              {configSaving ? 'Guardando...' : 'Guardar toda la configuración'}
-            </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
+            <GlossyBtn accent size="lg" onClick={guardarConfig} disabled={configSaving} style={{ opacity: configSaving ? 0.6 : 1 }}>
+              <Check size={16} /> {configSaving ? 'Guardando…' : 'Guardar toda la configuración'}
+            </GlossyBtn>
             {configMsg && (
-              <span style={{ marginLeft: 16, fontSize: 13, fontWeight: 600, color: configMsg.includes('Error') ? 'var(--c-danger)' : 'var(--c-text)' }}>
+              <Chip tono={errorAlGuardar ? 'danger' : 'sage'} style={{ whiteSpace: 'normal' }}>
                 {configMsg}
-              </span>
+              </Chip>
             )}
           </div>
         </>
       )}
 
       {/* ==================== CATEGORÍAS GENERALES ==================== */}
-      <div style={styles.section}>
-        <h2 style={styles.sectionTitle}>Categorías generales (se muestran en pido-app)</h2>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-          {catsGenerales.map(cat => (
-            <span key={cat.id} style={styles.tag}>
-              {cat.emoji} {cat.nombre}
-              <button onClick={() => removeCatGeneral(cat.id)} style={styles.tagRemove}><Trash2 size={11} /></button>
-            </span>
-          ))}
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+      <Seccion
+        icono={<Tags size={18} color={colors.terracotta} />}
+        titulo="Categorías generales"
+        texto="Son las que se muestran en pido-app para filtrar restaurantes."
+      >
+        {catsGenerales.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+            {catsGenerales.map(cat => (
+              <Chip key={cat.id} tono="neutral" style={{ paddingRight: 5 }}>
+                {cat.emoji} {cat.nombre}
+                <button
+                  onClick={() => removeCatGeneral(cat.id)}
+                  aria-label={`Quitar la categoría ${cat.nombre}`}
+                  title={`Quitar la categoría ${cat.nombre}`}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer', padding: 2,
+                    marginLeft: 1, color: colors.stone, display: 'inline-flex', alignItems: 'center',
+                    borderRadius: radius.full, lineHeight: 0,
+                  }}
+                >
+                  <Trash2 size={12} />
+                </button>
+              </Chip>
+            ))}
+          </div>
+        )}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <input value={nuevaCatGen.emoji} onChange={e => setNuevaCatGen({ ...nuevaCatGen, emoji: e.target.value })}
-            placeholder="🍽️" style={{ ...ds.formInput, width: 60, textAlign: 'center' }} />
+            aria-label="Emoji de la categoría"
+            placeholder="🍽️" style={{ ...ds.formInput, width: 62, flexShrink: 0, textAlign: 'center' }} />
           <input value={nuevaCatGen.nombre} onChange={e => setNuevaCatGen({ ...nuevaCatGen, nombre: e.target.value })}
-            placeholder="Nombre categoría..." style={{ ...ds.formInput, flex: 1 }}
+            aria-label="Nombre de la categoría"
+            placeholder="Nombre categoría…" style={{ ...ds.formInput, flex: '1 1 180px', width: 'auto' }}
             onKeyDown={e => e.key === 'Enter' && addCatGeneral()} />
-          <button onClick={addCatGeneral} style={ds.primaryBtn}>Añadir</button>
+          <GlossyBtn accent onClick={addCatGeneral}><Plus size={15} /> Añadir</GlossyBtn>
         </div>
-      </div>
+      </Seccion>
 
       {/* ==================== PÁGINAS LEGALES ==================== */}
-      <div style={styles.section}>
-        <h2 style={styles.sectionTitle}>Páginas legales</h2>
-        <p style={{ fontSize: 12, color: 'var(--c-muted)', marginBottom: 16 }}>Edita los textos legales que se muestran en pidoo.es/terminos y pidoo.es/privacidad</p>
-
+      <Seccion
+        icono={<FileText size={18} color={colors.terracotta} />}
+        titulo="Páginas legales"
+        texto="Edita los textos que se muestran en pidoo.es/terminos y pidoo.es/privacidad."
+      >
         {editLegal ? (
           <div>
-            <button onClick={() => setEditLegal(null)} style={{ background: 'none', border: 'none', color: '#C5562C', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", marginBottom: 16, padding: 0 }}>← Volver a la lista</button>
-            <div style={{ marginBottom: 12 }}>
+            <div style={{ marginBottom: 16 }}>
+              <GhostBtn size="sm" onClick={() => setEditLegal(null)}>
+                <ChevronLeft size={15} /> Volver a la lista
+              </GhostBtn>
+            </div>
+            <div style={{ marginBottom: 14 }}>
               <label style={ds.label}>Título</label>
               <input value={legalForm.titulo} onChange={e => setLegalForm({ ...legalForm, titulo: e.target.value })} style={ds.formInput} />
             </div>
-            <div style={{ marginBottom: 12 }}>
+            <div style={{ marginBottom: 14 }}>
               <label style={ds.label}>Contenido (HTML)</label>
-              <textarea value={legalForm.contenido} onChange={e => setLegalForm({ ...legalForm, contenido: e.target.value })} rows={18} style={{ ...ds.formInput, resize: 'vertical', fontFamily: 'monospace', fontSize: 12, lineHeight: 1.6 }} />
+              {/* `ds.formInput` fija height 38: en un textarea eso ganaba a `rows`
+                  y el editor de los términos legales medía UNA línea de alto. */}
+              <textarea value={legalForm.contenido} onChange={e => setLegalForm({ ...legalForm, contenido: e.target.value })} rows={18}
+                style={{
+                  ...ds.formInput, ...type.mono,
+                  height: 'auto', minHeight: 300, padding: '10px 12px',
+                  fontSize: type.label.fontSize, lineHeight: 1.6, resize: 'vertical',
+                }} />
+              <div style={hint}>Se limpian scripts, iframes y atributos on* antes de mostrarlo.</div>
             </div>
-            <div style={{ marginBottom: 12, background: 'var(--c-surface2)', borderRadius: 10, padding: 16, border: '1px solid var(--c-border)' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-muted)', marginBottom: 8 }}>Vista previa</div>
-              <div style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--c-text)' }} dangerouslySetInnerHTML={{ __html: sanitizeHtml(legalForm.contenido) }} />
+            <div style={{ marginBottom: 16, background: colors.cream2, borderRadius: radius.md, padding: 16, border: `1px solid ${colors.border}` }}>
+              <SectionLabel>Vista previa</SectionLabel>
+              <div style={{ ...type.body, lineHeight: 1.7, color: colors.text }} dangerouslySetInnerHTML={{ __html: sanitizeHtml(legalForm.contenido) }} />
             </div>
-            <button onClick={guardarPaginaLegal} disabled={savingLegal} style={{ ...ds.primaryBtn, width: '100%' }}>
-              {savingLegal ? 'Guardando...' : 'Guardar página'}
-            </button>
+            <GlossyBtn accent full onClick={guardarPaginaLegal} disabled={savingLegal} style={{ opacity: savingLegal ? 0.6 : 1 }}>
+              <Check size={15} /> {savingLegal ? 'Guardando…' : 'Guardar página'}
+            </GlossyBtn>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {paginasLegales.map(p => (
-              <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: 'var(--c-surface2)', borderRadius: 10, border: '1px solid var(--c-border)' }}>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--c-text)' }}>{p.titulo}</div>
-                  <div style={{ fontSize: 11, color: 'var(--c-muted)', marginTop: 2 }}>pidoo.es/{p.slug} · Editado: {new Date(p.updated_at).toLocaleDateString('es-ES')}</div>
+              <div key={p.id} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+                padding: '14px 16px', background: colors.cream2, borderRadius: radius.md, border: `1px solid ${colors.border}`,
+              }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ ...type.bodyLg, fontWeight: 600, color: colors.text }}>{p.titulo}</div>
+                  <div style={{ ...type.caption, color: colors.textMute, marginTop: 3 }}>
+                    pidoo.es/{p.slug} · Editado: {new Date(p.updated_at).toLocaleDateString('es-ES')}
+                  </div>
                 </div>
-                <button onClick={() => { setEditLegal(p); setLegalForm({ titulo: p.titulo, contenido: p.contenido }) }} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#C5562C', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" }}>Editar</button>
+                <GhostBtn
+                  size="sm"
+                  aria-label={`Editar la página ${p.titulo}`}
+                  onClick={() => { setEditLegal(p); setLegalForm({ titulo: p.titulo, contenido: p.contenido }) }}
+                >
+                  Editar
+                </GhostBtn>
               </div>
             ))}
-            {paginasLegales.length === 0 && <div style={{ textAlign: 'center', padding: 24, color: 'var(--c-muted)', fontSize: 13 }}>No hay páginas legales configuradas</div>}
+            {paginasLegales.length === 0 && (
+              <Vacio
+                titulo="No hay páginas legales configuradas"
+                texto="Aquí aparecerán los términos y la política de privacidad que publica pidoo.es."
+              />
+            )}
           </div>
         )}
-      </div>
+      </Seccion>
     </div>
   )
 }
 
+/* ── Piezas de la pantalla ───────────────────────────────────────────────── */
+
+// Cada bloque de ajustes es una tarjeta de papel con su título en `ds.h3`.
+// Antes cada sección repetía a mano el mismo `div` + `h2` de 17/700.
+function Seccion({ icono, titulo, texto, children }) {
+  return (
+    <Card pad={24} style={{ marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: texto ? 6 : 16 }}>
+        {icono}
+        <h2 style={{ ...ds.h3, margin: 0 }}>{titulo}</h2>
+      </div>
+      {texto && (
+        <p style={{ ...type.body, color: colors.textMute, margin: '0 0 20px' }}>{texto}</p>
+      )}
+      {children}
+    </Card>
+  )
+}
+
+// El interruptor sigue viviendo en la fila entera (se pulsa en cualquier punto);
+// lo único que cambia es que el switch ya no se dibuja a mano aquí: es el
+// `Toggle` del sistema, que además expone role="switch" y aria-checked.
 function ToggleRow({ label, value, onChange }) {
   return (
     <div
       onClick={() => onChange(!value)}
       style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '12px 14px', borderRadius: 10,
-        background: 'var(--c-surface2)', border: '1px solid var(--c-border)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+        padding: '12px 14px', borderRadius: radius.md,
+        background: colors.cream2, border: `1px solid ${colors.border}`,
         cursor: 'pointer', userSelect: 'none',
       }}
     >
-      <span style={{ fontSize: 13, color: 'var(--c-text)', fontWeight: 600 }}>{label}</span>
-      <span style={{
-        width: 38, height: 22, borderRadius: 22, padding: 2,
-        background: value ? '#C5562C' : 'var(--c-border-strong)',
-        transition: 'background 0.2s', display: 'flex', alignItems: 'center',
-      }}>
-        <span style={{
-          width: 18, height: 18, borderRadius: 18, background: '#fff',
-          transform: value ? 'translateX(16px)' : 'translateX(0)',
-          transition: 'transform 0.2s',
-        }} />
-      </span>
+      <span style={{ ...type.label, fontWeight: 600, color: colors.text }}>{label}</span>
+      <Toggle on={value} size="sm" tone="terracotta" aria-label={label} />
     </div>
   )
 }
 
-const styles = {
-  section: { background: 'var(--c-surface2)', borderRadius: 14, padding: 24, marginBottom: 16, border: '1px solid var(--c-border)' },
-  sectionTitle: { fontSize: 15, fontWeight: 700, color: 'var(--c-text)', margin: 0 },
-  tag: { display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, background: 'var(--c-surface2)', fontSize: 12, fontWeight: 600, color: 'var(--c-text)' },
-  tagRemove: { background: 'none', border: 'none', cursor: 'pointer', color: 'var(--c-muted)', fontSize: 12, fontWeight: 700, padding: 0, display: 'flex', alignItems: 'center' },
-  hint: { fontSize: 11, color: 'var(--c-muted)', marginTop: 4 },
-}
+// La ayuda que va debajo de cada campo. Un solo estilo, y sale de `type`.
+const hint = { ...type.caption, color: colors.textMute, marginTop: 6, letterSpacing: 'normal', textTransform: 'none' }

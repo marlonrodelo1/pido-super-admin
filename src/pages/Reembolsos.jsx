@@ -1,8 +1,20 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { ds } from '../lib/darkStyles'
+import { ds, colors, type, radius } from '../lib/darkStyles'
 import { RotateCcw, CheckCircle, Clock, AlertTriangle, CreditCard, Search } from 'lucide-react'
+import { Card, Chip, GlossyBtn, PillTabs, StatCard, Vacio, fmtEUR } from '../lib/ui'
 import { toast, confirmar } from '../App'
+
+// Anchos de columna compartidos entre cabecera y filas: si se escriben dos
+// veces a ojo, la cabecera y el contenido dejan de cuadrar al primer retoque.
+const COL = {
+  cod: { width: 104, flexShrink: 0 },
+  nom: { flex: '2 1 170px', minWidth: 0 },
+  tot: { width: 96, flexShrink: 0, textAlign: 'right' },
+  est: { flex: '1 1 136px', minWidth: 0 },
+  fec: { flex: '1 1 104px', minWidth: 0 },
+  acc: { flex: '1.3 1 150px', minWidth: 0 },
+}
 
 export default function Reembolsos() {
   const [pedidos, setPedidos] = useState([])
@@ -73,7 +85,7 @@ export default function Reembolsos() {
       const data = await res.json()
 
       if (data.success) {
-        toast(`Reembolso procesado: ${data.monto_reembolsado?.toFixed(2)} EUR devueltos al cliente.`)
+        toast(`Reembolso procesado: ${fmtEUR(data.monto_reembolsado)} devueltos al cliente.`)
         cargarPedidos()
       } else {
         toast(data.error || data.message || 'No se pudo procesar el reembolso', 'error')
@@ -100,191 +112,179 @@ export default function Reembolsos() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={ds.h1}>Reembolsos</h1>
-          <p style={{ fontSize: 12, color: 'var(--c-muted)', marginTop: 4 }}>
-            Gestiona los reembolsos de pedidos cancelados pagados con tarjeta
-          </p>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
-        <div style={{ ...ds.card, display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(251,191,36,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Clock size={20} color="#FBBF24" />
-          </div>
-          <div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)' }}>{stats.pendientes}</div>
-            <div style={{ fontSize: 11, color: 'var(--c-muted)', fontWeight: 600 }}>Pendientes de reembolso</div>
-          </div>
-        </div>
-        <div style={{ ...ds.card, display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(22,163,74,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <CheckCircle size={20} color='var(--c-text)' />
-          </div>
-          <div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)' }}>{stats.procesados}</div>
-            <div style={{ fontSize: 11, color: 'var(--c-muted)', fontWeight: 600 }}>Reembolsos procesados</div>
-          </div>
-        </div>
-        <div style={{ ...ds.card, display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 42, height: 42, borderRadius: 12, background: 'var(--c-danger-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <CreditCard size={20} color="#EF4444" />
-          </div>
-          <div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)' }}>{stats.totalReembolsado.toFixed(2)} EUR</div>
-            <div style={{ fontSize: 11, color: 'var(--c-muted)', fontWeight: 600 }}>Total reembolsado</div>
+          <h1 style={{ ...ds.h1, marginBottom: 4 }}>Reembolsos</h1>
+          <div style={{ ...type.body, color: colors.textMute }}>
+            Devoluciones de pedidos cancelados que se pagaron con tarjeta. El dinero sale de la cuenta Stripe.
           </div>
         </div>
       </div>
 
-      {/* Filtros y busqueda */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-        {[
-          { id: 'pendientes', label: 'Pendientes', color: 'var(--c-warning)' },
-          { id: 'procesados', label: 'Procesados', color: 'var(--c-text)' },
-          { id: 'todos', label: 'Todos', color: '#C5562C' },
-        ].map(f => (
-          <button key={f.id} onClick={() => setFiltro(f.id)} style={{
-            ...ds.filterBtn,
-            background: filtro === f.id ? f.color : 'var(--c-surface2)',
-            color: filtro === f.id ? '#fff' : 'var(--c-muted)',
-          }}>{f.label}</button>
-        ))}
-        <div style={{ flex: 1 }} />
+      {/* Cifras */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12, marginBottom: 20 }}>
+        <StatCard
+          label="Pendientes de reembolso"
+          value={stats.pendientes}
+          sub="Esperando a que los proceses"
+          tone="terracotta"
+          icon={<Clock size={16} />}
+        />
+        <StatCard
+          label="Reembolsos procesados"
+          value={stats.procesados}
+          sub="Ya devueltos al cliente"
+          tone="sage"
+          icon={<CheckCircle size={16} />}
+        />
+        <StatCard
+          label="Total reembolsado"
+          value={fmtEUR(stats.totalReembolsado)}
+          sub="Salido de la cuenta Stripe"
+          icon={<CreditCard size={16} />}
+        />
+      </div>
+
+      {/* Filtros y búsqueda */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+        {/* Los recuentos salen de `stats`, que ya está cargado: no se consulta nada extra */}
+        <PillTabs
+          value={filtro}
+          onChange={setFiltro}
+          options={[
+            { value: 'pendientes', label: 'Pendientes', count: stats.pendientes },
+            { value: 'procesados', label: 'Procesados', count: stats.procesados },
+            { value: 'todos', label: 'Todos', count: stats.pendientes + stats.procesados },
+          ]}
+        />
+        <div style={{ flex: 1, minWidth: 8 }} />
         <div style={{ position: 'relative' }}>
-          <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--c-muted)' }} />
+          <Search size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: colors.textFaint, pointerEvents: 'none' }} />
           <input
             value={busqueda} onChange={e => setBusqueda(e.target.value)}
-            placeholder="Buscar por codigo o restaurante..."
-            style={{ ...ds.input, paddingLeft: 30, width: 260 }}
+            placeholder="Buscar por código o restaurante…"
+            style={{ ...ds.input, paddingLeft: 34 }}
           />
         </div>
       </div>
 
       {/* Lista */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 60, color: 'var(--c-muted)' }}>Cargando...</div>
+        <Card><div style={{ padding: 24, textAlign: 'center', ...type.body, color: colors.textMute }}>Cargando…</div></Card>
       ) : pedidosFiltrados.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 60, color: 'var(--c-muted)' }}>
-          <RotateCcw size={32} style={{ marginBottom: 8, opacity: 0.4 }} />
-          <div style={{ fontSize: 14, fontWeight: 600 }}>
-            {filtro === 'pendientes' ? 'No hay reembolsos pendientes' : 'No hay reembolsos'}
-          </div>
-        </div>
+        <Card pad={0}>
+          <Vacio
+            icon={<RotateCcw size={30} />}
+            titulo={filtro === 'pendientes' ? 'No hay reembolsos pendientes' : busqueda ? 'Ningún reembolso coincide' : 'Todavía no hay reembolsos'}
+            texto={
+              busqueda
+                ? 'Prueba con otro código de pedido o con el nombre del restaurante.'
+                : filtro === 'pendientes'
+                  ? 'Aquí aparecen los pedidos cancelados pagados con tarjeta que aún no se han devuelto.'
+                  : 'Cuando canceles un pedido pagado con tarjeta, aparecerá en esta lista.'
+            }
+          />
+        </Card>
       ) : (
-        <div style={ds.table}>
-          {/* Header */}
-          <div style={{ ...ds.tableHeader, gridTemplateColumns: '1fr' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 100px 90px 90px 140px', width: '100%', gap: 12 }}>
-              <span>Codigo</span>
-              <span>Restaurante</span>
-              <span>Total</span>
-              <span>Estado</span>
-              <span>Cuando</span>
-              <span style={{ textAlign: 'right' }}>Accion</span>
-            </div>
+        <div className="ds-table-stack" style={ds.table}>
+          <div className="ds-th" style={ds.tableHeader}>
+            <span style={COL.cod}>Código</span>
+            <span style={COL.nom}>Restaurante</span>
+            <span style={COL.tot}>Total</span>
+            <span style={COL.est}>Reembolso</span>
+            <span data-tablet-sm-hide="true" style={COL.fec}>Cuándo</span>
+            <span style={{ ...COL.acc, textAlign: 'right' }}>Acción</span>
           </div>
 
-          {/* Rows */}
-          {pedidosFiltrados.map(p => (
-            <div key={p.id} style={{
-              ...ds.tableRow,
-              background: !p.stripe_refund_id ? 'rgba(251,191,36,0.03)' : 'transparent',
-            }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 100px 90px 90px 140px', width: '100%', gap: 12, alignItems: 'center' }}>
-                {/* Codigo */}
-                <div>
-                  <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--c-text)' }}>{p.codigo}</span>
-                </div>
+          {pedidosFiltrados.map(p => {
+            const reembolsado = !!p.stripe_refund_id
+            const sinPago = !reembolsado && !p.stripe_payment_id
+            return (
+              <div
+                key={p.id}
+                className="ds-row-touch"
+                style={{
+                  ...ds.tableRow,
+                  // Tinte muy suave para lo que sigue pendiente de devolver
+                  background: reembolsado ? colors.surface : colors.cream,
+                }}
+              >
+                <span data-col="cod" style={{ ...COL.cod, ...type.mono, fontSize: 13, color: colors.ink }}>
+                  {p.codigo}
+                </span>
 
-                {/* Restaurante + motivo */}
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text)' }}>
-                    {p.establecimientos?.nombre || '-'}
-                  </div>
+                <span data-col="nom" style={COL.nom}>
+                  <span style={{ ...type.label, fontWeight: 600, color: colors.text, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {p.establecimientos?.nombre || '—'}
+                  </span>
                   {p.motivo_cancelacion && (
-                    <div style={{ fontSize: 11, color: 'var(--c-muted)', marginTop: 2, lineHeight: 1.3 }}>
+                    <span style={{ ...type.caption, letterSpacing: 0, color: colors.textMute, display: 'block', marginTop: 2 }}>
                       {p.motivo_cancelacion}
-                    </div>
-                  )}
-                </div>
-
-                {/* Total */}
-                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--c-text)' }}>
-                  {p.total?.toFixed(2)} EUR
-                </div>
-
-                {/* Estado reembolso */}
-                <div>
-                  {p.stripe_refund_id ? (
-                    <span style={{ ...ds.badge, background: 'var(--c-surface2)', color: 'var(--c-text)' }}>
-                      Reembolsado
-                    </span>
-                  ) : (
-                    <span style={{ ...ds.badge, background: 'var(--c-warning-soft)', color: 'var(--c-warning)' }}>
-                      Pendiente
                     </span>
                   )}
-                </div>
+                </span>
 
-                {/* Tiempo */}
-                <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>
-                  {p.stripe_refund_id
-                    ? tiempoDesde(p.reembolsado_at)
-                    : tiempoDesde(p.cancelado_at)
-                  }
-                </div>
+                <span data-col="tot" style={{ ...COL.tot, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                  {fmtEUR(p.total)}
+                </span>
 
-                {/* Accion */}
-                <div style={{ textAlign: 'right' }}>
-                  {p.stripe_refund_id ? (
-                    <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>
-                      {p.monto_reembolsado?.toFixed(2)} EUR devueltos
-                    </div>
-                  ) : !p.stripe_payment_id ? (
-                    <span style={{ ...ds.badge, background: 'var(--c-danger-soft)', color: 'var(--c-danger)' }}>
-                      <AlertTriangle size={10} style={{ marginRight: 4, verticalAlign: 'middle' }} />
-                      Sin ID de pago
-                    </span>
+                {/* Tres situaciones distintas, tres etiquetas distintas: devuelto,
+                    pendiente de devolver y "no hay pago que devolver". */}
+                <span data-col="est" style={COL.est}>
+                  {reembolsado ? (
+                    <Chip tono="sage" dot>Reembolsado</Chip>
+                  ) : sinPago ? (
+                    <Chip tono="danger" title="El cobro nunca llegó a completarse en Stripe, así que no hay importe que devolver.">
+                      <AlertTriangle size={12} /> Sin ID de pago
+                    </Chip>
                   ) : (
-                    <button
+                    <Chip tono="warning" dot>Pendiente</Chip>
+                  )}
+                </span>
+
+                <span data-col="fec" data-tablet-sm-hide="true" style={{ ...COL.fec, ...type.label, color: colors.textMute }}>
+                  {reembolsado ? tiempoDesde(p.reembolsado_at) : tiempoDesde(p.cancelado_at)}
+                </span>
+
+                <span data-col="acc" style={{ ...COL.acc, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8 }}>
+                  {reembolsado ? (
+                    <span style={{ ...type.label, color: colors.onSageSoft, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                      {fmtEUR(p.monto_reembolsado)} devueltos
+                    </span>
+                  ) : sinPago ? (
+                    <span style={{ ...type.label, color: colors.textMute }}>No reembolsable</span>
+                  ) : (
+                    <GlossyBtn
+                      accent
+                      size="sm"
                       onClick={() => procesarReembolso(p.id)}
                       disabled={procesando === p.id}
-                      style={{
-                        ...ds.primaryBtn,
-                        padding: '8px 16px', fontSize: 12,
-                        opacity: procesando === p.id ? 0.6 : 1,
-                        display: 'flex', alignItems: 'center', gap: 6,
-                        marginLeft: 'auto',
-                      }}
+                      title={`Devolver ${fmtEUR(p.total)} al cliente del pedido ${p.codigo}`}
+                      style={{ opacity: procesando === p.id ? 0.6 : 1 }}
                     >
-                      <RotateCcw size={13} />
-                      {procesando === p.id ? 'Procesando...' : 'Reembolsar'}
-                    </button>
+                      <RotateCcw size={14} />
+                      {procesando === p.id ? 'Procesando…' : 'Reembolsar'}
+                    </GlossyBtn>
                   )}
-                </div>
+                </span>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
       {/* Info */}
-      <div style={{
-        marginTop: 20, padding: '14px 18px', borderRadius: 12,
-        background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.12)',
-      }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: '#C5562C', marginBottom: 6 }}>Informacion importante</div>
-        <ul style={{ fontSize: 12, color: 'var(--c-muted)', lineHeight: 1.8, margin: 0, paddingLeft: 16 }}>
-          <li>Los reembolsos se procesan a traves de Stripe y pueden tardar 5-10 dias habiles en reflejarse en la tarjeta del cliente.</li>
-          <li>Al procesar un reembolso, se devuelve el importe completo del pedido y se notifica automaticamente al cliente.</li>
-          <li>Los pedidos sin "ID de pago" no se pueden reembolsar (el cobro no llego a completarse).</li>
+      <Card pad={16} style={{ marginTop: 20, background: colors.infoSoft, borderColor: colors.info, borderRadius: radius.md }}>
+        <div style={{ ...type.label, fontWeight: 700, color: colors.onInfoSoft, marginBottom: 8 }}>
+          Información importante
+        </div>
+        <ul style={{ ...type.body, color: colors.onInfoSoft, lineHeight: 1.7, margin: 0, paddingLeft: 18 }}>
+          <li>Los reembolsos se procesan a través de Stripe y pueden tardar 5-10 días hábiles en reflejarse en la tarjeta del cliente.</li>
+          <li>Al procesar un reembolso, se devuelve el importe completo del pedido y se notifica automáticamente al cliente.</li>
+          <li>Los pedidos sin «ID de pago» no se pueden reembolsar (el cobro no llegó a completarse).</li>
           <li>Cada reembolso queda registrado en los movimientos de cuenta.</li>
         </ul>
-      </div>
+      </Card>
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { ds } from '../lib/darkStyles'
+import { ds, colors, type, radius } from '../lib/darkStyles'
+import { Card, Chip, MiniBtn, PillTabs, StatCard, Vacio, fmtEUR } from '../lib/ui'
 import { Scale, Ban, Clock, CheckCircle, Search } from 'lucide-react'
 import { toast, confirmar } from '../App'
 
@@ -75,133 +76,114 @@ export default function Cargos() {
       || (c.pedido?.codigo || '').toLowerCase().includes(s)
   })
 
-  const euro = (v) => `${Number(v || 0).toFixed(2)} EUR`
-  const fecha = (f) => f ? new Date(f).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '-'
+  const euro = (v) => fmtEUR(v)
+  const fecha = (f) => f ? new Date(f).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: '2-digit' }) : '—'
   const badgeEstado = {
-    pendiente: { bg: 'var(--c-warning-soft)', color: 'var(--c-warning)', label: 'Pendiente' },
-    aplicado: { bg: 'var(--c-surface2)', color: 'var(--c-text)', label: 'Saldado' },
-    anulado: { bg: 'var(--c-surface2)', color: 'var(--c-muted)', label: 'Anulado' },
+    pendiente: { tono: 'warning', label: 'Pendiente' },
+    aplicado:  { tono: 'sage',    label: 'Saldado' },
+    anulado:   { tono: 'neutral', label: 'Anulado' },
   }
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <div>
-          <h1 style={ds.h1}>Cargos a socios</h1>
-          <p style={{ fontSize: 12, color: 'var(--c-muted)', marginTop: 4 }}>
-            Compensación del 80% del subtotal cuando un pedido se cancela porque ningún repartidor lo aceptó (2 vueltas). Lo asume el primer repartidor asignado.
-          </p>
-        </div>
+      <div className="admin-page-header" style={{ marginBottom: 20 }}>
+        <h1 style={{ ...ds.h1, marginBottom: 4 }}>Cargos a socios</h1>
+        <p style={{ ...type.body, color: colors.textMute, maxWidth: 760 }}>
+          Compensación del 80 % del subtotal cuando un pedido se cancela porque ningún repartidor lo aceptó (2 vueltas). Lo asume el primer repartidor asignado.
+        </p>
       </div>
 
-      {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
-        <div style={{ ...ds.card, display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(251,191,36,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Clock size={20} color="#FBBF24" />
-          </div>
-          <div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)' }}>{stats.pendientes}</div>
-            <div style={{ fontSize: 11, color: 'var(--c-muted)', fontWeight: 600 }}>Cargos pendientes</div>
-          </div>
-        </div>
-        <div style={{ ...ds.card, display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 42, height: 42, borderRadius: 12, background: 'var(--c-danger-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Scale size={20} color="#EF4444" />
-          </div>
-          <div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)' }}>{euro(stats.totalPendiente)}</div>
-            <div style={{ fontSize: 11, color: 'var(--c-muted)', fontWeight: 600 }}>Total pendiente</div>
-          </div>
-        </div>
-        <div style={{ ...ds.card, display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ width: 42, height: 42, borderRadius: 12, background: 'var(--c-surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Ban size={20} color="var(--c-muted)" />
-          </div>
-          <div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)' }}>{stats.anulados}</div>
-            <div style={{ fontSize: 11, color: 'var(--c-muted)', fontWeight: 600 }}>Anulados</div>
-          </div>
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(155px, 1fr))', gap: 12, marginBottom: 20 }}>
+        <StatCard label="Cargos pendientes" value={stats.pendientes} sub="Sin saldar ni anular" icon={<Clock size={17} />} tone={stats.pendientes ? 'terracotta' : 'ink'} />
+        <StatCard label="Total pendiente" value={euro(stats.totalPendiente)} sub="Por descontar a socios" icon={<Scale size={17} />} tone={stats.totalPendiente ? 'danger' : 'ink'} />
+        <StatCard label="Anulados" value={stats.anulados} sub="Perdonados" icon={<Ban size={17} />} />
       </div>
 
       {/* Filtros */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-        {[
-          { id: 'pendiente', label: 'Pendientes', color: 'var(--c-warning)' },
-          { id: 'aplicado', label: 'Saldados', color: 'var(--c-text)' },
-          { id: 'anulado', label: 'Anulados', color: 'var(--c-muted)' },
-          { id: 'todos', label: 'Todos', color: '#C5562C' },
-        ].map(f => (
-          <button key={f.id} onClick={() => setFiltro(f.id)} style={{
-            ...ds.filterBtn,
-            background: filtro === f.id ? f.color : 'var(--c-surface2)',
-            color: filtro === f.id ? '#fff' : 'var(--c-muted)',
-          }}>{f.label}</button>
-        ))}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+        <PillTabs
+          value={filtro}
+          onChange={setFiltro}
+          options={[
+            { value: 'pendiente', label: 'Pendientes' },
+            { value: 'aplicado', label: 'Saldados' },
+            { value: 'anulado', label: 'Anulados' },
+            { value: 'todos', label: 'Todos' },
+          ]}
+        />
         <div style={{ flex: 1 }} />
         <div style={{ position: 'relative' }}>
-          <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--c-muted)' }} />
+          <Search size={15} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: colors.stone }} />
           <input value={busqueda} onChange={e => setBusqueda(e.target.value)}
-            placeholder="Buscar por socio, restaurante o código..."
-            style={{ ...ds.input, paddingLeft: 30, width: 280 }} />
+            aria-label="Buscar cargos"
+            placeholder="Socio, restaurante o código…"
+            style={{ ...ds.input, paddingLeft: 34, width: 280 }} />
         </div>
       </div>
 
       {/* Lista */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 60, color: 'var(--c-muted)' }}>Cargando...</div>
+        <Card><div style={{ padding: 24, textAlign: 'center', ...type.body, color: colors.textMute }}>Cargando…</div></Card>
       ) : filtrados.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 60, color: 'var(--c-muted)' }}>
-          <Scale size={32} style={{ marginBottom: 8, opacity: 0.4 }} />
-          <div style={{ fontSize: 14, fontWeight: 600 }}>No hay cargos {filtro !== 'todos' ? `(${filtro}s)` : ''}</div>
-        </div>
+        <Card pad={0}>
+          <Vacio
+            icon={<Scale size={28} />}
+            titulo={busqueda ? 'Ningún cargo con esa búsqueda' : 'Ningún cargo aquí'}
+            texto={busqueda
+              ? 'Prueba con el nombre del socio, el del restaurante o el código del pedido.'
+              : filtro === 'pendiente'
+                ? 'No hay cargos pendientes: ningún pedido se ha quedado sin repartidor.'
+                : 'No hay cargos en este estado.'}
+          />
+        </Card>
       ) : (
-        <div style={ds.table}>
-          <div style={{ ...ds.tableHeader, gridTemplateColumns: '1fr' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 90px 90px 80px 160px', width: '100%', gap: 12 }}>
-              <span>Socio</span>
-              <span>Restaurante / pedido</span>
-              <span>Importe</span>
-              <span>Estado</span>
-              <span>Fecha</span>
-              <span style={{ textAlign: 'right' }}>Acción</span>
-            </div>
+        <div className="ds-table-stack" style={ds.table}>
+          <div className="ds-th" style={ds.tableHeader}>
+            <span style={{ flex: '1.4 1 140px', minWidth: 0 }}>Socio</span>
+            <span style={{ flex: '1.4 1 150px', minWidth: 0 }}>Restaurante / pedido</span>
+            <span style={{ width: 100, flexShrink: 0, textAlign: 'right' }}>Importe</span>
+            <span style={{ width: 110, flexShrink: 0 }}>Estado</span>
+            <span data-tablet-sm-hide="true" style={{ width: 90, flexShrink: 0 }}>Fecha</span>
+            <span style={{ width: 160, flexShrink: 0 }} />
           </div>
 
           {filtrados.map(c => {
             const b = badgeEstado[c.estado] || badgeEstado.pendiente
             return (
-              <div key={c.id} style={{ ...ds.tableRow, background: c.estado === 'pendiente' ? 'rgba(251,191,36,0.03)' : 'transparent' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 90px 90px 80px 160px', width: '100%', gap: 12, alignItems: 'center' }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--c-text)' }}>
-                    {c.socio?.nombre_comercial || c.socio?.nombre || '—'}
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text)' }}>{c.establecimiento?.nombre || '—'}</div>
-                    <div style={{ fontSize: 11, color: 'var(--c-muted)', marginTop: 2 }}>{c.pedido?.codigo || '—'}</div>
-                  </div>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: '#EF4444' }}>{euro(c.monto)}</div>
-                  <div><span style={{ ...ds.badge, background: b.bg, color: b.color }}>{b.label}</span></div>
-                  <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>{fecha(c.created_at)}</div>
-                  <div style={{ textAlign: 'right', display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                    {c.estado === 'pendiente' ? (
-                      <>
-                        <button onClick={() => marcarAplicado(c)} disabled={procesando === c.id}
-                          style={{ ...ds.filterBtn, background: 'var(--c-surface2)', color: 'var(--c-text)', fontSize: 12, opacity: procesando === c.id ? 0.6 : 1 }}>
-                          Saldar
-                        </button>
-                        <button onClick={() => anular(c)} disabled={procesando === c.id}
-                          style={{ ...ds.filterBtn, background: 'transparent', color: 'var(--c-danger)', border: '1px solid var(--c-danger)', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5, opacity: procesando === c.id ? 0.6 : 1 }}>
-                          <Ban size={12} /> Anular
-                        </button>
-                      </>
-                    ) : c.estado === 'anulado' ? (
-                      <span style={{ fontSize: 11, color: 'var(--c-muted)' }} title={c.anulado_motivo || ''}>Anulado</span>
-                    ) : (
-                      <span style={{ fontSize: 11, color: 'var(--c-muted)' }}><CheckCircle size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />Saldado</span>
-                    )}
-                  </div>
+              <div key={c.id} className="ds-row-touch" style={{ ...ds.tableRow, background: c.estado === 'pendiente' ? colors.warningSoft : 'transparent' }}>
+                <div data-col="nom" style={{ flex: '1.4 1 140px', minWidth: 0, ...type.label, fontWeight: 600, color: colors.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {c.socio?.nombre_comercial || c.socio?.nombre || '—'}
+                </div>
+                <div data-col="cod" style={{ flex: '1.4 1 150px', minWidth: 0 }}>
+                  <div style={{ ...type.label, color: colors.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.establecimiento?.nombre || '—'}</div>
+                  <div style={{ ...type.mono, fontSize: 12, color: colors.textMute, marginTop: 2 }}>{c.pedido?.codigo || '—'}</div>
+                </div>
+                <div data-col="tot" style={{ width: 100, flexShrink: 0, textAlign: 'right', ...type.label, fontWeight: 700, color: colors.onDangerSoft, fontVariantNumeric: 'tabular-nums' }}>
+                  {euro(c.monto)}
+                </div>
+                <div data-col="est" style={{ width: 110, flexShrink: 0 }}>
+                  <Chip tono={b.tono} title={c.estado === 'anulado' ? (c.anulado_motivo || '') : ''}>{b.label}</Chip>
+                </div>
+                <div data-col="fec" data-tablet-sm-hide="true" style={{ width: 90, flexShrink: 0, ...type.caption, color: colors.textMute }}>
+                  {fecha(c.created_at)}
+                </div>
+                <div data-col="acc" style={{ width: 160, flexShrink: 0, display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                  {c.estado === 'pendiente' ? (
+                    <>
+                      <MiniBtn onClick={() => marcarAplicado(c)} disabled={procesando === c.id} style={{ opacity: procesando === c.id ? 0.6 : 1 }}>
+                        Saldar
+                      </MiniBtn>
+                      <MiniBtn danger onClick={() => anular(c)} disabled={procesando === c.id} style={{ opacity: procesando === c.id ? 0.6 : 1 }}>
+                        <Ban size={12} /> Anular
+                      </MiniBtn>
+                    </>
+                  ) : c.estado === 'anulado' ? (
+                    <span style={{ ...type.caption, color: colors.textMute }} title={c.anulado_motivo || ''}>Perdonado</span>
+                  ) : (
+                    <span style={{ ...type.caption, color: colors.onSageSoft, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <CheckCircle size={12} /> Saldado
+                    </span>
+                  )}
                 </div>
               </div>
             )
@@ -209,15 +191,15 @@ export default function Cargos() {
         </div>
       )}
 
-      <div style={{ marginTop: 20, padding: '14px 18px', borderRadius: 12, background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.12)' }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: '#C5562C', marginBottom: 6 }}>Cómo funciona</div>
-        <ul style={{ fontSize: 12, color: 'var(--c-muted)', lineHeight: 1.8, margin: 0, paddingLeft: 16 }}>
+      <Card pad={16} style={{ marginTop: 20, background: colors.infoSoft, borderColor: colors.info }}>
+        <div style={{ ...type.label, fontWeight: 700, color: colors.onInfoSoft, marginBottom: 6 }}>Cómo funciona</div>
+        <ul style={{ ...type.label, color: colors.onInfoSoft, lineHeight: 1.8, margin: 0, paddingLeft: 18 }}>
           <li>El cargo se crea automáticamente cuando un pedido delivery se cancela porque nadie lo aceptó tras 2 vueltas.</li>
           <li>Lo asume el <b>primer repartidor asignado</b> (el más cercano) = 80% del subtotal, para que el restaurante no pierda la comida.</li>
           <li><b>Saldar</b>: marcarlo como ya reconciliado en el pago (el restaurante cobró menos del socio). <b>Anular</b>: perdonarlo (accidente justificado).</li>
           <li>El movimiento real del dinero se reconcilia en el pago socio↔restaurante (semi-manual).</li>
         </ul>
-      </div>
+      </Card>
     </div>
   )
 }

@@ -13,7 +13,7 @@ import SoporteRider from './pages/SoporteRider'
 import SaludSistema from './pages/SaludSistema'
 import Configuracion from './pages/Configuracion'
 import Notificaciones from './pages/Notificaciones'
-import MapaAdmin from './pages/MapaAdmin'
+import Dispatch from './pages/Dispatch'
 import Reembolsos from './pages/Reembolsos'
 import Liquidaciones from './pages/Liquidaciones'
 import Cargos from './pages/Cargos'
@@ -28,7 +28,7 @@ const SECCION_TITULOS = {
   establecimientos: 'Establecimientos',
   usuarios: 'Usuarios',
   pedidos: 'Pedidos',
-  mapa: 'Mapa en vivo',
+  dispatch: 'Dispatch',
   notificaciones: 'Notificaciones',
   soporte: 'Soporte',
   'soporte-rider': 'Soporte rider',
@@ -167,8 +167,9 @@ function AppContent() {
             </div>
             <div style={{ flex: 1 }} />
             <span style={{
-              fontSize: 9, letterSpacing: '0.12em', fontWeight: 700, textTransform: 'uppercase',
-              color: 'var(--c-primary)',
+              fontSize: 11, letterSpacing: '0.08em', fontWeight: 600, textTransform: 'uppercase',
+              // #C5562C sobre su propio tinte al 10% se queda en 3,69:1
+              color: '#8F3A18',
               padding: '3px 6px',
               border: '1px solid var(--c-primary-border)',
               background: 'var(--c-primary-soft)',
@@ -192,7 +193,7 @@ function AppContent() {
           {seccion === 'establecimientos' && <Establecimientos />}
           {seccion === 'usuarios' && <Usuarios />}
           {seccion === 'pedidos' && <Pedidos />}
-          {seccion === 'mapa' && <MapaAdmin />}
+          {seccion === 'dispatch' && <Dispatch />}
           {seccion === 'notificaciones' && <Notificaciones />}
           {seccion === 'soporte' && <SoporteAdmin />}
           {seccion === 'soporte-rider' && <SoporteRider />}

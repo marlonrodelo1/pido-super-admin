@@ -1,10 +1,23 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { ds } from '../lib/darkStyles'
+import { ds, colors, type, radius } from '../lib/darkStyles'
+import { Card, Chip, EstadoBadge, GhostBtn, GlossyBtn, MiniBtn, StatCard, Vacio, fmtEUR } from '../lib/ui'
 import { toast } from '../App'
-import { Save, X, KeyRound, Trash2 } from 'lucide-react'
+import { Save, KeyRound, Trash2, Users, Search, Receipt } from 'lucide-react'
 import ResetPasswordModal from '../components/ResetPasswordModal'
 import EliminarEntidadModal from '../components/EliminarEntidadModal'
+
+// Etiqueta/valor de la ficha: la etiqueta con `ds.label` y el valor con
+// `type.body`. Antes era "Teléfono:" en gris seguido del dato en la misma línea
+// a 13px sueltos, y no había forma de leer la ficha en diagonal.
+function Dato({ etiqueta, children }) {
+  return (
+    <div>
+      <div style={{ ...ds.label, marginBottom: 2 }}>{etiqueta}</div>
+      <div style={{ ...type.body, color: colors.text }}>{children}</div>
+    </div>
+  )
+}
 
 export default function Usuarios() {
   const [items, setItems] = useState([])
@@ -61,62 +74,79 @@ export default function Usuarios() {
     return (u.nombre || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q) || (u.telefono || '').includes(q)
   })
 
-  const estadoColor = { entregado: 'var(--c-text)', cancelado: 'var(--c-danger)', fallido: 'var(--c-danger)', nuevo: '#C5562C', aceptado: '#C5562C', preparando: '#C5562C', listo: 'var(--c-text-soft)', en_camino: '#C5562C', recogido: '#C5562C' }
+  // (El mapa de colores por estado que había aquí era el segundo del repo, con
+  //  valores distintos a los de Pedidos.jsx para los mismos estados, y tenía el
+  //  mismo fallo: `'var(--c-danger)' + '20'` no es un color. Ahora: EstadoBadge.)
 
   // Total gastado por el usuario
   const totalGastado = pedidosUsuario.filter(p => p.estado === 'entregado').reduce((s, p) => s + (p.total || 0), 0)
   const totalPedidos = pedidosUsuario.length
   const pedidosEntregados = pedidosUsuario.filter(p => p.estado === 'entregado').length
 
+  // Avatar redondo. Una sola definición para la ficha (60px) y la lista (34px):
+  // antes eran dos bloques calcados con el terracota escrito a pelo.
+  const avatar = (u, px) => (
+    <div style={{
+      width: px, height: px, borderRadius: radius.full, flexShrink: 0,
+      background: colors.terracottaSoft, color: colors.onTerracottaSoft,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      overflow: 'hidden',
+      ...(px >= 48 ? type.h2 : { ...type.label, fontWeight: 700 }),
+    }}>
+      {u.avatar_url
+        ? <img src={u.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        : (u.nombre?.[0] || 'U').toUpperCase()}
+    </div>
+  )
+
   if (detalle) {
+    const esCliente = (detalle.rol || 'cliente') === 'cliente'
     return (
       <div>
         <button onClick={() => { setDetalle(null); setEditando(false) }} style={ds.backBtn}>← Volver</button>
 
-        <div style={ds.card}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-            <div style={{ width: 60, height: 60, borderRadius: '50%', background: 'var(--c-primary-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 800, color: '#C5562C', overflow: 'hidden' }}>
-              {detalle.avatar_url ? <img src={detalle.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (detalle.nombre?.[0] || 'U').toUpperCase()}
+        <Card>
+          <div className="admin-page-header" style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
+            {avatar(detalle, 60)}
+            <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+              <h1 style={{ ...ds.h1, marginBottom: 2 }}>{detalle.nombre} {detalle.apellido || ''}</h1>
+              <div style={{ ...type.body, color: colors.textMute, overflow: 'hidden', textOverflow: 'ellipsis' }}>{detalle.email}</div>
             </div>
-            <div style={{ flex: 1 }}>
-              <h2 style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-text)' }}>{detalle.nombre} {detalle.apellido || ''}</h2>
-              <div style={{ fontSize: 12, color: 'var(--c-muted)' }}>{detalle.email}</div>
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {!editando ? (
                 <>
-                  <button onClick={() => setResetPwd(true)} style={{ ...ds.secondaryBtn, display: 'flex', alignItems: 'center', gap: 4 }} title="Restablecer contraseña">
-                    <KeyRound size={14} /> Contraseña
-                  </button>
-                  {(detalle.rol || 'cliente') === 'cliente' && (
-                    <button
-                      onClick={() => setShowEliminar(true)}
-                      title="Eliminar usuario definitivamente"
-                      style={{
-                        ...ds.secondaryBtn,
-                        color: '#B5564A',
-                        borderColor: 'rgba(220,38,38,0.32)',
-                        background: 'rgba(220,38,38,0.06)',
-                        display: 'flex', alignItems: 'center', gap: 4,
-                      }}
-                    >
-                      <Trash2 size={14} /> Eliminar
-                    </button>
+                  <GhostBtn onClick={() => setResetPwd(true)} title="Restablecer contraseña">
+                    <KeyRound size={15} /> Contraseña
+                  </GhostBtn>
+                  {esCliente && (
+                    <GhostBtn danger onClick={() => setShowEliminar(true)} title="Eliminar usuario definitivamente">
+                      <Trash2 size={15} /> Eliminar
+                    </GhostBtn>
                   )}
-                  <button onClick={() => { setForm({ nombre: detalle.nombre || '', apellido: detalle.apellido || '', telefono: detalle.telefono || '', direccion: detalle.direccion || '', metodo_pago_preferido: detalle.metodo_pago_preferido || 'tarjeta' }); setEditando(true) }} style={ds.primaryBtn}>Editar</button>
+                  <GlossyBtn accent onClick={() => { setForm({ nombre: detalle.nombre || '', apellido: detalle.apellido || '', telefono: detalle.telefono || '', direccion: detalle.direccion || '', metodo_pago_preferido: detalle.metodo_pago_preferido || 'tarjeta' }); setEditando(true) }}>
+                    Editar
+                  </GlossyBtn>
                 </>
               ) : (
                 <>
-                  <button onClick={guardarUsuario} disabled={saving} style={{ ...ds.primaryBtn, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <Save size={14} /> {saving ? 'Guardando...' : 'Guardar'}
-                  </button>
-                  <button onClick={() => setEditando(false)} style={ds.secondaryBtn}>Cancelar</button>
+                  <GlossyBtn accent onClick={guardarUsuario} disabled={saving} style={{ opacity: saving ? 0.6 : 1 }}>
+                    <Save size={15} /> {saving ? 'Guardando…' : 'Guardar'}
+                  </GlossyBtn>
+                  <GhostBtn onClick={() => setEditando(false)}>Cancelar</GhostBtn>
                 </>
               )}
             </div>
           </div>
 
-          {guardado && <div style={{ background: 'var(--c-surface2)', color: 'var(--c-text)', fontSize: 12, fontWeight: 600, padding: '8px 14px', borderRadius: 8, marginBottom: 16, textAlign: 'center' }}>Cambios guardados</div>}
+          {guardado && (
+            <div style={{
+              ...type.label, fontWeight: 600, textAlign: 'center',
+              background: colors.sageSoft, color: colors.onSageSoft,
+              padding: '9px 14px', borderRadius: radius.sm, marginBottom: 16,
+            }}>
+              Cambios guardados
+            </div>
+          )}
 
           {editando ? (
             <div className="admin-grid-2col-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -132,59 +162,70 @@ export default function Usuarios() {
               <div style={{ gridColumn: '1/-1' }}><label style={ds.label}>Dirección</label><input value={form.direccion} onChange={e => setForm({ ...form, direccion: e.target.value })} style={ds.formInput} /></div>
               <div style={{ gridColumn: '1/-1' }}>
                 <label style={ds.label}>Email (no editable)</label>
-                <input value={detalle.email || ''} disabled style={{ ...ds.formInput, opacity: 0.4, cursor: 'not-allowed' }} />
+                <input value={detalle.email || ''} disabled style={{ ...ds.formInput, background: colors.elev2, color: colors.textMute, cursor: 'not-allowed' }} />
               </div>
             </div>
           ) : (
             <>
-              {/* Stats */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 20 }}>
-                <div style={{ background: 'var(--c-surface2)', borderRadius: 10, padding: 14 }}>
-                  <div style={{ fontSize: 10, color: 'var(--c-muted)', fontWeight: 600, marginBottom: 4 }}>Total gastado</div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: '#C5562C' }}>{totalGastado.toFixed(2)} €</div>
-                </div>
-                <div style={{ background: 'var(--c-surface2)', borderRadius: 10, padding: 14 }}>
-                  <div style={{ fontSize: 10, color: 'var(--c-muted)', fontWeight: 600, marginBottom: 4 }}>Pedidos</div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-text)' }}>{totalPedidos}</div>
-                </div>
-                <div style={{ background: 'var(--c-surface2)', borderRadius: 10, padding: 14 }}>
-                  <div style={{ fontSize: 10, color: 'var(--c-muted)', fontWeight: 600, marginBottom: 4 }}>Entregados</div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--c-text)' }}>{pedidosEntregados}</div>
-                </div>
+              {/* Las tres cifras: mismo componente y mismo tamaño que en el resto
+                  del panel (antes eran 20px inventados sobre un rectángulo gris) */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(155px, 1fr))', gap: 12, marginBottom: 20 }}>
+                <StatCard label="Total gastado" value={fmtEUR(totalGastado)} sub="Pedidos entregados" tone="terracotta" />
+                <StatCard label="Pedidos" value={totalPedidos} sub="Últimos 30" />
+                <StatCard label="Entregados" value={pedidosEntregados} sub={`de ${totalPedidos} pedidos`} tone="sage" />
               </div>
 
-              <div className="admin-grid-2col-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 13, color: 'var(--c-text)', marginBottom: 20 }}>
-                <div><span style={{ color: 'var(--c-muted)' }}>Teléfono:</span> {detalle.telefono || '—'}</div>
-                <div><span style={{ color: 'var(--c-muted)' }}>Dirección:</span> {detalle.direccion || '—'}</div>
-                <div><span style={{ color: 'var(--c-muted)' }}>Pago preferido:</span> {detalle.metodo_pago_preferido === 'efectivo' ? '💵 Efectivo' : '💳 Tarjeta'}</div>
-                <div><span style={{ color: 'var(--c-muted)' }}>Registrado:</span> {new Date(detalle.created_at).toLocaleDateString('es-ES')}</div>
-                <div><span style={{ color: 'var(--c-muted)' }}>Favoritos:</span> {detalle.favoritos?.length || 0}</div>
+              <div className="admin-grid-2col-collapse" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                <Dato etiqueta="Teléfono">{detalle.telefono || '—'}</Dato>
+                <Dato etiqueta="Dirección">{detalle.direccion || '—'}</Dato>
+                <Dato etiqueta="Pago preferido">
+                  <Chip tono={detalle.metodo_pago_preferido === 'efectivo' ? 'warning' : 'info'}>
+                    {detalle.metodo_pago_preferido === 'efectivo' ? 'Efectivo' : 'Tarjeta'}
+                  </Chip>
+                </Dato>
+                <Dato etiqueta="Registrado">{new Date(detalle.created_at).toLocaleDateString('es-ES')}</Dato>
+                <Dato etiqueta="Favoritos">{detalle.favoritos?.length || 0}</Dato>
               </div>
             </>
           )}
-        </div>
+        </Card>
 
         {/* Historial de pedidos */}
-        <div style={{ marginTop: 20 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 12, color: 'var(--c-text)' }}>Historial de pedidos ({pedidosUsuario.length})</h3>
+        <div style={{ marginTop: 24 }}>
+          <h2 style={ds.h2}>Historial de pedidos ({pedidosUsuario.length})</h2>
           {pedidosUsuario.map(p => (
-            <div key={p.id} style={{ ...ds.card, padding: '12px 16px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                  <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--c-text)' }}>{p.codigo}</span>
-                  <span style={{ ...ds.badge, background: (estadoColor[p.estado] || '#6B7280') + '20', color: estadoColor[p.estado] || '#6B7280', fontSize: 10 }}>{p.estado?.replace('_', ' ')}</span>
-                  <span style={{ fontSize: 10, color: p.metodo_pago === 'tarjeta' ? 'var(--c-info)' : 'var(--c-success)' }}>{p.metodo_pago === 'tarjeta' ? '💳' : '💵'}</span>
-                  <span style={{ fontSize: 9, color: 'var(--c-muted)', fontWeight: 600 }}>PIDO</span>
+            <Card key={p.id} pad={14} style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+                  <span style={{ ...type.mono, fontSize: type.label.fontSize, fontWeight: 600, color: colors.ink }}>{p.codigo}</span>
+                  <EstadoBadge estado={p.estado} />
+                  <Chip tono={p.metodo_pago === 'tarjeta' ? 'info' : 'warning'}>
+                    {p.metodo_pago === 'tarjeta' ? 'Tarjeta' : 'Efectivo'}
+                  </Chip>
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>{p.establecimientos?.nombre || '—'} · {new Date(p.created_at).toLocaleDateString('es-ES')}</div>
+                <div style={{ ...type.caption, color: colors.textMute, letterSpacing: 0 }}>
+                  {p.establecimientos?.nombre || '—'} · {new Date(p.created_at).toLocaleDateString('es-ES')} · PIDO
+                </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--c-text)' }}>{p.total?.toFixed(2)} €</div>
-                {p.coste_envio > 0 && <div style={{ fontSize: 10, color: 'var(--c-muted)' }}>envío {p.coste_envio?.toFixed(2)}€</div>}
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <div style={{ ...type.num, fontSize: type.bodyLg.fontSize, color: colors.text }}>{fmtEUR(p.total)}</div>
+                {p.coste_envio > 0 && (
+                  <div style={{ ...type.caption, color: colors.textMute, letterSpacing: 0, marginTop: 2 }}>
+                    envío {fmtEUR(p.coste_envio)}
+                  </div>
+                )}
               </div>
-            </div>
+            </Card>
           ))}
-          {pedidosUsuario.length === 0 && <div style={{ ...ds.card, textAlign: 'center', padding: 32, color: 'var(--c-muted)', fontSize: 13 }}>Sin pedidos</div>}
+          {pedidosUsuario.length === 0 && (
+            <Card pad={0}>
+              <Vacio
+                icon={<Receipt size={30} />}
+                titulo="Sin pedidos todavía"
+                texto="Cuando este cliente haga su primer pedido aparecerá aquí."
+              />
+            </Card>
+          )}
         </div>
 
         {resetPwd && (
@@ -216,43 +257,71 @@ export default function Usuarios() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <h1 style={ds.h1}>Usuarios</h1>
-        <span style={{ fontSize: 13, color: 'var(--c-muted)', fontWeight: 600 }}>{filtrados.length} total</span>
+      <div className="admin-page-header" style={{ marginBottom: 20 }}>
+        <h1 style={{ ...ds.h1, marginBottom: 4 }}>Usuarios</h1>
+        <div style={{ ...type.body, color: colors.textMute }}>
+          {filtrados.length === items.length
+            ? `${items.length} cliente${items.length === 1 ? '' : 's'} registrado${items.length === 1 ? '' : 's'}`
+            : `${filtrados.length} de ${items.length} clientes`}
+        </div>
       </div>
 
-      <input
-        placeholder="Buscar por nombre, email o teléfono..."
-        value={buscar} onChange={e => setBuscar(e.target.value)}
-        style={{ ...ds.input, marginBottom: 20, width: 320 }}
-      />
+      <div style={{ position: 'relative', width: 320, maxWidth: '100%', marginBottom: 20 }}>
+        <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: colors.stone, pointerEvents: 'none' }} />
+        <input
+          aria-label="Buscar usuarios por nombre, email o teléfono"
+          placeholder="Buscar por nombre, email o teléfono…"
+          value={buscar} onChange={e => setBuscar(e.target.value)}
+          style={{ ...ds.input, width: '100%', paddingLeft: 34 }}
+        />
+      </div>
 
-      <div style={ds.table}>
-        <div style={ds.tableHeader}>
-          <span style={{ width: 44 }}></span>
-          <span style={{ flex: 1 }}>Nombre</span>
-          <span data-tablet-sm-hide="true" style={{ width: 200 }}>Email</span>
-          <span data-tablet-hide="true" style={{ width: 110 }}>Teléfono</span>
-          <span data-tablet-hide="true" style={{ width: 90 }}>Registro</span>
-          <span style={{ width: 60 }}>Acción</span>
+      <div className="ds-table-stack" style={ds.table}>
+        <div className="ds-th" style={ds.tableHeader}>
+          <span style={{ flex: '1 1 180px', minWidth: 0 }}>Nombre</span>
+          <span data-tablet-sm-hide="true" style={{ flex: '1 1 200px', minWidth: 0 }}>Email</span>
+          <span data-tablet-hide="true" style={{ width: 120, flexShrink: 0 }}>Teléfono</span>
+          <span data-tablet-hide="true" style={{ width: 96, flexShrink: 0 }}>Registro</span>
+          <span style={{ width: 60, flexShrink: 0 }}>Acción</span>
         </div>
+
         {filtrados.map(u => (
           <div key={u.id} className="ds-row-touch" style={ds.tableRow}>
-            <span style={{ width: 44 }}>
-              <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--c-primary-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#C5562C', overflow: 'hidden' }}>
-                {u.avatar_url ? <img src={u.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (u.nombre?.[0] || 'U').toUpperCase()}
-              </div>
+            <span data-col="nom" style={{ flex: '1 1 180px', minWidth: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
+              {avatar(u, 34)}
+              {/* Sin fontSize propio: en móvil la regla `[data-col="nom"]` sube
+                  el nombre a 15px y un tamaño inline aquí se lo comería. */}
+              <span
+                onClick={() => verDetalle(u)}
+                style={{ fontWeight: 600, color: colors.text, cursor: 'pointer', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+              >
+                {u.nombre} {u.apellido || ''}
+              </span>
             </span>
-            <span style={{ flex: 1, fontWeight: 700, fontSize: 13, color: 'var(--c-text)', cursor: 'pointer' }} onClick={() => verDetalle(u)}>{u.nombre} {u.apellido || ''}</span>
-            <span data-tablet-sm-hide="true" style={{ width: 200, fontSize: 12, color: 'var(--c-muted)' }}>{u.email}</span>
-            <span data-tablet-hide="true" style={{ width: 110, fontSize: 12, color: 'var(--c-muted)' }}>{u.telefono || '—'}</span>
-            <span data-tablet-hide="true" style={{ width: 90, fontSize: 11, color: 'var(--c-muted)' }}>{new Date(u.created_at).toLocaleDateString('es-ES')}</span>
-            <span style={{ width: 60 }}>
-              <button className="admin-action-btn" onClick={() => verDetalle(u)} style={ds.actionBtn}>Ver</button>
+            <span data-col="cod" data-tablet-sm-hide="true" style={{ flex: '1 1 200px', minWidth: 0, ...type.label, color: colors.textMute, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {u.email}
+            </span>
+            <span data-col="ori" data-tablet-hide="true" style={{ width: 120, flexShrink: 0, ...type.label, color: colors.textMute, fontVariantNumeric: 'tabular-nums' }}>
+              {u.telefono || '—'}
+            </span>
+            <span data-col="fec" data-tablet-hide="true" style={{ width: 96, flexShrink: 0, ...type.label, color: colors.textMute, fontVariantNumeric: 'tabular-nums' }}>
+              {new Date(u.created_at).toLocaleDateString('es-ES')}
+            </span>
+            <span data-col="acc" style={{ width: 60, flexShrink: 0 }}>
+              <MiniBtn className="admin-action-btn" onClick={() => verDetalle(u)} aria-label={`Ver la ficha de ${u.nombre || 'este usuario'}`}>
+                Ver
+              </MiniBtn>
             </span>
           </div>
         ))}
-        {filtrados.length === 0 && <div style={{ padding: 32, textAlign: 'center', color: 'var(--c-muted)', fontSize: 13 }}>Sin usuarios</div>}
+
+        {filtrados.length === 0 && (
+          <Vacio
+            icon={<Users size={30} />}
+            titulo={buscar ? 'Ningún usuario coincide' : 'Todavía no hay usuarios'}
+            texto={buscar ? `No se ha encontrado nada para "${buscar}". Prueba con otro nombre, email o teléfono.` : 'Aquí aparecerán los clientes en cuanto se registren en la app.'}
+          />
+        )}
       </div>
     </div>
   )

@@ -109,8 +109,18 @@ body {
 ::-webkit-scrollbar-thumb:hover { background: var(--c-muted); background-clip: padding-box; }
 
 input, select, textarea, button {
-  font-size: 16px !important;
   font-family: inherit;
+}
+
+/* iOS hace zoom al enfocar un campo de texto con letra < 16px. Solo pasa en
+   pantallas táctiles y solo con campos de ENTRADA (los botones no lo provocan),
+   así que la protección se limita a ese caso. Antes era global y con !important,
+   y ganaba a los estilos inline: pintaba TODOS los botones del panel a 16px
+   por encima de la escala de darkStyles.js (11.5 / 12.5 / 13). */
+@media (hover: none) and (pointer: coarse) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
 }
 
 button { color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
@@ -127,6 +137,25 @@ button:focus-visible, input:focus-visible {
 }
 
 .mono { font-family: 'JetBrains Mono', monospace; }
+
+/* Liquidaciones: la tabla tiene 7 columnas de dinero y por debajo de 880px se
+   comprime hasta ser ilegible, así que en escritorio se desplaza en horizontal.
+   En móvil NO: manda `.ds-table-stack` y cada fila pasa a ficha. */
+.liq-min { min-width: 880px; }
+@media (max-width: 700px) { .liq-min { min-width: 0; } }
+
+/* AsignarManualModal.jsx pinta <Loader2 className="spin"/> desde antes, pero la
+   regla no existía: el indicador de "Cargando repartidores…" estaba quieto. */
+.spin { animation: spin 0.9s linear infinite; transform-origin: 50% 50%; }
+
+@keyframes spin {
+  from { transform: rotate(0deg) }
+  to   { transform: rotate(360deg) }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin { animation-duration: 2.4s; }
+}
 
 @keyframes pulse-p {
   0%   { box-shadow: 0 0 0 0 rgba(197,86,44,.55); }
@@ -218,6 +247,76 @@ button:focus-visible, input:focus-visible {
     padding: 6px 10px !important;
     font-size: 12px !important;
   }
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* MÓVIL (≤700px) — las tablas dejan de ser columnas y pasan a fichas         */
+/*                                                                            */
+/* Una tabla de 6 columnas en 375px no cabe de ninguna manera: o se recorta   */
+/* el contenido o se sale de la pantalla. Cada fila pasa a una rejilla de 2   */
+/* columnas y 3 alturas, y de paso se recuperan las columnas que se ocultan   */
+/* en tablet, porque apiladas sí caben.                                       */
+/*                                                                            */
+/*   codigo          total                                                    */
+/*   estado           pago                                                    */
+/*   origen          fecha                                                    */
+
+@media (max-width: 700px) {
+  .ds-table-stack .ds-th { display: none !important; }
+
+  .ds-table-stack .ds-row-touch {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 12px;
+    row-gap: 8px;
+    align-items: center;
+    padding: 14px 16px !important;
+  }
+
+  .ds-table-stack .ds-row-touch [data-tablet-hide="true"],
+  .ds-table-stack .ds-row-touch [data-tablet-sm-hide="true"] {
+    display: block !important;
+  }
+
+  .ds-table-stack .ds-row-touch > * {
+    width: auto !important;
+    flex: none !important;
+    min-width: 0;
+  }
+
+  /* El orden lo fija el CSS, no el orden del HTML: así la misma regla sirve
+     para tablas con distintas columnas (el Dashboard no tiene restaurante ni
+     acciones, Pedidos sí). */
+  .ds-table-stack [data-col="nom"] { order: 1; grid-column: 1 / -1; font-weight: 600; font-size: 15px !important; }
+  .ds-table-stack [data-col="cod"] { order: 2; grid-column: 1; }
+  .ds-table-stack [data-col="tot"] { order: 3; grid-column: 2; justify-self: end; font-size: 15px !important; }
+  .ds-table-stack [data-col="est"] { order: 4; grid-column: 1; }
+  .ds-table-stack [data-col="pag"] { order: 5; grid-column: 2; justify-self: end; }
+  .ds-table-stack [data-col="ori"] { order: 6; grid-column: 1; }
+  .ds-table-stack [data-col="fec"] { order: 7; grid-column: 2; justify-self: end; }
+  .ds-table-stack [data-col="ale"] { order: 8; grid-column: 1 / -1; }
+  .ds-table-stack [data-col="acc"] { order: 9; grid-column: 1 / -1; display: flex; gap: 8px; justify-content: stretch; }
+  .ds-table-stack [data-col="acc"] > button { flex: 1; }
+  /* hueco que solo existe para cuadrar la rejilla en escritorio */
+  .ds-table-stack .ds-row-touch .ds-col-hueco { display: none !important; }
+
+  /* El título de página a 32px se come media pantalla en un móvil */
+  .admin-page-header h1 { font-size: 26px !important; }
+
+  /* Dispatch: la cola y el mapa dejan de ir en paralelo y se apilan */
+  .dispatch-grid { grid-template-columns: 1fr !important; }
+
+  /* La ficha del pedido ocupa la pantalla entera en vez de un panel lateral */
+  .dispatch-drawer { width: 100vw !important; }
+
+  /* Soporte: la lista de conversaciones y el chat dejan de ir en paralelo.
+     Y se quita el alto fijo (calc(100vh - 200px)): apilados, dos bloques de esa
+     altura dejan la conversación fuera de la pantalla. */
+  .soporte-grid {
+    grid-template-columns: 1fr !important;
+    height: auto !important;
+  }
+  .soporte-grid > * { min-height: 320px; }
 }
 
 @media (max-width: 900px) {

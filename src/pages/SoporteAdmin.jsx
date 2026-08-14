@@ -1,6 +1,38 @@
+// Bandeja de soporte con restaurantes.
+//
+// Gemela de SoporteRider.jsx: misma cabecera, misma rejilla `soporte-grid`,
+// mismas burbujas y mismo estado vacío. Las dos pantallas hacían lo mismo con
+// maquetación distinta (300px vs 320px de lista, burbujas naranja sólido en
+// una y `var(--c-primary)` en la otra, alturas de caja distintas); ahora
+// comparten patrón para que dejen de divergir.
+//
+// Los colores de texto sobre los fondos *Soft salen de los tokens `on*Soft`:
+// el terracota puro sobre `terracottaSoft` se quedaba en 2,4:1.
+
 import { useState, useEffect, useRef } from 'react'
+import { MessageSquare, Inbox, Send } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { ds } from '../lib/darkStyles'
+import { ds, colors, type, radius } from '../lib/darkStyles'
+import { Card, Chip, GlossyBtn, Vacio } from '../lib/ui'
+
+// Hora sola si el mensaje es de hoy; si no, el día delante. El original
+// pintaba `toLocaleString()` entero ("14/8/2026, 21:05:33"), que en una lista
+// de 320px se salía de la fila.
+function fmtHora(iso) {
+  if (!iso) return ''
+  return new Date(iso).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+}
+
+function fmtRel(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
+  const ayer = new Date(hoy); ayer.setDate(ayer.getDate() - 1)
+  const dia = new Date(d); dia.setHours(0, 0, 0, 0)
+  if (dia.getTime() === hoy.getTime()) return fmtHora(iso)
+  if (dia.getTime() === ayer.getTime()) return `Ayer · ${fmtHora(iso)}`
+  return `${d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })} · ${fmtHora(iso)}`
+}
 
 export default function SoporteAdmin() {
   const [conversaciones, setConversaciones] = useState([])
@@ -84,78 +116,140 @@ export default function SoporteAdmin() {
     selectConv(selected)
   }
 
+  // Derivados de pintado (sin estado ni hooks nuevos)
+  const conSinLeer = conversaciones.filter(c => c.sinLeer > 0).length
+  const nombreDe = (c) => c?.establecimiento?.nombre || 'Restaurante'
+
   return (
     <div>
-      <h1 style={{ ...ds.h1, marginBottom: 20 }}>Soporte</h1>
-
-      <div style={{ display: 'flex', gap: 16, height: 'calc(100vh - 160px)' }}>
-        {/* Lista conversaciones */}
-        <div style={styles.lista}>
-          {conversaciones.map(c => (
-            <button key={c.establecimiento_id} onClick={() => selectConv(c)} style={{
-              ...styles.convItem,
-              background: selected?.establecimiento_id === c.establecimiento_id ? 'var(--c-primary-soft)' : 'transparent',
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--c-text)' }}>{c.establecimiento?.nombre || 'Restaurante'}</span>
-                {c.sinLeer > 0 && <span style={styles.unread}>{c.sinLeer}</span>}
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--c-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.ultimo}</div>
-              <div style={{ fontSize: 10, color: 'var(--c-muted)', marginTop: 2 }}>{new Date(c.fecha).toLocaleString('es-ES')}</div>
-            </button>
-          ))}
-          {conversaciones.length === 0 && <div style={{ padding: 24, textAlign: 'center', color: 'var(--c-muted)', fontSize: 13 }}>Sin conversaciones</div>}
+      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+        <div>
+          <h1 style={{ ...ds.h1, marginBottom: 4 }}>Soporte</h1>
+          <div style={{ ...type.body, color: colors.textMute }}>
+            Conversaciones con los restaurantes, en directo.
+          </div>
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <Chip tono="neutral">
+            {conversaciones.length} {conversaciones.length === 1 ? 'conversación' : 'conversaciones'}
+          </Chip>
+          <Chip tono={conSinLeer > 0 ? 'terracotta' : 'sage'} dot>
+            {conSinLeer > 0
+              ? `${conSinLeer} sin leer`
+              : 'Todo leído'}
+          </Chip>
+        </div>
+      </div>
 
-        {/* Chat */}
-        <div style={styles.chat}>
+      {/* Dos columnas en escritorio; en móvil se apilan (regla `.soporte-grid`
+          de index.css: los estilos de esta página son inline y no pueden
+          llevar media query). */}
+      <div
+        className="soporte-grid"
+        style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 16, height: 'calc(100vh - 200px)', minHeight: 420, alignItems: 'stretch' }}
+      >
+        {/* Lista de conversaciones */}
+        <Card className="soporte-lista" pad={0} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          <div style={{ ...ds.sectionLabel, margin: 0, padding: '12px 14px', borderBottom: `1px solid ${colors.border}`, background: colors.elev2 }}>
+            Conversaciones
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+            {conversaciones.length === 0 ? (
+              <Vacio icon={<Inbox size={26} />} titulo="Sin conversaciones" texto="Aquí aparecerán los restaurantes que escriban a soporte." />
+            ) : conversaciones.map(c => {
+              const activa = selected?.establecimiento_id === c.establecimiento_id
+              const fgMute = activa ? colors.onTerracottaSoft : colors.stone
+              return (
+                <button
+                  key={c.establecimiento_id}
+                  onClick={() => selectConv(c)}
+                  style={{
+                    width: '100%', textAlign: 'left', display: 'block',
+                    padding: '12px 14px', border: 'none', cursor: 'pointer',
+                    borderBottom: `1px solid ${colors.border}`,
+                    fontFamily: type.family,
+                    background: activa ? colors.terracottaSoft : 'transparent',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <span style={{ ...type.label, fontWeight: 700, color: colors.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {nombreDe(c)}
+                    </span>
+                    {c.sinLeer > 0 && <Chip tono="terracotta">{c.sinLeer}</Chip>}
+                  </div>
+                  <div style={{ ...type.label, color: fgMute, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {c.ultimo}
+                  </div>
+                  <div style={{ ...type.caption, color: fgMute, marginTop: 3 }}>
+                    {fmtRel(c.fecha)}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </Card>
+
+        {/* Hilo */}
+        <Card className="soporte-chat" pad={0} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           {selected ? (
             <>
-              <div style={styles.chatHeader}>
-                <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--c-text)' }}>{selected.establecimiento?.nombre || 'Restaurante'}</span>
+              <div style={{ padding: '12px 16px', borderBottom: `1px solid ${colors.border}`, background: colors.elev2 }}>
+                <div style={{ ...type.h3, color: colors.ink }}>{nombreDe(selected)}</div>
+                <div style={{ ...type.caption, color: colors.stone, marginTop: 2 }}>Restaurante</div>
               </div>
-              <div style={styles.chatMessages}>
-                {mensajes.map(m => (
-                  <div key={m.id} style={{ display: 'flex', justifyContent: m.de === 'soporte' ? 'flex-end' : 'flex-start', marginBottom: 8 }}>
-                    <div style={{
-                      maxWidth: '70%', padding: '10px 14px', borderRadius: 14, fontSize: 13,
-                      background: m.de === 'soporte' ? '#C5562C' : 'var(--c-surface2)',
-                      color: m.de === 'soporte' ? '#fff' : 'var(--c-text)',
-                      borderBottomRightRadius: m.de === 'soporte' ? 4 : 14,
-                      borderBottomLeftRadius: m.de === 'soporte' ? 14 : 4,
-                    }}>
-                      {m.texto}
-                      <div style={{ fontSize: 9, marginTop: 4, opacity: 0.6 }}>{new Date(m.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</div>
+
+              <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: 16, background: colors.cream }}>
+                {mensajes.length === 0 ? (
+                  <Vacio icon={<MessageSquare size={26} />} titulo="Sin mensajes" texto="Escribe el primero desde la caja de abajo." />
+                ) : mensajes.map(m => {
+                  const mio = m.de === 'soporte'
+                  return (
+                    <div key={m.id} style={{ display: 'flex', justifyContent: mio ? 'flex-end' : 'flex-start', marginBottom: 10 }}>
+                      <div style={{
+                        maxWidth: '76%', padding: '9px 13px',
+                        borderRadius: radius.lg,
+                        borderBottomRightRadius: mio ? radius.sm : radius.lg,
+                        borderBottomLeftRadius: mio ? radius.lg : radius.sm,
+                        background: mio ? colors.terracottaSoft : colors.elev2,
+                        color: mio ? colors.onTerracottaSoft : colors.text,
+                        ...type.body, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                      }}>
+                        {m.texto}
+                        {/* Sin `opacity`: rebajarla tumbaba el contraste de la hora
+                            por debajo de lo legible sobre el fondo claro. */}
+                        <div style={{ ...type.caption, marginTop: 4, textAlign: 'right', color: mio ? colors.onTerracottaSoft : colors.stone }}>
+                          {fmtHora(m.created_at)}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
-              <form onSubmit={enviar} style={styles.chatInput}>
+
+              <form onSubmit={enviar} style={{ display: 'flex', gap: 8, padding: 12, borderTop: `1px solid ${colors.border}` }}>
                 <input
-                  value={texto} onChange={e => setTexto(e.target.value)}
-                  placeholder="Escribe un mensaje..." style={styles.input}
+                  value={texto}
+                  onChange={e => setTexto(e.target.value)}
+                  placeholder="Escribe un mensaje…"
+                  aria-label="Mensaje para el restaurante"
+                  style={{ ...ds.formInput, flex: 1 }}
                 />
-                <button type="submit" style={ds.primaryBtn}>Enviar</button>
+                <GlossyBtn accent type="submit" style={{ flexShrink: 0 }}>
+                  <Send size={15} /> Enviar
+                </GlossyBtn>
               </form>
             </>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--c-muted)', fontSize: 14 }}>
-              Selecciona una conversacion
+            <div style={{ flex: 1, display: 'grid', placeItems: 'center' }}>
+              <Vacio
+                icon={<MessageSquare size={28} />}
+                titulo="Elige una conversación"
+                texto="Selecciona un restaurante de la izquierda para ver el hilo y responder."
+              />
             </div>
           )}
-        </div>
+        </Card>
       </div>
     </div>
   )
-}
-
-const styles = {
-  lista: { width: 300, background: 'var(--c-surface2)', borderRadius: 14, overflow: 'auto', border: '1px solid var(--c-border)' },
-  convItem: { width: '100%', padding: '14px 16px', border: 'none', cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", textAlign: 'left', borderBottom: '1px solid var(--c-border)', display: 'block' },
-  unread: { width: 18, height: 18, borderRadius: 9, background: '#C5562C', color: '#fff', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  chat: { flex: 1, background: 'var(--c-surface2)', borderRadius: 14, display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid var(--c-border)' },
-  chatHeader: { padding: '14px 20px', borderBottom: '1px solid var(--c-border)', display: 'flex', alignItems: 'center', gap: 10 },
-  chatMessages: { flex: 1, padding: 20, overflow: 'auto' },
-  chatInput: { padding: '12px 16px', borderTop: '1px solid var(--c-border)', display: 'flex', gap: 8 },
-  input: { flex: 1, padding: '10px 14px', borderRadius: 10, border: '1px solid var(--c-border-strong)', fontSize: 13, fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", outline: 'none', background: 'var(--c-surface2)', color: 'var(--c-text)' },
 }

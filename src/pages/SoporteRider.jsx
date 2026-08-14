@@ -1,26 +1,33 @@
 // Bandeja de soporte con socios/riders.
-// Lista lateral de socios con conversaciones, panel derecho con el hilo +
-// caja de envio. Realtime sobre rider_support_messages.
+//
+// Gemela de SoporteAdmin.jsx: misma cabecera, misma rejilla `soporte-grid`,
+// mismas burbujas y mismo estado vacío. Realtime sobre
+// `rider_support_messages` (lista + hilo activo), sin tocar.
+//
+// Los colores de texto sobre los fondos *Soft salen de los tokens `on*Soft`:
+// el terracota puro sobre `terracottaSoft` se quedaba en 2,4:1.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { ds } from '../lib/darkStyles'
-import { MessageCircle, Send } from 'lucide-react'
+import { ds, colors, type, radius } from '../lib/darkStyles'
+import { Card, Chip, GlossyBtn, Vacio } from '../lib/ui'
+import { MessageSquare, Inbox, Send } from 'lucide-react'
 
-function fmtTime(iso) {
+function fmtHora(iso) {
   if (!iso) return ''
   return new Date(iso).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
 }
 
-function fmtDateLabel(iso) {
+// Hora sola si es de hoy, "Ayer · 21:05" o "03 ago · 18:12".
+function fmtRel(iso) {
   if (!iso) return ''
   const d = new Date(iso)
   const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
   const ayer = new Date(hoy); ayer.setDate(ayer.getDate() - 1)
-  const dDia = new Date(d); dDia.setHours(0, 0, 0, 0)
-  if (dDia.getTime() === hoy.getTime()) return 'Hoy'
-  if (dDia.getTime() === ayer.getTime()) return 'Ayer'
-  return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })
+  const dia = new Date(d); dia.setHours(0, 0, 0, 0)
+  if (dia.getTime() === hoy.getTime()) return fmtHora(iso)
+  if (dia.getTime() === ayer.getTime()) return `Ayer · ${fmtHora(iso)}`
+  return `${d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })} · ${fmtHora(iso)}`
 }
 
 export default function SoporteRider() {
@@ -128,110 +135,140 @@ export default function SoporteRider() {
 
   const activo = useMemo(() => socios.find((s) => s.socio_id === activoId), [socios, activoId])
 
+  // Derivados de pintado (sin estado ni hooks nuevos)
+  const conSinLeer = socios.filter((s) => s.unread > 0).length
+  const nombreDe = (s) => s?.socio?.nombre || s?.socio?.nombre_comercial || 'Socio sin nombre'
+
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-        <MessageCircle size={20} color="#C5562C" />
-        <h1 style={{ ...ds.h1 }}>Soporte rider</h1>
-        <span style={{ ...ds.muted, fontSize: 12 }}>
-          {socios.length} {socios.length === 1 ? 'conversación' : 'conversaciones'}
-        </span>
+      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+        <div>
+          <h1 style={{ ...ds.h1, marginBottom: 4 }}>Soporte rider</h1>
+          <div style={{ ...type.body, color: colors.textMute }}>
+            Conversaciones con los socios que reparten, en directo.
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <Chip tono="neutral">
+            {socios.length} {socios.length === 1 ? 'conversación' : 'conversaciones'}
+          </Chip>
+          <Chip tono={conSinLeer > 0 ? 'terracotta' : 'sage'} dot>
+            {conSinLeer > 0 ? `${conSinLeer} sin leer` : 'Todo leído'}
+          </Chip>
+        </div>
       </div>
 
-      <div style={{
-        display: 'grid', gridTemplateColumns: '320px 1fr', gap: 16,
-        height: 'calc(100vh - 160px)',
-      }}>
+      {/* Dos columnas en escritorio; en móvil se apilan (regla `.soporte-grid`
+          de index.css: los estilos de esta página son inline y no pueden
+          llevar media query). */}
+      <div
+        className="soporte-grid"
+        style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 16, height: 'calc(100vh - 200px)', minHeight: 420, alignItems: 'stretch' }}
+      >
         {/* Lista de socios */}
-        <div style={{ ...ds.card, padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ overflowY: 'auto', flex: 1 }}>
-            {socios.length === 0 && (
-              <div style={{ padding: 30, textAlign: 'center', color: 'var(--c-muted)', fontSize: 12 }}>
-                Sin conversaciones aún
-              </div>
-            )}
-            {socios.map((s) => {
-              const active = s.socio_id === activoId
+        <Card className="soporte-lista" pad={0} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          <div style={{ ...ds.sectionLabel, margin: 0, padding: '12px 14px', borderBottom: `1px solid ${colors.border}`, background: colors.elev2 }}>
+            Conversaciones
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+            {socios.length === 0 ? (
+              <Vacio icon={<Inbox size={26} />} titulo="Sin conversaciones" texto="Aquí aparecerán los socios que escriban a soporte." />
+            ) : socios.map((s) => {
+              const activa = s.socio_id === activoId
+              const fgMute = activa ? colors.onTerracottaSoft : colors.stone
               return (
-                <button key={s.socio_id} onClick={() => setActivoId(s.socio_id)} style={{
-                  width: '100%', padding: '12px 14px', textAlign: 'left',
-                  background: active ? 'var(--c-primary-soft)' : 'transparent',
-                  border: 'none', borderBottom: '1px solid var(--c-border)',
-                  cursor: 'pointer', color: 'var(--c-text)',
-                  display: 'flex', flexDirection: 'column', gap: 4,
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ fontSize: 13, fontWeight: 700 }}>
-                      {s.socio?.nombre || s.socio?.nombre_comercial || 'Socio sin nombre'}
-                    </div>
-                    {s.unread > 0 && (
-                      <span style={{
-                        background: 'var(--c-primary)', color: '#fff',
-                        fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 999,
-                      }}>{s.unread}</span>
-                    )}
+                <button
+                  key={s.socio_id}
+                  onClick={() => setActivoId(s.socio_id)}
+                  style={{
+                    width: '100%', textAlign: 'left', display: 'block',
+                    padding: '12px 14px', border: 'none', cursor: 'pointer',
+                    borderBottom: `1px solid ${colors.border}`,
+                    fontFamily: type.family,
+                    background: activa ? colors.terracottaSoft : 'transparent',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <span style={{ ...type.label, fontWeight: 700, color: colors.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {nombreDe(s)}
+                    </span>
+                    {s.unread > 0 && <Chip tono="terracotta">{s.unread}</Chip>}
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--c-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ ...type.label, color: fgMute, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {s.ultimo.remitente === 'rider' ? '' : '✓ '}{s.ultimo.mensaje}
                   </div>
-                  <div style={{ fontSize: 10, color: 'var(--c-muted)' }}>
-                    {fmtDateLabel(s.ultimo.created_at)} · {fmtTime(s.ultimo.created_at)}
+                  <div style={{ ...type.caption, color: fgMute, marginTop: 3 }}>
+                    {fmtRel(s.ultimo.created_at)}
                   </div>
                 </button>
               )
             })}
           </div>
-        </div>
+        </Card>
 
         {/* Hilo */}
-        <div style={{ ...ds.card, padding: 0, display: 'flex', flexDirection: 'column' }}>
+        <Card className="soporte-chat" pad={0} style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           {!activo ? (
-            <div style={{ flex: 1, display: 'grid', placeItems: 'center', color: 'var(--c-muted)', fontSize: 13 }}>
-              Selecciona una conversación
+            <div style={{ flex: 1, display: 'grid', placeItems: 'center' }}>
+              <Vacio
+                icon={<MessageSquare size={28} />}
+                titulo="Elige una conversación"
+                texto="Selecciona un socio de la izquierda para ver el hilo y responder."
+              />
             </div>
           ) : (
             <>
-              <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--c-border)' }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--c-text)' }}>
-                  {activo.socio?.nombre || activo.socio?.nombre_comercial}
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>
-                  {activo.socio?.telefono || '—'}
+              <div style={{ padding: '12px 16px', borderBottom: `1px solid ${colors.border}`, background: colors.elev2 }}>
+                <div style={{ ...type.h3, color: colors.ink }}>{nombreDe(activo)}</div>
+                <div style={{ ...type.caption, color: colors.stone, marginTop: 2 }}>
+                  {activo.socio?.telefono || 'Sin teléfono'}
                 </div>
               </div>
-              <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '14px 18px' }}>
-                {msgs.map((m) => {
-                  const mine = m.remitente === 'soporte'
+
+              <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: 16, background: colors.cream }}>
+                {msgs.length === 0 ? (
+                  <Vacio icon={<MessageSquare size={26} />} titulo="Sin mensajes" texto="Escribe el primero desde la caja de abajo." />
+                ) : msgs.map((m) => {
+                  const mio = m.remitente === 'soporte'
                   return (
-                    <div key={m.id} style={{ display: 'flex', justifyContent: mine ? 'flex-end' : 'flex-start', marginBottom: 8 }}>
+                    <div key={m.id} style={{ display: 'flex', justifyContent: mio ? 'flex-end' : 'flex-start', marginBottom: 10 }}>
                       <div style={{
-                        maxWidth: '70%', padding: '8px 12px', borderRadius: 14,
-                        background: mine ? 'var(--c-primary)' : 'var(--c-surface2)',
-                        color: mine ? '#fff' : 'var(--c-text)',
-                        fontSize: 13, lineHeight: 1.4,
+                        maxWidth: '76%', padding: '9px 13px',
+                        borderRadius: radius.lg,
+                        borderBottomRightRadius: mio ? radius.sm : radius.lg,
+                        borderBottomLeftRadius: mio ? radius.lg : radius.sm,
+                        background: mio ? colors.terracottaSoft : colors.elev2,
+                        color: mio ? colors.onTerracottaSoft : colors.text,
+                        ...type.body, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
                       }}>
                         {m.mensaje}
-                        <div style={{ fontSize: 10, opacity: 0.65, marginTop: 4, textAlign: 'right' }}>
-                          {fmtTime(m.created_at)}
+                        {/* Sin `opacity`: rebajarla tumbaba el contraste de la hora
+                            por debajo de lo legible sobre el fondo claro. */}
+                        <div style={{ ...type.caption, marginTop: 4, textAlign: 'right', color: mio ? colors.onTerracottaSoft : colors.stone }}>
+                          {fmtHora(m.created_at)}
                         </div>
                       </div>
                     </div>
                   )
                 })}
               </div>
-              <form onSubmit={send} style={{ display: 'flex', gap: 8, padding: 12, borderTop: '1px solid var(--c-border)' }}>
-                <input value={text} onChange={(e) => setText(e.target.value)}
+
+              <form onSubmit={send} style={{ display: 'flex', gap: 8, padding: 12, borderTop: `1px solid ${colors.border}` }}>
+                <input
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
                   placeholder="Responde al rider…"
-                  style={{ ...ds.input, flex: 1 }} />
-                <button type="submit" disabled={sending || !text.trim()}
-                  style={{ ...ds.primaryBtn, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <Send size={14} /> Enviar
-                </button>
+                  aria-label="Mensaje para el socio"
+                  style={{ ...ds.formInput, flex: 1 }}
+                />
+                <GlossyBtn accent type="submit" disabled={sending || !text.trim()}
+                  style={{ flexShrink: 0, opacity: sending || !text.trim() ? 0.6 : 1 }}>
+                  <Send size={15} /> {sending ? 'Enviando…' : 'Enviar'}
+                </GlossyBtn>
               </form>
             </>
           )}
-        </div>
+        </Card>
       </div>
     </div>
   )

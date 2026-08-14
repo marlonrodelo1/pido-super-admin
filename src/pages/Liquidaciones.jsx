@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
-import { RefreshCw, Download, Check, AlertTriangle, Link2 } from 'lucide-react'
+import { RefreshCw, Download, Check, AlertTriangle, Link2, FileText } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { ds, colors, type, radius } from '../lib/darkStyles'
+import { Card, Chip, GhostBtn, GlossyBtn, MiniBtn, StatCard, Vacio, fmtEUR } from '../lib/ui'
 import { toast } from '../App'
 
-const euro = (v) => `${Number(v || 0).toFixed(2)} €`
+// Este fichero era el único del panel que NO importaba el sistema de estilos:
+// se definía su propia `card` y su propio `btn`, ya divergidos de los del resto.
+// Ahora sale todo de darkStyles/ui. La lógica del dinero no se toca.
+const euro = (v) => fmtEUR(v)
 const periodoLabel = (i, f) => {
   if (!i) return '—'
   const fmt = (d) => new Date(d + 'T12:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })
@@ -16,12 +21,14 @@ const hoyISO = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+// Los colores salen ahora de los tonos del sistema: los de antes eran el acento
+// puro sobre un tinte del mismo color y se quedaban en 2-3:1 de contraste.
 const ESTADOS = {
-  pendiente: { label: 'Pendiente', color: '#C99551', bg: 'rgba(201,149,81,0.15)' },
-  pagada: { label: 'Pagada', color: '#6F8460', bg: 'rgba(139,157,122,0.18)' },
-  sin_movimiento: { label: 'Sin movimiento', color: '#8A8174', bg: 'rgba(138,129,116,0.15)' },
-  fallida: { label: 'Fallida', color: '#B5564A', bg: 'rgba(181,86,74,0.15)' },
-  arrastrada: { label: 'Arrastrada', color: '#7B8FA8', bg: 'rgba(123,143,168,0.15)' },
+  pendiente:      { label: 'Pendiente',      tono: 'warning' },
+  pagada:         { label: 'Pagada',         tono: 'sage' },
+  sin_movimiento: { label: 'Sin movimiento', tono: 'neutral' },
+  fallida:        { label: 'Fallida',        tono: 'danger' },
+  arrastrada:     { label: 'Arrastrada',     tono: 'info' },
 }
 
 export default function Liquidaciones() {
@@ -29,6 +36,7 @@ export default function Liquidaciones() {
   const [loading, setLoading] = useState(true)
   const [periodo, setPeriodo] = useState('todos')
   const [recalc, setRecalc] = useState(false)
+  const [pack, setPack] = useState(false)
   const [pagoModal, setPagoModal] = useState(null) // { row, referencia, fecha, guardando }
 
   async function cargar() {
@@ -113,6 +121,32 @@ export default function Liquidaciones() {
     cargar()
   }
 
+  // Pack semanal (los PDF de los lunes): una liquidación por restaurante, un
+  // reparto por socio y el informe interno. Lo genera la edge, que lee los
+  // mismos números que esta pantalla — no recalcula nada por su cuenta.
+  async function generarPack() {
+    if (periodo === 'todos') {
+      toast('Elige primero una semana en el desplegable', 'error')
+      return
+    }
+    const [ini, fin] = periodo.split('|')
+    setPack(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('generar-pack-liquidacion', {
+        body: { periodo_inicio: ini, periodo_fin: fin },
+      })
+      if (error) throw new Error(data?.error || error.message)
+      if (!data?.ok) throw new Error(data?.error || 'Respuesta inesperada')
+      const n = data.generados?.length || 0
+      toast(`Pack generado: ${n} documento${n === 1 ? '' : 's'}`, 'success')
+      cargar()
+    } catch (e) {
+      toast('No se pudo generar el pack: ' + e.message, 'error')
+    } finally {
+      setPack(false)
+    }
+  }
+
   async function recalcular() {
     setRecalc(true)
     try {
@@ -143,64 +177,59 @@ export default function Liquidaciones() {
     a.click()
   }
 
-  const titSty = { fontSize: 22, fontWeight: 800, color: 'var(--c-text)', letterSpacing: '-0.4px', margin: 0 }
-  const card = { background: 'var(--c-surface)', border: '1px solid var(--c-border)', borderRadius: 12, padding: 16 }
-  const btn = (primary) => ({
-    display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 14px', borderRadius: 9,
-    border: primary ? 'none' : '1px solid var(--c-border)',
-    background: primary ? 'var(--c-primary)' : 'var(--c-surface)',
-    color: primary ? '#fff' : 'var(--c-text)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-  })
-
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 18, flexWrap: 'wrap' }}>
+      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
         <div>
-          <h1 style={titSty}>Liquidaciones</h1>
-          <div style={{ fontSize: 13, color: 'var(--c-muted)', marginTop: 4 }}>
+          <h1 style={{ ...ds.h1, marginBottom: 4 }}>Liquidaciones</h1>
+          <div style={{ ...type.body, color: colors.textMute }}>
             Cortes semanales (lunes). El sistema calcula; el pago lo lanzas tú.
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button onClick={recalcular} disabled={recalc} style={{ ...btn(false), opacity: recalc ? 0.6 : 1 }}>
+          <GhostBtn onClick={recalcular} disabled={recalc} style={{ opacity: recalc ? 0.6 : 1 }}>
             <RefreshCw size={15} /> {recalc ? 'Recalculando…' : 'Recalcular semana'}
-          </button>
-          <button onClick={exportarCSV} disabled={filtradas.length === 0} style={{ ...btn(false), opacity: filtradas.length === 0 ? 0.5 : 1 }}>
+          </GhostBtn>
+          <GhostBtn onClick={exportarCSV} disabled={filtradas.length === 0} style={{ opacity: filtradas.length === 0 ? 0.5 : 1 }}>
             <Download size={15} /> Exportar CSV
-          </button>
+          </GhostBtn>
+          <GlossyBtn accent onClick={generarPack} disabled={pack || periodo === 'todos'}
+            title={periodo === 'todos' ? 'Elige una semana para generar su pack' : 'Genera los PDF de la semana'}
+            style={{ opacity: pack || periodo === 'todos' ? 0.6 : 1 }}>
+            <FileText size={15} /> {pack ? 'Generando…' : 'Generar pack'}
+          </GlossyBtn>
         </div>
       </div>
 
-      {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(190px,1fr))', gap: 12, marginBottom: 16 }}>
-        <div style={card}>
-          <div style={{ fontSize: 11, color: 'var(--c-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Pido paga (pendiente)</div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: '#6F8460', marginTop: 6 }}>{euro(totPidoPaga)}</div>
-        </div>
-        <div style={card}>
-          <div style={{ fontSize: 11, color: 'var(--c-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Restaurantes deben (pendiente)</div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--c-primary)', marginTop: 6 }}>{euro(totRestPaga)}</div>
-        </div>
-        <div style={card}>
-          <div style={{ fontSize: 11, color: 'var(--c-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Comisión Pido (total)</div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--c-text)', marginTop: 6 }}>{euro(totComision)}</div>
-        </div>
+        <StatCard label="Pido paga (pendiente)" value={euro(totPidoPaga)} sub="A favor del restaurante" tone="sage" />
+        <StatCard label="Restaurantes deben (pendiente)" value={euro(totRestPaga)} sub="Comisión por cobrar" tone="terracotta" />
+        <StatCard label="Comisión Pidoo (total)" value={euro(totComision)} sub="En el periodo mostrado" />
       </div>
 
-      {/* Aviso Stripe Connect no activo */}
+      {/* Stripe Connect. Iba en rojo diciendo que "el pago automático no se
+          ejecutará", y eso confundía: el cobro automático (cron
+          'pagar-liquidaciones-lunes', jobid 34) está APAGADO a propósito y
+          todas las transferencias se hacen a mano. Que a un restaurante le
+          falte Connect no bloquea nada hoy; solo importaría el día que se
+          encienda el pago automático. Por eso es un aviso informativo. */}
       {sinConnect.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 14px', borderRadius: 10, background: 'rgba(181,86,74,0.12)', border: '1px solid rgba(181,86,74,0.4)', color: '#B5564A', fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
-          <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
-          <span><b>{sinConnect.length} restaurante(s)</b> con liquidación pendiente a su favor NO tienen Stripe Connect activo. El pago automático no se ejecutará hasta que completen el onboarding. Genera el enlace en cada fila marcada y envíaselo.</span>
-        </div>
+        <Card pad={14} style={{ marginBottom: 16, background: colors.infoSoft, borderColor: colors.info }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, color: colors.onInfoSoft, ...type.label, lineHeight: 1.5 }}>
+            <AlertTriangle size={16} style={{ flexShrink: 0, marginTop: 1 }} />
+            <span>
+              Las transferencias las haces tú a mano, así que esto no bloquea nada.
+              Para cuando quieras automatizarlo: <b>{sinConnect.length} restaurante{sinConnect.length === 1 ? '' : 's'}</b> con
+              liquidación a su favor {sinConnect.length === 1 ? 'no tiene' : 'no tienen'} Stripe Connect activo. El enlace de alta
+              está en su fila.
+            </span>
+          </div>
+        </Card>
       )}
 
       {/* Filtro periodo */}
       <div style={{ marginBottom: 14 }}>
-        <select value={periodo} onChange={e => setPeriodo(e.target.value)} style={{
-          padding: '9px 12px', borderRadius: 9, border: '1px solid var(--c-border)',
-          background: 'var(--c-surface)', color: 'var(--c-text)', fontSize: 13, fontFamily: 'inherit', cursor: 'pointer',
-        }}>
+        <select value={periodo} onChange={e => setPeriodo(e.target.value)} style={{ ...ds.select, width: 'auto', minWidth: 220 }}>
           <option value="todos">Todas las semanas</option>
           {periodos.map(p => <option key={p.k} value={p.k}>{periodoLabel(p.i, p.f)}</option>)}
         </select>
@@ -208,19 +237,24 @@ export default function Liquidaciones() {
 
       {/* Tabla */}
       {loading ? (
-        <div style={{ padding: 40, textAlign: 'center', color: 'var(--c-muted)', fontSize: 14 }}>Cargando…</div>
+        <Card><div style={{ padding: 24, textAlign: 'center', ...type.body, color: colors.textMute }}>Cargando…</div></Card>
       ) : filtradas.length === 0 ? (
-        <div style={{ ...card, textAlign: 'center', padding: 36, color: 'var(--c-muted)', fontSize: 14 }}>
-          Aún no hay liquidaciones. Se generan cada lunes (o pulsa "Recalcular semana").
-        </div>
+        <Card pad={0}>
+          <Vacio
+            titulo="Todavía no hay liquidaciones"
+            texto={'Se generan solas cada lunes. También puedes forzarlo con "Recalcular semana".'}
+          />
+        </Card>
       ) : (
-        <div style={{ ...card, padding: 0, overflowX: 'auto' }}>
-          <div style={{ minWidth: 880 }}>
-            <div style={{ display: 'flex', padding: '12px 16px', borderBottom: '1px solid var(--c-border)', fontSize: 11, fontWeight: 700, color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        // El desbordamiento horizontal se queda SOLO para tablet/escritorio: en
+        // móvil manda `ds-table-stack`, que convierte cada fila en una ficha.
+        <div className="ds-table-stack" style={{ ...ds.table, padding: 0, overflowX: 'auto' }}>
+          <div className="liq-min">
+            <div className="ds-th" style={{ ...ds.tableHeader, gap: 0 }}>
               <div style={{ flex: '2 1 160px' }}>Restaurante</div>
               <div style={{ flex: '1 1 90px', textAlign: 'right' }}>Pedidos</div>
               <div style={{ flex: '1 1 100px', textAlign: 'right' }}>Subtotal</div>
-              <div style={{ flex: '1 1 100px', textAlign: 'right' }}>Com. Pido</div>
+              <div style={{ flex: '1 1 100px', textAlign: 'right' }}>Com. Pidoo</div>
               <div style={{ flex: '1 1 100px', textAlign: 'right' }}>Efectivo</div>
               <div style={{ flex: '1.4 1 150px', textAlign: 'right' }}>Liquidación</div>
               <div style={{ flex: '1.2 1 130px', textAlign: 'right' }}>Estado</div>
@@ -229,7 +263,7 @@ export default function Liquidaciones() {
               // Un estado desconocido NUNCA se pinta como "Pendiente": había una fila
               // con estado 'pagado' (en masculino) que aparecía como pendiente estando
               // ya cobrada. Mejor enseñar el valor crudo que mentir.
-              const est = ESTADOS[r.estado] || { label: r.estado || '—', color: 'var(--c-muted)', bg: 'var(--c-bg)' }
+              const est = ESTADOS[r.estado] || { label: r.estado || '—', tono: 'neutral' }
               const neto = Number(r.neto_a_pagar || 0)
               const arr = Number(r.saldo_arrastre || 0)
               const sinMov = r.estado === 'sin_movimiento' || (!r.pedidos_count && Math.abs(neto) < 0.005)
@@ -237,43 +271,51 @@ export default function Liquidaciones() {
                 : sinMov ? '—'
                 : neto > 0 ? `Pido paga ${euro(neto)}`
                 : `Restaurante debe ${euro(Math.abs(neto))}`
-              const liqColor = r.estado === 'arrastrada' || sinMov ? 'var(--c-muted)'
-                : neto > 0 ? '#6F8460' : 'var(--c-primary)'
+              const liqColor = r.estado === 'arrastrada' || sinMov ? colors.textMute
+                : neto > 0 ? colors.onSageSoft : colors.onTerracottaSoft
               return (
-                <div key={r.id} style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid var(--c-border)', fontSize: 13, color: 'var(--c-text)' }}>
-                  <div style={{ flex: '2 1 160px', minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.establecimientos?.nombre || '—'}</div>
-                    <div style={{ fontSize: 11, color: 'var(--c-muted)', marginTop: 2 }}>{periodoLabel(r.periodo_inicio, r.periodo_fin)}</div>
+                <div key={r.id} className="ds-row-touch" style={{ ...ds.tableRow, gap: 0 }}>
+                  <div data-col="nom" style={{ flex: '2 1 160px', minWidth: 0 }}>
+                    <div style={{ ...type.label, fontWeight: 600, color: colors.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {r.establecimientos?.nombre || '—'}
+                    </div>
+                    <div style={{ ...type.caption, color: colors.textMute, marginTop: 2 }}>{periodoLabel(r.periodo_inicio, r.periodo_fin)}</div>
                     {pendiente(r) && cobraElRestaurante(r) && !connectActiva(r) && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 999, color: '#B5564A', background: 'rgba(181,86,74,0.15)' }}>Connect no activo</span>
-                        <button onClick={() => reenviarOnboarding(r)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10.5, fontWeight: 600, padding: '2px 7px', borderRadius: 6, border: '1px solid var(--c-border)', background: 'var(--c-surface)', color: 'var(--c-text)', cursor: 'pointer', fontFamily: 'inherit' }}>
-                          <Link2 size={11} /> Enlace onboarding
-                        </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                        <Chip tono="danger">Connect no activo</Chip>
+                        <MiniBtn onClick={() => reenviarOnboarding(r)}>
+                          <Link2 size={12} /> Enlace onboarding
+                        </MiniBtn>
                       </div>
                     )}
                   </div>
-                  <div style={{ flex: '1 1 90px', textAlign: 'right' }}>{r.pedidos_count}</div>
-                  <div style={{ flex: '1 1 100px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{euro(r.subtotal_total)}</div>
-                  <div style={{ flex: '1 1 100px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{euro(r.comision_pido)}</div>
-                  <div style={{ flex: '1 1 100px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: 'var(--c-muted)' }}>{euro(r.efectivo_total)}</div>
-                  <div style={{ flex: '1.4 1 150px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                    <div style={{ fontWeight: 700, color: liqColor }}>{liqTxt}</div>
+                  <div data-col="cod" style={{ flex: '1 1 90px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{r.pedidos_count}</div>
+                  <div data-col="tot" style={{ flex: '1 1 100px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{euro(r.subtotal_total)}</div>
+                  <div data-col="pag" style={{ flex: '1 1 100px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{euro(r.comision_pido)}</div>
+                  <div data-col="ori" style={{ flex: '1 1 100px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: colors.textMute }}>{euro(r.efectivo_total)}</div>
+                  <div data-col="est" style={{ flex: '1.4 1 150px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                    <div style={{ ...type.label, fontWeight: 700, color: liqColor }}>{liqTxt}</div>
                     {r.estado === 'pendiente' && Math.abs(arr) >= 0.005 && (
-                      <div style={{ fontSize: 10, color: 'var(--c-muted)', marginTop: 2 }}>incl. arrastre {euro(arr)}</div>
+                      <div style={{ ...type.caption, color: colors.textMute, marginTop: 2 }}>incl. arrastre {euro(arr)}</div>
                     )}
                     {r.estado === 'pagada' && (r.pagado_at || r.referencia_pago) && (
-                      <div style={{ fontSize: 10, color: 'var(--c-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div style={{ ...type.caption, color: colors.textMute, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {[fechaCorta(r.pagado_at), r.referencia_pago].filter(Boolean).join(' · ')}
                       </div>
                     )}
                   </div>
-                  <div style={{ flex: '1.2 1 130px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 999, color: est.color, background: est.bg, whiteSpace: 'nowrap' }}>{est.label}</span>
+                  <div data-col="acc" style={{ flex: '1.2 1 130px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8 }}>
+                    <Chip tono={est.tono}>{est.label}</Chip>
+                    {r.pdf_url && (
+                      <MiniBtn onClick={() => window.open(r.pdf_url, '_blank', 'noopener')}
+                        title={`Abrir el PDF de ${r.establecimientos?.nombre || 'este restaurante'}`}>
+                        <FileText size={13} /> PDF
+                      </MiniBtn>
+                    )}
                     {r.estado === 'pendiente' && (
-                      <button onClick={() => abrirPago(r)} title="Marcar pagada" style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid var(--c-border)', background: 'var(--c-surface)', color: '#6F8460', cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
-                        <Check size={14} />
-                      </button>
+                      <MiniBtn onClick={() => abrirPago(r)} title="Marcar pagada" aria-label={`Marcar pagada la liquidación de ${r.establecimientos?.nombre || 'este restaurante'}`}>
+                        <Check size={14} /> Pagada
+                      </MiniBtn>
                     )}
                   </div>
                 </div>
@@ -288,56 +330,51 @@ export default function Liquidaciones() {
         const r = pagoModal.row
         const neto = Number(r.neto_a_pagar || 0)
         const cobra = neto > 0
-        const inputSty = {
-          width: '100%', padding: '9px 11px', borderRadius: 9, border: '1px solid var(--c-border)',
-          background: 'var(--c-surface)', color: 'var(--c-text)', fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box',
-        }
-        const labelSty = { fontSize: 11, fontWeight: 700, color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }
         return (
           <div
             onClick={() => { if (!pagoModal.guardando) setPagoModal(null) }}
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'grid', placeItems: 'center', padding: 16, zIndex: 100 }}
+            style={ds.modal}
           >
-            <div onClick={e => e.stopPropagation()} style={{ ...card, width: '100%', maxWidth: 420, padding: 20 }}>
-              <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--c-text)', letterSpacing: '-0.2px' }}>Marcar como pagada</div>
-              <div style={{ fontSize: 13, color: 'var(--c-muted)', marginTop: 4 }}>
+            <div onClick={e => e.stopPropagation()} className="admin-modal-content" style={{ ...ds.modalContent, maxWidth: 420 }}>
+              <div style={ds.h3}>Marcar como pagada</div>
+              <div style={{ ...type.body, color: colors.textMute, marginTop: 4 }}>
                 {r.establecimientos?.nombre || 'Restaurante'} · {periodoLabel(r.periodo_inicio, r.periodo_fin)}
               </div>
 
-              <div style={{ marginTop: 14, padding: '12px 14px', borderRadius: 10, background: 'var(--c-bg)', border: '1px solid var(--c-border)' }}>
-                <div style={{ fontSize: 11, color: 'var(--c-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <div style={{ marginTop: 16, padding: '14px 16px', borderRadius: radius.md, background: colors.elev2, border: `1px solid ${colors.border}` }}>
+                <div style={{ ...type.label, color: colors.textMute }}>
                   {cobra ? 'Le transfieres' : 'Te ingresa el restaurante'}
                 </div>
-                <div style={{ fontSize: 26, fontWeight: 800, marginTop: 4, color: cobra ? '#6F8460' : 'var(--c-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                <div style={{ ...type.num, fontSize: 28, marginTop: 4, color: cobra ? colors.onSageSoft : colors.onTerracottaSoft }}>
                   {euro(Math.abs(neto))}
                 </div>
               </div>
 
-              <div style={{ marginTop: 14 }}>
-                <label style={labelSty}>Fecha del pago</label>
+              <div style={{ marginTop: 16 }}>
+                <label style={ds.label}>Fecha del pago</label>
                 <input
-                  type="date" value={pagoModal.fecha} style={inputSty}
+                  type="date" value={pagoModal.fecha} style={ds.formInput}
                   onChange={e => setPagoModal(m => ({ ...m, fecha: e.target.value }))}
                 />
               </div>
 
               <div style={{ marginTop: 12 }}>
-                <label style={labelSty}>Referencia (opcional)</label>
+                <label style={ds.label}>Referencia (opcional)</label>
                 <input
-                  type="text" value={pagoModal.referencia} autoFocus style={inputSty}
+                  type="text" value={pagoModal.referencia} autoFocus style={ds.formInput}
                   placeholder="Nº de transferencia, Bizum, concepto…"
                   onChange={e => setPagoModal(m => ({ ...m, referencia: e.target.value }))}
                   onKeyDown={e => { if (e.key === 'Enter') confirmarPago() }}
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 18 }}>
-                <button onClick={() => setPagoModal(null)} disabled={pagoModal.guardando} style={{ ...btn(false), opacity: pagoModal.guardando ? 0.6 : 1 }}>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 20 }}>
+                <GhostBtn onClick={() => setPagoModal(null)} disabled={pagoModal.guardando}>
                   Cancelar
-                </button>
-                <button onClick={confirmarPago} disabled={pagoModal.guardando} style={{ ...btn(true), opacity: pagoModal.guardando ? 0.6 : 1 }}>
+                </GhostBtn>
+                <GlossyBtn accent onClick={confirmarPago} disabled={pagoModal.guardando} style={{ opacity: pagoModal.guardando ? 0.6 : 1 }}>
                   <Check size={15} /> {pagoModal.guardando ? 'Guardando…' : 'Confirmar pago'}
-                </button>
+                </GlossyBtn>
               </div>
             </div>
           </div>
