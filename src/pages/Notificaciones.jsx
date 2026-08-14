@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { ds } from '../lib/darkStyles'
-import { Send, Bell, Users, Store, CheckCircle, Clock } from 'lucide-react'
+import { ds, colors, type, radius } from '../lib/darkStyles'
+import { Card, SectionLabel, StatCard, GlossyBtn, Vacio, Chip } from '../lib/ui'
+import { Send, Bell, Users, Store, CheckCircle, AlertTriangle, Clock } from 'lucide-react'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -101,50 +102,57 @@ export default function Notificaciones() {
     { id: 'restaurantes', label: 'Restaurantes', icon: Store, desc: `${stats.restaurantes} dispositivos` },
   ]
 
+  // El destino puede no coincidir con ninguna opción (el estado arranca en 'all',
+  // que no está en la lista). No lo damos por bueno: se avisa en pantalla.
+  const destinoActual = destinos.find(d => d.id === destino)
+  const total = stats.clientes + stats.restaurantes
+  const listo = !!titulo.trim() && !!mensaje.trim()
+
+  const fecha = (iso) => new Date(iso).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h1 style={ds.h1}>Notificaciones Push</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Bell size={16} color="var(--c-muted)" />
-          <span style={{ fontSize: 13, color: 'var(--c-muted)' }}>{stats.clientes + stats.restaurantes} suscripciones activas</span>
+      <div className="admin-page-header" style={{ marginBottom: 24 }}>
+        <h1 style={{ ...ds.h1, marginBottom: 4 }}>Notificaciones push</h1>
+        <div style={{ ...type.body, color: colors.textMute }}>
+          Avisos que suenan en el móvil de clientes y restaurantes. Se entregan al instante y no se pueden retirar.
         </div>
       </div>
 
-      {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 24 }}>
-        <div style={ds.card}>
-          <div style={{ fontSize: 11, color: 'var(--c-muted)', fontWeight: 600 }}>Clientes</div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: '#C5562C' }}>{stats.clientes}</div>
-        </div>
-        <div style={ds.card}>
-          <div style={{ fontSize: 11, color: 'var(--c-muted)', fontWeight: 600 }}>Restaurantes</div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: '#C5562C' }}>{stats.restaurantes}</div>
-        </div>
+      {/* Suscripciones */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, marginBottom: 28 }}>
+        <StatCard label="Suscripciones" value={total} sub="Dispositivos alcanzables" icon={<Bell size={16} />} />
+        <StatCard label="Clientes" value={stats.clientes} sub="Apps de cliente" tone="terracotta" icon={<Users size={16} />} />
+        <StatCard label="Restaurantes" value={stats.restaurantes} sub="Paneles de restaurante" tone="sage" icon={<Store size={16} />} />
       </div>
 
       {/* Enviar notificación */}
-      <div style={{ ...ds.card, padding: 24, marginBottom: 24 }}>
-        <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--c-text)', marginBottom: 16 }}>Enviar notificación</h2>
+      <Card pad={22} style={{ marginBottom: 28 }}>
+        <h2 style={{ ...ds.h3, marginBottom: 2 }}>Enviar notificación</h2>
+        <div style={{ ...type.body, color: colors.textMute, marginBottom: 18 }}>
+          Escribe el aviso, comprueba la vista previa y envíalo.
+        </div>
 
         {/* Destino */}
         <div style={{ marginBottom: 16 }}>
           <label style={ds.label}>Enviar a</label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-            {destinos.map(d => {
-              const sel = destino === d.id
-              return (
-                <button key={d.id} onClick={() => setDestino(d.id)} style={{
-                  padding: '12px 10px', borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center',
-                  border: sel ? '2px solid #C5562C' : '1px solid var(--c-border-strong)',
-                  background: sel ? 'var(--c-primary-soft)' : 'var(--c-surface2)',
-                }}>
-                  <d.icon size={18} color={sel ? '#C5562C' : 'var(--c-muted)'} style={{ margin: '0 auto 6px', display: 'block' }} />
-                  <div style={{ fontSize: 12, fontWeight: 700, color: sel ? '#C5562C' : 'var(--c-text)' }}>{d.label}</div>
-                  <div style={{ fontSize: 10, color: 'var(--c-muted)', marginTop: 2 }}>{d.desc}</div>
-                </button>
-              )
-            })}
+          <select value={destino} onChange={e => setDestino(e.target.value)} style={{ ...ds.select, maxWidth: 320 }}>
+            {destinos.map(d => (
+              <option key={d.id} value={d.id}>{d.label} · {d.desc}</option>
+            ))}
+          </select>
+          <div style={{ ...type.label, color: colors.textMute, marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {destinoActual ? (
+              <>
+                <Chip tono="info" dot>{destinoActual.label}</Chip>
+                <span>Se enviará a {destinoActual.desc}.</span>
+              </>
+            ) : (
+              <>
+                <Chip tono="warning" dot>Sin elegir</Chip>
+                <span>Elige a quién va dirigido antes de enviar.</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -155,22 +163,46 @@ export default function Notificaciones() {
         </div>
 
         {/* Mensaje */}
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom: 18 }}>
           <label style={ds.label}>Mensaje</label>
-          <textarea value={mensaje} onChange={e => setMensaje(e.target.value)} placeholder="Ej: 20% de descuento en todos los pedidos este fin de semana" rows={3} style={{ ...ds.formInput, resize: 'vertical' }} />
+          <textarea
+            value={mensaje}
+            onChange={e => setMensaje(e.target.value)}
+            placeholder="Ej: 20% de descuento en todos los pedidos este fin de semana"
+            rows={3}
+            style={{ ...ds.formInput, height: 'auto', padding: '10px 12px', lineHeight: 1.5, resize: 'vertical' }}
+          />
         </div>
 
-        {/* Preview */}
+        {/* Vista previa: se pinta como el aviso real que sale en la pantalla del móvil */}
         {(titulo || mensaje) && (
-          <div style={{ background: 'var(--c-surface2)', borderRadius: 12, padding: 14, marginBottom: 16, border: '1px solid var(--c-border)' }}>
-            <div style={{ fontSize: 10, color: 'var(--c-muted)', marginBottom: 8, fontWeight: 600 }}>PREVIEW</div>
-            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: '#C5562C', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Bell size={16} color="#fff" />
-              </div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--c-text)' }}>{titulo || 'Título'}</div>
-                <div style={{ fontSize: 12, color: 'var(--c-muted)', marginTop: 2 }}>{mensaje || 'Mensaje...'}</div>
+          <div style={{ marginBottom: 18 }}>
+            <SectionLabel>Así se verá en el móvil</SectionLabel>
+            <div style={{ background: colors.cream2, borderRadius: radius.lg, padding: 18, border: `1px solid ${colors.border}` }}>
+              <div style={{
+                maxWidth: 380, margin: '0 auto', display: 'flex', gap: 11, alignItems: 'flex-start',
+                background: colors.paper, borderRadius: 14, padding: 12,
+                border: `1px solid ${colors.border}`, boxShadow: colors.shadowMd,
+              }}>
+                <div style={{
+                  width: 34, height: 34, borderRadius: 9, flexShrink: 0,
+                  background: `linear-gradient(180deg, ${colors.terracotta} 0%, ${colors.terracotta2} 100%)`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Bell size={17} color={colors.cream} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                    <span style={{ ...type.caption, color: colors.stone, textTransform: 'uppercase' }}>Pidoo</span>
+                    <span style={{ ...type.caption, color: colors.stone, flexShrink: 0 }}>ahora</span>
+                  </div>
+                  <div style={{ ...type.label, fontWeight: 700, color: colors.ink, marginTop: 3, overflowWrap: 'anywhere' }}>
+                    {titulo || 'Título de la notificación'}
+                  </div>
+                  <div style={{ ...type.label, color: colors.stone, marginTop: 2, overflowWrap: 'anywhere' }}>
+                    {mensaje || 'Aquí va el mensaje que leerá quien la reciba…'}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -179,46 +211,68 @@ export default function Notificaciones() {
         {/* Resultado */}
         {resultado && (
           <div style={{
-            padding: '12px 16px', borderRadius: 10, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8,
-            background: resultado.ok ? 'var(--c-success-soft)' : 'var(--c-danger-soft)',
-            color: resultado.ok ? 'var(--c-text)' : 'var(--c-danger)', fontSize: 13, fontWeight: 600,
+            padding: '12px 14px', borderRadius: radius.md, marginBottom: 14,
+            display: 'flex', alignItems: 'center', gap: 9,
+            background: resultado.ok ? colors.sageSoft : colors.dangerSoft,
+            color: resultado.ok ? colors.onSageSoft : colors.onDangerSoft,
+            ...type.label, fontWeight: 600,
           }}>
-            <CheckCircle size={16} />
+            {resultado.ok ? <CheckCircle size={16} style={{ flexShrink: 0 }} /> : <AlertTriangle size={16} style={{ flexShrink: 0 }} />}
             {resultado.ok ? `Enviada a ${resultado.enviados}/${resultado.total} dispositivos` : `Error: ${resultado.error}`}
           </div>
         )}
 
         {/* Botón enviar */}
-        <button onClick={enviarNotificacion} disabled={enviando || !titulo.trim() || !mensaje.trim()} style={{
-          width: '100%', padding: '14px', borderRadius: 12, border: 'none',
-          background: enviando || !titulo.trim() || !mensaje.trim() ? 'var(--c-surface2)' : '#C5562C',
-          color: '#fff', fontSize: 15, fontWeight: 800, cursor: enviando ? 'default' : 'pointer',
-          fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-        }}>
+        <GlossyBtn
+          accent
+          full
+          size="lg"
+          onClick={enviarNotificacion}
+          disabled={enviando || !listo}
+          style={{ opacity: enviando || !listo ? 0.55 : 1, cursor: enviando || !listo ? 'default' : 'pointer' }}
+        >
           <Send size={16} />
-          {enviando ? 'Enviando...' : 'Enviar notificación'}
-        </button>
-      </div>
+          {enviando ? 'Enviando…' : 'Enviar notificación'}
+        </GlossyBtn>
+        <div style={{ ...type.caption, color: colors.textMute, textAlign: 'center', marginTop: 10 }}>
+          El envío es inmediato y no se puede deshacer.
+        </div>
+      </Card>
 
       {/* Historial */}
-      <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--c-text)', marginBottom: 12 }}>Historial reciente</h2>
-      <div style={ds.table}>
-        {historial.length === 0 && (
-          <div style={{ padding: 32, textAlign: 'center', color: 'var(--c-muted)', fontSize: 13 }}>Sin notificaciones enviadas</div>
-        )}
+      <h2 style={ds.h2}>Historial reciente</h2>
+      <div className="ds-table-stack" style={ds.table}>
+        <div className="ds-th" style={ds.tableHeader}>
+          <span style={{ flex: '1 1 200px', minWidth: 0 }}>Notificación</span>
+          <span data-tablet-sm-hide="true" style={{ flex: '1.6 1 240px', minWidth: 0 }}>Mensaje</span>
+          <span style={{ width: 150, flexShrink: 0 }}>Enviada</span>
+        </div>
+
         {historial.map(n => (
-          <div key={n.id} style={{ ...ds.tableRow, display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Bell size={14} color="var(--c-muted)" />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--c-text)' }}>{n.titulo}</div>
-              <div style={{ fontSize: 11, color: 'var(--c-muted)' }}>{n.descripcion}</div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--c-muted)' }}>
-              <Clock size={12} />
-              {new Date(n.created_at).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-            </div>
+          <div key={n.id} className="ds-row-touch" style={ds.tableRow}>
+            <span data-col="nom" style={{ flex: '1 1 200px', minWidth: 0, display: 'flex', alignItems: 'center', gap: 9 }}>
+              <Bell size={14} color={colors.stone} style={{ flexShrink: 0 }} />
+              <span style={{ ...type.label, fontWeight: 600, color: colors.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {n.titulo}
+              </span>
+            </span>
+            <span data-col="ale" data-tablet-sm-hide="true" style={{ flex: '1.6 1 240px', minWidth: 0, ...type.label, color: colors.textMute }}>
+              {n.descripcion}
+            </span>
+            <span data-col="fec" style={{ width: 150, flexShrink: 0, ...type.label, color: colors.textMute, display: 'flex', alignItems: 'center', gap: 5 }}>
+              <Clock size={12} style={{ flexShrink: 0 }} />
+              {fecha(n.created_at)}
+            </span>
           </div>
         ))}
+
+        {historial.length === 0 && (
+          <Vacio
+            icon={<Bell size={26} />}
+            titulo="Sin notificaciones enviadas"
+            texto="Aquí quedará el rastro de los últimos veinte avisos que mandes."
+          />
+        )}
       </div>
     </div>
   )

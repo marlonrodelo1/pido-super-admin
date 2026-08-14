@@ -308,6 +308,15 @@ button:focus-visible, input:focus-visible {
 
   /* La ficha del pedido ocupa la pantalla entera en vez de un panel lateral */
   .dispatch-drawer { width: 100vw !important; }
+
+  /* Soporte: la lista de conversaciones y el chat dejan de ir en paralelo.
+     Y se quita el alto fijo (calc(100vh - 200px)): apilados, dos bloques de esa
+     altura dejan la conversación fuera de la pantalla. */
+  .soporte-grid {
+    grid-template-columns: 1fr !important;
+    height: auto !important;
+  }
+  .soporte-grid > * { min-height: 320px; }
 }
 
 @media (max-width: 900px) {
