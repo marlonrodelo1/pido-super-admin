@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { RefreshCw, Download, Check, AlertTriangle, Link2 } from 'lucide-react'
+import { RefreshCw, Download, Check, AlertTriangle, Link2, FileText } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { ds, colors, type, radius } from '../lib/darkStyles'
 import { Card, Chip, GhostBtn, GlossyBtn, MiniBtn, StatCard, Vacio, fmtEUR } from '../lib/ui'
@@ -36,6 +36,7 @@ export default function Liquidaciones() {
   const [loading, setLoading] = useState(true)
   const [periodo, setPeriodo] = useState('todos')
   const [recalc, setRecalc] = useState(false)
+  const [pack, setPack] = useState(false)
   const [pagoModal, setPagoModal] = useState(null) // { row, referencia, fecha, guardando }
 
   async function cargar() {
@@ -120,6 +121,32 @@ export default function Liquidaciones() {
     cargar()
   }
 
+  // Pack semanal (los PDF de los lunes): una liquidación por restaurante, un
+  // reparto por socio y el informe interno. Lo genera la edge, que lee los
+  // mismos números que esta pantalla — no recalcula nada por su cuenta.
+  async function generarPack() {
+    if (periodo === 'todos') {
+      toast('Elige primero una semana en el desplegable', 'error')
+      return
+    }
+    const [ini, fin] = periodo.split('|')
+    setPack(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('generar-pack-liquidacion', {
+        body: { periodo_inicio: ini, periodo_fin: fin },
+      })
+      if (error) throw new Error(data?.error || error.message)
+      if (!data?.ok) throw new Error(data?.error || 'Respuesta inesperada')
+      const n = data.generados?.length || 0
+      toast(`Pack generado: ${n} documento${n === 1 ? '' : 's'}`, 'success')
+      cargar()
+    } catch (e) {
+      toast('No se pudo generar el pack: ' + e.message, 'error')
+    } finally {
+      setPack(false)
+    }
+  }
+
   async function recalcular() {
     setRecalc(true)
     try {
@@ -166,6 +193,11 @@ export default function Liquidaciones() {
           <GhostBtn onClick={exportarCSV} disabled={filtradas.length === 0} style={{ opacity: filtradas.length === 0 ? 0.5 : 1 }}>
             <Download size={15} /> Exportar CSV
           </GhostBtn>
+          <GlossyBtn accent onClick={generarPack} disabled={pack || periodo === 'todos'}
+            title={periodo === 'todos' ? 'Elige una semana para generar su pack' : 'Genera los PDF de la semana'}
+            style={{ opacity: pack || periodo === 'todos' ? 0.6 : 1 }}>
+            <FileText size={15} /> {pack ? 'Generando…' : 'Generar pack'}
+          </GlossyBtn>
         </div>
       </div>
 
@@ -264,6 +296,12 @@ export default function Liquidaciones() {
                   </div>
                   <div data-col="acc" style={{ flex: '1.2 1 130px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8 }}>
                     <Chip tono={est.tono}>{est.label}</Chip>
+                    {r.pdf_url && (
+                      <MiniBtn onClick={() => window.open(r.pdf_url, '_blank', 'noopener')}
+                        title={`Abrir el PDF de ${r.establecimientos?.nombre || 'este restaurante'}`}>
+                        <FileText size={13} /> PDF
+                      </MiniBtn>
+                    )}
                     {r.estado === 'pendiente' && (
                       <MiniBtn onClick={() => abrirPago(r)} title="Marcar pagada" aria-label={`Marcar pagada la liquidación de ${r.establecimientos?.nombre || 'este restaurante'}`}>
                         <Check size={14} /> Pagada
