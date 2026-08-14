@@ -138,6 +138,12 @@ button:focus-visible, input:focus-visible {
 
 .mono { font-family: 'JetBrains Mono', monospace; }
 
+/* Liquidaciones: la tabla tiene 7 columnas de dinero y por debajo de 880px se
+   comprime hasta ser ilegible, así que en escritorio se desplaza en horizontal.
+   En móvil NO: manda `.ds-table-stack` y cada fila pasa a ficha. */
+.liq-min { min-width: 880px; }
+@media (max-width: 700px) { .liq-min { min-width: 0; } }
+
 /* AsignarManualModal.jsx pinta <Loader2 className="spin"/> desde antes, pero la
    regla no existía: el indicador de "Cargando repartidores…" estaba quieto. */
 .spin { animation: spin 0.9s linear infinite; transform-origin: 50% 50%; }

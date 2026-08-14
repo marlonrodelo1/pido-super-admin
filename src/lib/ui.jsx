@@ -255,7 +255,8 @@ export function PillTabs({ options, value, onChange, style }) {
             style={{
               padding: '7px 14px', borderRadius: radius.full, cursor: 'pointer',
               border: activo ? '1px solid transparent' : `1px solid ${colors.border}`,
-              background: activo ? colors.terracotta : colors.paper,
+              // terracotta2 y no terracotta: el crema encima sube de 4,0:1 a 5,4:1
+              background: activo ? colors.terracotta2 : colors.paper,
               color: activo ? colors.cream : colors.stone,
               fontFamily: FONT, fontWeight: 600, fontSize: 13, lineHeight: 1.2,
               display: 'inline-flex', gap: 6, alignItems: 'center',
