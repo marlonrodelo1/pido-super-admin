@@ -84,9 +84,9 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* minmax(155px) y no 190: en un móvil de 375px eso da DOS columnas de
-          KPI en vez de siete tarjetas en fila india */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(155px, 1fr))', gap: 12, marginBottom: 32 }}>
+      {/* `.ds-cards` (index.css): dos columnas en un móvil de 375px y tarjetas
+          de ~260px en escritorio, sin estirarse con el ancho de la pantalla */}
+      <div className="ds-cards" style={{ marginBottom: 32 }}>
         <StatCard label="Pedidos"              value={stats.pedidos}            sub={subPeriodo} />
         <StatCard label="Entregados"           value={stats.entregados}         sub={`de ${stats.pedidos} pedidos`} />
         <StatCard label="GMV entregado"        value={fmtEUR(stats.gmv)}        sub="Valor total entregado" tone="terracotta" />

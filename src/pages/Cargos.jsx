@@ -93,7 +93,7 @@ export default function Cargos() {
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(155px, 1fr))', gap: 12, marginBottom: 20 }}>
+      <div className="ds-cards" style={{ marginBottom: 20 }}>
         <StatCard label="Cargos pendientes" value={stats.pendientes} sub="Sin saldar ni anular" icon={<Clock size={17} />} tone={stats.pendientes ? 'terracotta' : 'ink'} />
         <StatCard label="Total pendiente" value={euro(stats.totalPendiente)} sub="Por descontar a socios" icon={<Scale size={17} />} tone={stats.totalPendiente ? 'danger' : 'ink'} />
         <StatCard label="Anulados" value={stats.anulados} sub="Perdonados" icon={<Ban size={17} />} />

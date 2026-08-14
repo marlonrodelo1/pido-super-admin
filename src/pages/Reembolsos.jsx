@@ -122,7 +122,7 @@ export default function Reembolsos() {
       </div>
 
       {/* Cifras */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12, marginBottom: 20 }}>
+      <div className="ds-cards" style={{ marginBottom: 20 }}>
         <StatCard
           label="Pendientes de reembolso"
           value={stats.pendientes}

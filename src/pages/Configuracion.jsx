@@ -154,7 +154,7 @@ export default function Configuracion() {
             titulo="Tarifas de envío (canal Pido)"
             texto="Estas tarifas se aplican cuando un cliente pide desde la app principal (pidoo.es). Los socios configuran sus propias tarifas desde su panel."
           >
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 20 }}>
+            <div className="ds-fields" style={{ marginBottom: 20 }}>
               <div>
                 <label style={ds.label}>Tarifa base (€)</label>
                 <input type="number" step="0.10" min="0" value={config.envio_tarifa_base ?? '2.50'}
@@ -205,7 +205,9 @@ export default function Configuracion() {
             icono={<DollarSign size={18} color={colors.terracotta} />}
             titulo="Porcentajes de comisiones"
           >
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
+            {/* Una sola casilla: con `1fr` se estiraba a todo el ancho de la
+                pantalla para pedir un número de dos cifras */}
+            <div className="ds-fields">
               <div>
                 <label style={ds.label}>Comisión plataforma (%)</label>
                 <input type="number" min={0} max={50} value={config.comision_plataforma ?? '10'}
@@ -221,7 +223,7 @@ export default function Configuracion() {
             titulo="Algoritmo de asignación y comisiones"
             texto="Define cómo se asignan los pedidos a los riders y cómo se reparte el dinero entre Pidoo, rider y restaurante."
           >
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, marginBottom: 16 }}>
+            <div className="ds-fields" style={{ marginBottom: 16 }}>
               <div>
                 <label style={ds.label}>Algoritmo de asignación por defecto</label>
                 <select
@@ -384,7 +386,10 @@ export default function Configuracion() {
               <label style={ds.label}>Contenido (HTML)</label>
               {/* `ds.formInput` fija height 38: en un textarea eso ganaba a `rows`
                   y el editor de los términos legales medía UNA línea de alto. */}
-              <textarea value={legalForm.contenido} onChange={e => setLegalForm({ ...legalForm, contenido: e.target.value })} rows={18}
+              {/* El único campo que SÍ quiere todo el ancho de la pantalla: es
+                  HTML a pelo y con 720px se parte en cien líneas */}
+              <textarea data-keep-size="true"
+                value={legalForm.contenido} onChange={e => setLegalForm({ ...legalForm, contenido: e.target.value })} rows={18}
                 style={{
                   ...ds.formInput, ...type.mono,
                   height: 'auto', minHeight: 300, padding: '10px 12px',

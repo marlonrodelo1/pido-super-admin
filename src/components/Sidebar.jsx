@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   BarChart3, Store, Users, User, ClipboardList, Radar,
   MessageCircle, Settings, LogOut, X, Truck, Bell, RotateCcw, FileText, Receipt,
-  Activity, Scale, Video,
+  Activity, Scale, Video, PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { colors, type, radius } from '../lib/darkStyles'
@@ -61,13 +61,21 @@ const grupos = [
     titulo: 'Sistema',
     items: [
       { id: 'salud',            label: 'Salud del sistema', Icon: Activity },
-      { id: 'landing-riders',   label: 'Landing Riders',    Icon: FileText },
       { id: 'config',           label: 'Configuración',     Icon: Settings },
     ],
   },
 ]
 
-export default function Sidebar({ active, onChange, onLogout, user, mobile = false, onClose }) {
+// Ancho de la barra en sus dos estados. `ANCHO_PLEGADA` lo lee también App.jsx
+// para el margen del contenido: si los dos números se separan, queda una franja
+// muerta o el contenido se mete debajo de la barra.
+export const ANCHO_SIDEBAR = 240
+export const ANCHO_SIDEBAR_PLEGADA = 64
+
+export default function Sidebar({ active, onChange, onLogout, user, mobile = false, onClose, plegada = false, onPlegar }) {
+  // En el cajón de tablet nunca se pliega: allí la barra se abre y se cierra
+  // entera, y una tira de iconos sobre el contenido no se entendería.
+  const mini = plegada && !mobile
   const [pendientes, setPendientes] = useState(0)
   const [unreadRider, setUnreadRider] = useState(0)
   const [creadoresPend, setCreadoresPend] = useState(0)
@@ -130,7 +138,7 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
   const userName = userEmail.split('@')[0] || 'admin'
 
   const sidebarStyle = {
-    width: mobile ? 260 : 240,
+    width: mobile ? 260 : mini ? ANCHO_SIDEBAR_PLEGADA : ANCHO_SIDEBAR,
     minHeight: '100vh',
     background: colors.paper,
     color: colors.text,
@@ -141,11 +149,35 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
     left: 0,
     top: 0,
     overflow: 'hidden',
-    padding: '20px 12px',
+    padding: mini ? '20px 8px' : '20px 12px',
     zIndex: mobile ? 999 : 'auto',
     boxShadow: mobile ? '2px 0 20px rgba(26,24,21,0.18)' : 'none',
     animation: mobile ? 'slide-in-left 0.18s ease' : 'none',
+    transition: mobile ? 'none' : 'width 0.16s ease, padding 0.16s ease',
   }
+
+  const botonPlegar = onPlegar && !mobile && (
+    <button
+      onClick={onPlegar}
+      title={mini ? 'Desplegar el menú' : 'Plegar el menú a iconos'}
+      aria-label={mini ? 'Desplegar el menú' : 'Plegar el menú a iconos'}
+      aria-expanded={!mini}
+      onMouseEnter={e => { e.currentTarget.style.background = colors.cream2 }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        justifyContent: mini ? 'center' : 'flex-start',
+        padding: '8px 10px', marginBottom: 8,
+        borderRadius: radius.sm, cursor: 'pointer',
+        background: 'transparent', color: colors.stone,
+        border: 'none', width: '100%', fontFamily: type.family,
+        fontSize: 13, fontWeight: 500, textAlign: 'left',
+      }}
+    >
+      {mini ? <PanelLeftOpen size={17} strokeWidth={1.8} /> : <PanelLeftClose size={17} strokeWidth={1.8} />}
+      {!mini && <span>Plegar menú</span>}
+    </button>
+  )
 
   return (
     <aside style={sidebarStyle}>
@@ -154,40 +186,37 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
         display: 'flex',
         alignItems: 'center',
         gap: 10,
-        padding: '0 8px',
+        padding: mini ? 0 : '0 8px',
+        justifyContent: mini ? 'center' : 'flex-start',
         marginBottom: 6,
       }}>
-        {/* Logo block: 32x32 terracotta tile with white "P" */}
-        <div style={{
-          width: 32,
-          height: 32,
-          borderRadius: 9,
-          // El degradado arrancaba en terracotta y dejaba la "P" blanca en 4,43:1
-          background: `linear-gradient(135deg, ${colors.terracotta2} 0%, #8F3A18 100%)`,
-          display: 'grid',
-          placeItems: 'center',
-          color: '#fff',
-          fontWeight: 900,
-          fontSize: 16,
-          boxShadow: '0 0 0 1px rgba(197,86,44,0.35), 0 8px 20px -6px rgba(197,86,44,0.45)',
-          flexShrink: 0,
-        }}>P</div>
-        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15, flex: 1, minWidth: 0 }}>
-          <span style={{
-            fontSize: 18,
-            fontWeight: 800,
-            color: colors.ink,
-            letterSpacing: '-0.03em',
-            // terracotta a 18px se queda en 4,18:1 sobre papel; terracotta2 sube a 5,5:1
-          }}>pid<span style={{ color: colors.terracotta2 }}>oo</span></span>
-          <span style={{
-            ...type.caption,
-            color: colors.stone,
-            fontWeight: 600,
-            letterSpacing: '0.1em',
-            textTransform: 'uppercase',
-          }}>Super admin</span>
-        </div>
+        {/* El logo de verdad, del kit de identidad (6 ago 2026):
+            `Pidoo-Identidad-Visual/01-logo/svg`, copiado a `public/`.
+            Antes era una pastilla naranja con una "P" y la palabra "pidoo"
+            escrita con la fuente del panel — parecido, pero no era la marca.
+            Plegada va el isotipo (la moto) solo; desplegada, el logo completo. */}
+        {mini ? (
+          <img
+            src="/pidoo-isotipo.svg"
+            alt="Pidoo"
+            style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0 }}
+          />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 1, minWidth: 0 }}>
+            <img
+              src="/pidoo-logo.svg"
+              alt="Pidoo"
+              style={{ height: 26, width: 'auto', maxWidth: '100%', objectFit: 'contain', alignSelf: 'flex-start' }}
+            />
+            <span style={{
+              ...type.caption,
+              color: colors.stone,
+              fontWeight: 600,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+            }}>Super admin</span>
+          </div>
+        )}
         {mobile && (
           <button
             onClick={onClose}
@@ -218,15 +247,21 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
         overflowY: 'auto',
       }}>
         {grupos.map((grupo, i) => (
-          <div key={grupo.titulo} style={{ marginTop: i === 0 ? 0 : 14 }}>
-            <div style={{
-              ...type.caption,
-              color: colors.stone,
-              fontWeight: 600,
-              textTransform: 'uppercase',
-              padding: '0 10px',
-              marginBottom: 4,
-            }}>{grupo.titulo}</div>
+          <div key={grupo.titulo} style={{ marginTop: i === 0 ? 0 : mini ? 8 : 14 }}>
+            {/* Plegada no cabe el rótulo del grupo, pero la agrupación sí hay que
+                conservarla: pasa a ser una línea de separación */}
+            {mini ? (
+              i > 0 && <div style={{ height: 1, background: colors.border, margin: '0 6px 8px' }} />
+            ) : (
+              <div style={{
+                ...type.caption,
+                color: colors.stone,
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                padding: '0 10px',
+                marginBottom: 4,
+              }}>{grupo.titulo}</div>
+            )}
 
             {grupo.items.map(item => {
               const isActive = active === item.id
@@ -240,6 +275,9 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
                 <button
                   key={item.id}
                   onClick={() => onChange(item.id)}
+                  // Plegada, el nombre solo existe en el tooltip del navegador
+                  title={mini ? item.label + (dynamicBadge > 0 ? ` · ${dynamicBadge} pendiente${dynamicBadge === 1 ? '' : 's'}` : '') : undefined}
+                  aria-label={mini ? item.label : undefined}
                   onMouseEnter={e => {
                     if (!isActive) e.currentTarget.style.background = colors.cream2
                   }}
@@ -249,8 +287,9 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
                   style={{
                     display: 'flex',
                     alignItems: 'center',
+                    justifyContent: mini ? 'center' : 'flex-start',
                     gap: 10,
-                    padding: mobile ? '11px 10px' : '8px 10px',
+                    padding: mobile ? '11px 10px' : mini ? '9px 0' : '8px 10px',
                     borderRadius: radius.sm,
                     cursor: 'pointer',
                     background: isActive ? colors.terracottaSoft : 'transparent',
@@ -262,20 +301,25 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
                     width: '100%',
                     fontFamily: type.family,
                     transition: 'background 0.12s, color 0.12s',
+                    position: 'relative',
                   }}
                 >
                   <item.Icon size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
-                  <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
+                  {!mini && (
+                    <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
+                  )}
 
                   {/* Contador en vivo: vinculaciones y altas pendientes, soporte del
-                      rider sin leer, y vídeos de Creadores sin revisar en 24 h */}
+                      rider sin leer, y vídeos de Creadores sin revisar en 24 h.
+                      Plegada NO se puede perder: es lo único que avisa de que hay
+                      trabajo esperando. Pasa a una pastilla sobre el icono. */}
                   {dynamicBadge > 0 && (
                     <span
                       title={`${dynamicBadge} pendiente${dynamicBadge === 1 ? '' : 's'}`}
                       style={{
-                        fontSize: 11,
+                        fontSize: mini ? 10 : 11,
                         fontWeight: 700,
-                        padding: '1px 7px',
+                        padding: mini ? '0 4px' : '1px 7px',
                         borderRadius: radius.full,
                         // terracotta2 y no terracotta: el blanco encima sube de 4,43:1 a 5,9:1
                         background: colors.terracotta2,
@@ -284,14 +328,26 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
                         alignItems: 'center',
                         gap: 4,
                         flexShrink: 0,
+                        ...(mini ? {
+                          position: 'absolute',
+                          top: 3,
+                          right: 6,
+                          minWidth: 15,
+                          height: 15,
+                          justifyContent: 'center',
+                          lineHeight: 1,
+                          border: `1.5px solid ${colors.paper}`,
+                        } : null),
                       }}
                     >
-                      <span style={{
-                        width: 5, height: 5, borderRadius: '50%',
-                        background: '#fff',
-                        animation: 'pulse-p 1.8s infinite',
-                      }} />
-                      {dynamicBadge}
+                      {!mini && (
+                        <span style={{
+                          width: 5, height: 5, borderRadius: '50%',
+                          background: '#fff',
+                          animation: 'pulse-p 1.8s infinite',
+                        }} />
+                      )}
+                      {dynamicBadge > 99 ? '99+' : dynamicBadge}
                     </span>
                   )}
                 </button>
@@ -301,12 +357,15 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
         ))}
       </nav>
 
+      {botonPlegar}
+
       {/* Footer: avatar + name + logout */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        gap: 10,
-        padding: '10px 10px',
+        flexDirection: mini ? 'column' : 'row',
+        gap: mini ? 6 : 10,
+        padding: mini ? '10px 0' : '10px 10px',
         borderRadius: 8,
         background: colors.cream2,
       }}>
@@ -322,8 +381,8 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
           fontWeight: 700,
           fontSize: 13,
           flexShrink: 0,
-        }}>{userInitial}</div>
-        <div style={{ flex: 1, minWidth: 0 }}>
+        }} title={mini ? userEmail : undefined}>{userInitial}</div>
+        <div style={{ flex: 1, minWidth: 0, display: mini ? 'none' : 'block' }}>
           <div style={{
             ...type.label,
             fontWeight: 600,

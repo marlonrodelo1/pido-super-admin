@@ -169,7 +169,7 @@ export default function Usuarios() {
             <>
               {/* Las tres cifras: mismo componente y mismo tamaño que en el resto
                   del panel (antes eran 20px inventados sobre un rectángulo gris) */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(155px, 1fr))', gap: 12, marginBottom: 20 }}>
+              <div className="ds-cards" style={{ marginBottom: 20 }}>
                 <StatCard label="Total gastado" value={fmtEUR(totalGastado)} sub="Pedidos entregados" tone="terracotta" />
                 <StatCard label="Pedidos" value={totalPedidos} sub="Últimos 30" />
                 <StatCard label="Entregados" value={pedidosEntregados} sub={`de ${totalPedidos} pedidos`} tone="sage" />

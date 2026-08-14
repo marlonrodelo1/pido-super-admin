@@ -30,10 +30,13 @@ export function useMediaQuery(query) {
 
 // Breakpoints alineados con el resto de Pidoo (DESIGN.md)
 export const BP = {
-  // <768 → móvil (no soportado oficialmente)
+  // <768 → móvil
   // 768-1279 → tablet
-  // ≥1280 → desktop
+  // ≥1280 → escritorio
+  // ≥1700 → escritorio ancho: cabe una TERCERA columna sin ahogar el mapa
+  //          (Dispatch; el salto lo hace `.dispatch-grid` en index.css)
   desktop: '(min-width: 1280px)',
+  wide: '(min-width: 1700px)',
   tabletDown: '(max-width: 1279px)',
   tablet: '(min-width: 768px) and (max-width: 1279px)',
   mobile: '(max-width: 767px)',

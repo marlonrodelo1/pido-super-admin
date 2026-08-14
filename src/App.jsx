@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Menu } from 'lucide-react'
 import { AdminProvider, useAdmin } from './context/AdminContext'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import Sidebar from './components/Sidebar'
+import Sidebar, { ANCHO_SIDEBAR, ANCHO_SIDEBAR_PLEGADA } from './components/Sidebar'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Establecimientos from './pages/Establecimientos'
@@ -19,7 +19,6 @@ import Liquidaciones from './pages/Liquidaciones'
 import Cargos from './pages/Cargos'
 import Socios from './pages/Socios'
 import Creadores from './pages/Creadores'
-import LandingRiders from './pages/LandingRiders'
 import { useMediaQuery, BP } from './lib/useMediaQuery'
 import './index.css'
 
@@ -37,7 +36,6 @@ const SECCION_TITULOS = {
   cargos: 'Cargos',
   socios: 'Socios',
   creadores: 'Creadores',
-  'landing-riders': 'Landing Riders',
   salud: 'Salud del sistema',
   config: 'Configuración',
 }
@@ -49,6 +47,21 @@ function AppContent() {
   const [seccion, setSeccion] = useState('dashboard')
   const isTabletDown = useMediaQuery(BP.tabletDown)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // Barra lateral plegada a solo iconos. Se recuerda entre sesiones: es una
+  // preferencia de cómo se trabaja, no un estado de la pantalla, y volver a
+  // plegarla en cada recarga sería insufrible.
+  const [plegada, setPlegada] = useState(() => {
+    try { return localStorage.getItem('admin_sidebar_plegada') === '1' } catch { return false }
+  })
+
+  const alternarPlegada = () => {
+    setPlegada(v => {
+      const nuevo = !v
+      try { localStorage.setItem('admin_sidebar_plegada', nuevo ? '1' : '0') } catch { /* modo privado */ }
+      return nuevo
+    })
+  }
 
   // Cerrar drawer al cambiar de sección en tablet
   useEffect(() => {
@@ -96,6 +109,8 @@ function AppContent() {
           user={user}
           mobile={isTabletDown}
           onClose={() => setSidebarOpen(false)}
+          plegada={plegada}
+          onPlegar={alternarPlegada}
         />
       )}
 
@@ -114,7 +129,8 @@ function AppContent() {
           // minWidth:0 — sin esto, un flex item no baja de su min-content y las
           // tablas anchas empujan el layout (scroll horizontal en tablet).
           minWidth: 0,
-          marginLeft: isTabletDown ? 0 : 240,
+          marginLeft: isTabletDown ? 0 : plegada ? ANCHO_SIDEBAR_PLEGADA : ANCHO_SIDEBAR,
+          transition: isTabletDown ? 'none' : 'margin-left 0.16s ease',
           background: 'var(--c-bg)',
           minHeight: '100vh',
         }}
@@ -185,9 +201,21 @@ function AppContent() {
           </header>
         )}
 
+        {/* maxWidth 2400 y no 1600: medido en un monitor de 2560, el área útil
+            tras la barra lateral es de 2320px y el contenido se quedaba en
+            1600 → 720px muertos (el 31%).
+            2400 y no 2240 por una razón concreta: con 2240 el tope ya mordía a
+            2560 y PLEGAR LA BARRA no ganaba un solo píxel de contenido, solo
+            recentraba con más hueco a los lados — justo lo contrario de lo que
+            se espera al plegarla. Con 2400, a 2560 la barra desplegada llena el
+            ancho entero y plegarla suma 80px reales.
+            Sigue habiendo tope para el ultrawide de 3440, donde una fila de
+            tabla de 3200px obligaría a cruzar el monitor entero con la vista.
+            El padding crece con la pantalla; por debajo de 1280 lo pisa
+            `.admin-main-container` de index.css con !important. */}
         <div
           className={`admin-main-container ${isTabletDown ? 'admin-main-with-topbar' : ''}`}
-          style={{ maxWidth: 1600, margin: '0 auto', padding: '24px 28px 48px' }}
+          style={{ maxWidth: 2400, margin: '0 auto', padding: 'clamp(24px, 1.2vw, 32px) clamp(24px, 1.6vw, 40px) 56px' }}
         >
           {seccion === 'dashboard' && <Dashboard />}
           {seccion === 'establecimientos' && <Establecimientos />}
@@ -202,7 +230,6 @@ function AppContent() {
           {seccion === 'cargos' && <Cargos />}
           {seccion === 'socios' && <Socios />}
           {seccion === 'creadores' && <Creadores />}
-          {seccion === 'landing-riders' && <LandingRiders />}
           {seccion === 'salud' && <SaludSistema />}
           {seccion === 'config' && <Configuracion />}
         </div>

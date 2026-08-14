@@ -176,7 +176,7 @@ export default function CreadoresCard({ establecimiento }) {
       </div>
 
       {activo && (
-        <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8 }}>
+        <div className="ds-cards" style={{ marginTop: 12 }}>
           <Mini label="Gasto del mes" value={tope != null ? `${fmtEur(gasto)} / ${fmtEur(tope)}` : fmtEur(gasto)}
                 alerta={tope != null && gasto >= tope} />
           <Mini label="Vídeos" value={stats.participaciones} />
@@ -265,7 +265,7 @@ export default function CreadoresCard({ establecimiento }) {
                 </button>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(92px, 1fr))', gap: 6 }}>
+              <div className="ds-fields" style={{ gap: 8 }}>
                 <div>
                   <label style={{ fontSize: 10, color: 'var(--c-muted)' }}>Views (mín. 100)</label>
                   <input style={ds.formInput} type="number" min={100} value={f.views_necesarias ?? ''}

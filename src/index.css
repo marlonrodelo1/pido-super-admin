@@ -164,6 +164,131 @@ button:focus-visible, input:focus-visible {
 }
 
 /* ────────────────────────────────────────────────────────────────────────── */
+/* REJILLAS: el ancho de sobra crea COLUMNAS, no tarjetas más gordas         */
+/* ────────────────────────────────────────────────────────────────────────── */
+/*
+   `repeat(auto-fit, minmax(N, 1fr))` reparte TODO el sobrante entre los pocos
+   elementos que hay. Medido a 2560px con el contenedor en 1600: Liquidaciones,
+   Cargos, Reembolsos y Notificaciones pintaban 3 tarjetas de 506px con un solo
+   número dentro, y Dispatch 4 de 377px. Al subir el contenedor a 2240 esas
+   mismas tarjetas pasarían a 712px.
+
+   `auto-fill` mantiene las pistas vacías en su sitio, así que la tarjeta se
+   queda en su tamaño natural. Medido en el navegador con la fórmula de abajo:
+   247-291px de ancho de contenedor 1200 a 3100. Constante.
+
+   Por qué solo a partir de 1280: a 340px de ancho útil, `auto-fill` con un
+   mínimo de 240 da UNA columna. Por debajo manda la fórmula de siempre, que es
+   la que da dos columnas en un móvil (de ahí el mínimo de 155 y no de 190).
+
+   Ojo al usarlas: un `gridTemplateColumns` inline GANA a estas clases. Al
+   poner la clase hay que quitar el `display`, el `gap` y el
+   `gridTemplateColumns` del objeto de estilo, no solo añadirla.
+
+     .ds-cards   tiras de tarjetas de cifra (KPI)
+     .ds-panels  tarjetas con contenido dentro (flota, socios, salud)
+     .ds-fields  rejillas de campos de formulario
+*/
+.ds-cards,
+.ds-panels,
+.ds-fields { display: grid; }
+
+.ds-cards  { gap: 12px; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); }
+.ds-panels { gap: 12px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.ds-fields { gap: 16px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+
+/* EL TOPE VA EN LA TARJETA, NO EN LA COLUMNA. Es la parte que hay que entender:
+   el primer intento fue cambiar la rejilla a `auto-fill`, y aunque a 2320px
+   dejaba la tarjeta en 247 (bien), a 918px las CUATRO de Dispatch se partían
+   3 + 1 con un hueco en medio, y las siete del Dashboard en tres filas. Medido.
+   `auto-fit` + `1fr` no parte nunca mal: las columnas se reparten la fila
+   entera. El tope de la tarjeta impide el globo sin tocar ese reparto.
+
+     ancho útil   4 tarjetas          7 tarjetas
+     918px        221px, 1 fila       174px, 2 filas   ← igual que siempre
+     1600px       320px, 1 fila       218px, 1 fila
+     2320px       320px, 1 fila       320px, 1 fila    ← ya no 571 ni 765
+
+   Contrapartida asumida: con pocas tarjetas en una pantalla muy ancha quedan
+   separadas entre sí (263px con cuatro a 2320). Se prefiere eso a empaquetarlas
+   a la izquierda dejando un vacío de mil píxeles a la derecha. */
+.ds-cards  > * { max-width: 320px; }
+.ds-panels > * { max-width: 440px; }
+.ds-fields > * { max-width: 320px; }
+
+/* Ningún campo de entrada crece con el monitor.
+   Medido a 2560px: el título del push en Notificaciones ocupaba 2184px y un
+   campo de Configuración 2001. Un input de dos metros para escribir "10" no
+   ayuda a nadie y deja el formulario con pinta de vacío.
+   Solo desde 1280: por debajo manda el bloque de tablet, que los quiere a todo
+   lo ancho y con 44px de alto para el dedo.
+   El `textarea` va aparte, a 720px: es texto de varias líneas y agradece algo
+   más de sitio que un campo de una línea, pero el mensaje del push también
+   medía 2184px. La ÚNICA excepción es el editor HTML de las páginas legales,
+   marcado con data-keep-size="true".
+   Dentro de los modales no aplica nada de esto: ya están topados por el propio
+   modal (420-700px) y capar ahí dejaría el campo más corto que su caja.
+   Válvula de escape puntual: data-keep-size="true". */
+@media (min-width: 1280px) {
+  .admin-main-container input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([data-keep-size="true"]),
+  .admin-main-container select:not([data-keep-size="true"]) {
+    max-width: 560px;
+  }
+
+  .admin-main-container textarea:not([data-keep-size="true"]) {
+    max-width: 720px;
+  }
+
+  .admin-modal-content input,
+  .admin-modal-content select,
+  .admin-modal-content textarea {
+    max-width: none;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* DISPATCH — cola · mapa · repartidores                                     */
+/* ────────────────────────────────────────────────────────────────────────── */
+/*
+   Hasta 1700px: dos columnas (cola | mapa) y los repartidores en una banda a
+   todo lo ancho debajo, que es como estaba.
+   A partir de 1700px: TRES columnas. El motivo no es estético — la banda de
+   repartidores obligaba a la cola a caber en 340×540px, o sea tres pedidos y
+   medio; con veinte pedidos en hora punta eso es un tubo con scroll. Con la
+   tercera columna la cola se estira a lo alto de la ventana (~900px) y los
+   repartidores pasan a lista vertical, que es como se leen mejor.
+
+   1700 y no 1500: medido a 1590 el mapa se quedaba en 557px de ancho. La cola
+   se lleva sus 400 SIEMPRE (una pista `minmax(340px,400px)` crece hasta su
+   máximo antes de que el `1fr` del mapa reparta nada), así que por debajo de
+   1700 la tercera columna sale del mapa. A 1700 el mapa conserva ~660.
+*/
+.dispatch-grid {
+  display: grid;
+  gap: 16px;
+  align-items: start;
+  grid-template-columns: minmax(300px, 340px) minmax(0, 1fr);
+}
+
+/* Mientras no haya tercera columna, la flota ocupa su propia fila entera */
+.dispatch-flota-col { grid-column: 1 / -1; }
+
+/* Con la ficha compacta caben más por fila y no hace falta reservar 260 */
+.dispatch-flota {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+}
+
+@media (min-width: 1700px) {
+  /* La columna de repartidores baja de 360 a 300: la ficha compacta cabe de
+     sobra y esos 60px se los queda el mapa, que es lo que se mira */
+  .dispatch-grid { grid-template-columns: minmax(340px, 400px) minmax(0, 1fr) minmax(250px, 300px); }
+  .dispatch-flota-col { grid-column: auto; }
+  .dispatch-flota { grid-template-columns: 1fr; }
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
 /* RESPONSIVE TABLET (768-1279px) — Marlon en la calle con la tablet         */
 /* ────────────────────────────────────────────────────────────────────────── */
 

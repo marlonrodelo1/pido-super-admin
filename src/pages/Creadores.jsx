@@ -176,7 +176,7 @@ export default function Creadores() {
       </p>
 
       {kpis && (
-        <div className="pidoo-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, marginBottom: 18 }}>
+        <div className="ds-cards" style={{ marginBottom: 18 }}>
           <Kpi label="Vídeos en juego" value={fmtNum(kpis.activas)} />
           <Kpi label="Alcance total" value={fmtNum(kpis.alcance)} sub="visualizaciones" />
           <Kpi label="Premios entregados" value={fmtNum(kpis.premios)} sub={`${kpis.canjeados} canjeados`} />

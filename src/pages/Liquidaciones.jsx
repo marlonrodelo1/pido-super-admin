@@ -201,7 +201,7 @@ export default function Liquidaciones() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(190px,1fr))', gap: 12, marginBottom: 16 }}>
+      <div className="ds-cards" style={{ marginBottom: 16 }}>
         <StatCard label="Pido paga (pendiente)" value={euro(totPidoPaga)} sub="A favor del restaurante" tone="sage" />
         <StatCard label="Restaurantes deben (pendiente)" value={euro(totRestPaga)} sub="Comisión por cobrar" tone="terracotta" />
         <StatCard label="Comisión Pidoo (total)" value={euro(totComision)} sub="En el periodo mostrado" />

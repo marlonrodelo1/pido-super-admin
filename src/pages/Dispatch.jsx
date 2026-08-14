@@ -7,6 +7,7 @@ import { RefreshCw, MapPin, Phone, Navigation, AlertTriangle, Eye } from 'lucide
 import AsignarManualModal from '../components/AsignarManualModal'
 import MapaFlota from '../components/MapaFlota'
 import PedidoDrawer from '../components/PedidoDrawer'
+import { useMediaQuery, BP } from '../lib/useMediaQuery'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TORRE DE CONTROL
@@ -67,6 +68,18 @@ export default function Dispatch() {
   const [modalAsignar, setModalAsignar] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [ultima, setUltima] = useState(null)
+
+  // A partir de 1500px caben TRES columnas (cola · mapa · repartidores). Por
+  // debajo, los repartidores vuelven a su banda de siempre debajo del mapa:
+  // con menos de eso, meter una tercera columna dejaría el mapa en 300px.
+  //
+  // El alto sale de la VENTANA en todo el escritorio, no solo con tres
+  // columnas: con los 540px fijos de antes la cola enseñaba 3 pedidos y medio,
+  // y en hora punta con veinte pedidos eso es un tubo con scroll. En una
+  // ventana de 900px de alto pasa a 650, y en una de 1300 a 900.
+  // (el salto a tres columnas lo hace `.dispatch-grid` en index.css con BP.wide)
+  const esEscritorio = useMediaQuery(BP.desktop)
+  const altoPanel = esEscritorio ? 'min(calc(100vh - 250px), 900px)' : 540
   const timer = useRef(null)
 
   const { isLoaded } = useJsApiLoader({ googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '' })
@@ -189,9 +202,9 @@ export default function Dispatch() {
         <GhostBtn onClick={cargar}><RefreshCw size={14} /> Actualizar</GhostBtn>
       </div>
 
-      {/* 155 y no 180: en un móvil de 375px eso da dos columnas en vez de cuatro
-          tarjetas en fila india, igual que en el Dashboard */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(155px, 1fr))', gap: 12, marginBottom: 20 }}>
+      {/* `.ds-cards` (index.css): en móvil dos columnas, en escritorio la
+          tarjeta se queda en ~260px en vez de estirarse a 377 */}
+      <div className="ds-cards" style={{ marginBottom: 20 }}>
         <StatCard label="Pedidos en vuelo" value={pedidos.length} sub="Sin entregar ni cancelar" />
         <StatCard label="Sin repartidor" value={sinAsignar.length} sub="Reparto sin socio asignado" tone={sinAsignar.length ? 'danger' : 'ink'} />
         <StatCard label="Disponibles ahora" value={disponibles.length} sub={`De ${flota.length} socios dados de alta`} tone="sage" />
@@ -209,14 +222,17 @@ export default function Dispatch() {
         </Card>
       )}
 
-      <div className="dispatch-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 340px) minmax(0, 1fr)', gap: 16, alignItems: 'start' }}>
+      {/* La rejilla la define `.dispatch-grid` en index.css: 2 columnas hasta
+          1500px y 3 a partir de ahí. No puede ir inline porque un estilo inline
+          gana a la media query. */}
+      <div className="dispatch-grid">
 
         {/* ── Cola de pedidos ─────────────────────────────────────────────── */}
         <Card pad={0} style={{ overflow: 'hidden' }}>
           <div style={{ ...ds.tableHeader, borderRadius: 0 }}>
             <span style={{ flex: 1 }}>En vuelo ({pedidos.length})</span>
           </div>
-          <div style={{ maxHeight: 540, overflowY: 'auto' }}>
+          <div style={{ maxHeight: altoPanel, overflowY: 'auto' }}>
             {cola.map(p => {
               const activo = p.id === pedidoSel
               const socio = socios.find(s => s.id === p.socio_id)
@@ -295,7 +311,7 @@ export default function Dispatch() {
         {/* ── Mapa ────────────────────────────────────────────────────────── */}
         <div>
           {!isLoaded ? (
-            <div style={{ height: 540, borderRadius: radius.lg, background: colors.elev2, display: 'grid', placeItems: 'center', ...type.body, color: colors.textMute }}>
+            <div style={{ height: altoPanel, borderRadius: radius.lg, background: colors.elev2, display: 'grid', placeItems: 'center', ...type.body, color: colors.textMute }}>
               Cargando mapa…
             </div>
           ) : (
@@ -305,54 +321,91 @@ export default function Dispatch() {
               pedido={pedido}
               onSocio={(s) => { if (pedido && pedido.modo_entrega === 'delivery') abrirAsignar(pedido) }}
               onEstablecimiento={() => {}}
+              altura={altoPanel}
             />
           )}
         </div>
-      </div>
 
-      {/* ── Flota ─────────────────────────────────────────────────────────── */}
-      <h2 style={{ ...ds.h2, marginTop: 28 }}>
-        Repartidores {pedido && <span style={{ ...type.body, fontWeight: 400, color: colors.textMute }}>· distancia a {pedido.establecimientos?.nombre}</span>}
-      </h2>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
-        {flota.map(f => (
-          <Card key={f.id} pad={14} style={{ borderColor: f.disponible ? colors.sage : colors.border }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ ...type.label, fontWeight: 600, color: colors.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.nombre}</div>
-                <div style={{ ...type.caption, color: colors.stone }}>{f.cuenta?.nombre || 'Sin cuenta de reparto'}</div>
-              </div>
-              {f.disponible
-                ? <Chip tono="sage" dot>Disponible</Chip>
-                : f.en_servicio
-                  ? <Chip tono="warning" title={`Última posición hace ${hace(f.last_gps_at)}`}>Sin GPS</Chip>
-                  : <Chip tono="neutral">Fuera</Chip>}
+        {/* ── Flota ───────────────────────────────────────────────────────── */}
+        {/* Tercera columna a partir de 1500px. Por debajo, `.dispatch-flota-col`
+            la manda a una fila propia a todo lo ancho, que es como estaba.
+            El motivo de moverla: ocupaba una banda entera debajo del mapa y
+            dejaba la cola de pedidos en 340×540 — un tubo en cuanto entran
+            veinte pedidos. Ahora la cola se estira a lo alto de la ventana. */}
+        <div className="dispatch-flota-col">
+          <Card pad={0} style={{ overflow: 'hidden' }}>
+            <div style={{ ...ds.tableHeader, borderRadius: 0 }}>
+              <span style={{ flex: 1 }}>
+                Repartidores ({flota.length})
+                {pedido && (
+                  <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 500 }}>
+                    {' · distancia a '}{pedido.establecimientos?.nombre}
+                  </span>
+                )}
+              </span>
             </div>
+            <div className="dispatch-flota" style={{ maxHeight: altoPanel, overflowY: 'auto', padding: 12 }}>
+              {/* Ficha compacta: dos líneas en vez de cuatro (de ~120px de alto a
+                  ~62). Lo que se ganó de sitio: la cuenta de reparto, el GPS y la
+                  carga viven en UNA línea de datos, y "Llamar" pasa de botón con
+                  texto a icono al final de esa misma línea. El botón de asignar
+                  solo aparece cuando hay un pedido elegido, que es cuando sirve. */}
+              {flota.map(f => (
+                <Card key={f.id} pad={10} style={{ borderRadius: 12, borderColor: f.disponible ? colors.sage : colors.border }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div
+                      title={f.nombre}
+                      style={{ ...type.label, fontWeight: 600, color: colors.text, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    >{f.nombre}</div>
+                    {f.disponible
+                      ? <Chip tono="sage" dot style={{ fontSize: 11, padding: '2px 7px' }}>Disponible</Chip>
+                      : f.en_servicio
+                        ? <Chip tono="warning" title={`Última posición hace ${hace(f.last_gps_at)}`} style={{ fontSize: 11, padding: '2px 7px' }}>Sin GPS</Chip>
+                        : <Chip tono="neutral" style={{ fontSize: 11, padding: '2px 7px' }}>Fuera</Chip>}
+                  </div>
 
-            <div style={{ display: 'flex', gap: 14, ...type.caption, color: colors.stone, marginBottom: 10, flexWrap: 'wrap' }}>
-              <span><Navigation size={11} style={{ verticalAlign: -1 }} /> {f.gpsFresco ? `GPS ${hace(f.last_gps_at)}` : 'sin posición'}</span>
-              <span>{f.carga} en curso</span>
-              {pedido && f.distancia != null && <span style={{ color: colors.onSageSoft, fontWeight: 600 }}><MapPin size={11} style={{ verticalAlign: -1 }} /> {km(f.distancia)}</span>}
-            </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
+                    <div style={{ ...type.caption, color: colors.stone, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {f.cuenta?.nombre || 'Sin cuenta'}
+                      {' · '}
+                      <Navigation size={10} style={{ verticalAlign: -1 }} /> {f.gpsFresco ? hace(f.last_gps_at) : 'sin posición'}
+                      {' · '}{f.carga} en curso
+                      {pedido && f.distancia != null && (
+                        <span style={{ color: colors.onSageSoft, fontWeight: 700 }}>{' · '}<MapPin size={10} style={{ verticalAlign: -1 }} /> {km(f.distancia)}</span>
+                      )}
+                    </div>
+                    {f.telefono && (
+                      <button
+                        onClick={() => window.open(`tel:${f.telefono}`)}
+                        title={`Llamar a ${f.nombre} · ${f.telefono}`}
+                        aria-label={`Llamar a ${f.nombre}`}
+                        style={{
+                          width: 26, height: 26, borderRadius: 7, flexShrink: 0,
+                          display: 'grid', placeItems: 'center',
+                          border: `1px solid ${colors.border}`,
+                          background: colors.paper, color: colors.stone, cursor: 'pointer',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.color = colors.terracotta2 }}
+                        onMouseLeave={e => { e.currentTarget.style.color = colors.stone }}
+                      >
+                        <Phone size={12} />
+                      </button>
+                    )}
+                  </div>
 
-            <div style={{ display: 'flex', gap: 8 }}>
-              {f.telefono && (
-                <GhostBtn size="sm" onClick={() => window.open(`tel:${f.telefono}`)} aria-label={`Llamar a ${f.nombre}`}>
-                  <Phone size={13} /> Llamar
-                </GhostBtn>
-              )}
-              {pedido && pedido.modo_entrega === 'delivery' && (
-                <GlossyBtn size="sm" accent full onClick={() => abrirAsignar(pedido)}>
-                  Asignar {pedido.codigo}
-                </GlossyBtn>
+                  {pedido && pedido.modo_entrega === 'delivery' && (
+                    <GlossyBtn size="sm" accent full onClick={() => abrirAsignar(pedido)} style={{ marginTop: 8, height: 30 }}>
+                      Asignar {pedido.codigo}
+                    </GlossyBtn>
+                  )}
+                </Card>
+              ))}
+              {flota.length === 0 && !cargando && (
+                <Vacio titulo="Ningún socio dado de alta" texto="Los socios aparecen aquí en cuanto completan su alta." />
               )}
             </div>
           </Card>
-        ))}
-        {flota.length === 0 && !cargando && (
-          <Vacio titulo="Ningún socio dado de alta" texto="Los socios aparecen aquí en cuanto completan su alta." />
-        )}
+        </div>
       </div>
 
       {ficha && (

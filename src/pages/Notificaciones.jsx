@@ -120,7 +120,7 @@ export default function Notificaciones() {
       </div>
 
       {/* Suscripciones */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, marginBottom: 28 }}>
+      <div className="ds-cards" style={{ marginBottom: 28 }}>
         <StatCard label="Suscripciones" value={total} sub="Dispositivos alcanzables" icon={<Bell size={16} />} />
         <StatCard label="Clientes" value={stats.clientes} sub="Apps de cliente" tone="terracotta" icon={<Users size={16} />} />
         <StatCard label="Restaurantes" value={stats.restaurantes} sub="Paneles de restaurante" tone="sage" icon={<Store size={16} />} />
