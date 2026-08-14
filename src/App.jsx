@@ -14,6 +14,7 @@ import SaludSistema from './pages/SaludSistema'
 import Configuracion from './pages/Configuracion'
 import Notificaciones from './pages/Notificaciones'
 import Dispatch from './pages/Dispatch'
+import Algoritmo from './pages/Algoritmo'
 import Reembolsos from './pages/Reembolsos'
 import Liquidaciones from './pages/Liquidaciones'
 import Cargos from './pages/Cargos'
@@ -37,6 +38,7 @@ const SECCION_TITULOS = {
   socios: 'Socios',
   creadores: 'Creadores',
   salud: 'Salud del sistema',
+  algoritmo: 'Algoritmo',
   config: 'Configuración',
 }
 
@@ -231,6 +233,7 @@ function AppContent() {
           {seccion === 'socios' && <Socios />}
           {seccion === 'creadores' && <Creadores />}
           {seccion === 'salud' && <SaludSistema />}
+          {seccion === 'algoritmo' && <Algoritmo />}
           {seccion === 'config' && <Configuracion />}
         </div>
       </main>

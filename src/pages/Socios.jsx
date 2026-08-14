@@ -49,9 +49,18 @@ const ESTADOS_VINC = ['pendiente', 'activa', 'rechazada']
 // Por eso son TRES estados y no dos, igual que en Dispatch.
 const GPS_FRESCO_MIN = 12
 
+// `socios` tiene DOS columnas de posición, `last_location_at` y `last_gps_at`, y hoy se
+// escriben a la vez. La que decide de verdad es `last_location_at`: es la que mira el filtro
+// duro del dispatcher (`create-shipday-order` v59, MAX_LOC_AGE_MIN). Se lee esa primero para
+// que el panel no pueda decir "En línea" de alguien a quien el motor descarta.
+export function ultimaPosicion(s) {
+  return s?.last_location_at || s?.last_gps_at || null
+}
+
 export function estadoLineaSocio(s) {
   if (!s?.en_servicio) return 'fuera'
-  const t = s.last_gps_at ? new Date(s.last_gps_at).getTime() : 0
+  const iso = ultimaPosicion(s)
+  const t = iso ? new Date(iso).getTime() : 0
   const fresco = t > 0 && (Date.now() - t) < GPS_FRESCO_MIN * 60000
   return fresco ? 'disponible' : 'sin_gps'
 }
@@ -107,7 +116,7 @@ export default function Socios() {
 
   useEffect(() => { load() }, [])
 
-  // Realtime: el estado en línea sale de `socios` (en_servicio + last_gps_at),
+  // Realtime: el estado en línea sale de `socios` (en_servicio + posición),
   // que es justo lo que el socio actualiza al ponerse en servicio y al latir.
   useEffect(() => {
     const channel = supabase.channel('socios-hub-realtime')
@@ -433,7 +442,7 @@ export default function Socios() {
                 <Chip
                   tono={linea.tono}
                   dot
-                  title={`${linea.ayuda}${s.last_gps_at ? ` · última posición ${hace(s.last_gps_at)}` : ''}`}
+                  title={`${linea.ayuda}${ultimaPosicion(s) ? ` · última posición ${hace(ultimaPosicion(s))}` : ''}`}
                 >
                   {linea.label}
                 </Chip>
@@ -522,7 +531,7 @@ function SocioDetalle({
             <div style={{ display: 'flex', gap: 14, ...type.label, color: colors.stone, flexWrap: 'wrap' }}>
               {socio.email && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Mail size={13} /> {socio.email}</span>}
               {socio.telefono && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Phone size={13} /> {socio.telefono}</span>}
-              <span title="Última posición recibida del móvil del socio">Posición {hace(socio.last_gps_at)}</span>
+              <span title="Última posición recibida del móvil del socio">Posición {hace(ultimaPosicion(socio))}</span>
               {hasMarketplace && (
                 <a href={`https://pidoo.es/s/${socio.slug}`} target="_blank" rel="noopener noreferrer"
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: colors.terracotta2, textDecoration: 'none', fontWeight: 600 }}>
@@ -731,7 +740,7 @@ function TabRiders({ socio, riders }) {
                 {r.estado === 'activa' && r.activa !== false && (
                   <div>
                     <b style={{ color: isOnline ? colors.onSageSoft : colors.ink2 }}>{linea.label}</b>
-                    <span> · posición {hace(socio.last_gps_at)}</span>
+                    <span> · posición {hace(ultimaPosicion(socio))}</span>
                   </div>
                 )}
                 <div>Pedidos entregados: <b style={{ color: colors.text }}>{pedidosCount[r.id] || 0}</b></div>
@@ -1075,8 +1084,8 @@ function TabConfig({ socio, riders }) {
             tabla vacía y por tanto siempre "Sin datos". Lo que de verdad dice si
             se le puede asignar un pedido es la última posición de su móvil. */}
         <DetailRow label="Última posición">
-          {socio.last_gps_at
-            ? `${hace(socio.last_gps_at)} · ${fmtDateTime(socio.last_gps_at)}`
+          {ultimaPosicion(socio)
+            ? `${hace(ultimaPosicion(socio))} · ${fmtDateTime(ultimaPosicion(socio))}`
             : 'Nunca ha mandado posición'}
         </DetailRow>
         <DetailRow label="En servicio">

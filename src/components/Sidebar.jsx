@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   BarChart3, Store, Users, User, ClipboardList, Radar,
   MessageCircle, Settings, LogOut, X, Truck, Bell, RotateCcw, FileText, Receipt,
-  Activity, Scale, Video, PanelLeftClose, PanelLeftOpen,
+  Activity, Scale, Video, PanelLeftClose, PanelLeftOpen, Workflow,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { colors, type, radius } from '../lib/darkStyles'
@@ -61,6 +61,8 @@ const grupos = [
     titulo: 'Sistema',
     items: [
       { id: 'salud',            label: 'Salud del sistema', Icon: Activity },
+      // Pantalla de lectura: cómo funciona el reparto y el dinero, con las cifras en vivo.
+      { id: 'algoritmo',        label: 'Algoritmo',         Icon: Workflow },
       { id: 'config',           label: 'Configuración',     Icon: Settings },
     ],
   },
