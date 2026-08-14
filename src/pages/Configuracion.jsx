@@ -408,9 +408,12 @@ function ToggleRow({ label, value, onChange }) {
 }
 
 const styles = {
-  section: { background: 'var(--c-surface2)', borderRadius: 14, padding: 24, marginBottom: 16, border: '1px solid var(--c-border)' },
-  sectionTitle: { fontSize: 15, fontWeight: 700, color: 'var(--c-text)', margin: 0 },
-  tag: { display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, background: 'var(--c-surface2)', fontSize: 12, fontWeight: 600, color: 'var(--c-text)' },
+  // Las secciones iban en --c-surface2 (#EFE9DD) sobre el fondo --c-bg (#F7F3EC):
+  // beis sobre beis, sin separación visible. Van en papel, como el resto de tarjetas.
+  section: { background: 'var(--c-surface)', borderRadius: 16, padding: 24, marginBottom: 16, border: '1px solid var(--c-border)' },
+  sectionTitle: { fontSize: 17, fontWeight: 700, letterSpacing: '-0.01em', color: 'var(--c-text)', margin: 0 },
+  // Y los chips tenían EXACTAMENTE el mismo color que su contenedor: invisibles.
+  tag: { display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 999, background: 'var(--c-surface2)', border: '1px solid var(--c-border)', fontSize: 12, fontWeight: 600, color: 'var(--c-text)' },
   tagRemove: { background: 'none', border: 'none', cursor: 'pointer', color: 'var(--c-muted)', fontSize: 12, fontWeight: 700, padding: 0, display: 'flex', alignItems: 'center' },
-  hint: { fontSize: 11, color: 'var(--c-muted)', marginTop: 4 },
+  hint: { fontSize: 12, color: 'var(--c-muted)', marginTop: 4 },
 }

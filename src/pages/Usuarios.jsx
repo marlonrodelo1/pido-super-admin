@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { ds } from '../lib/darkStyles'
+import { EstadoBadge } from '../lib/ui'
 import { toast } from '../App'
 import { Save, X, KeyRound, Trash2 } from 'lucide-react'
 import ResetPasswordModal from '../components/ResetPasswordModal'
@@ -61,7 +62,9 @@ export default function Usuarios() {
     return (u.nombre || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q) || (u.telefono || '').includes(q)
   })
 
-  const estadoColor = { entregado: 'var(--c-text)', cancelado: 'var(--c-danger)', fallido: 'var(--c-danger)', nuevo: '#C5562C', aceptado: '#C5562C', preparando: '#C5562C', listo: 'var(--c-text-soft)', en_camino: '#C5562C', recogido: '#C5562C' }
+  // (El mapa de colores por estado que había aquí era el segundo del repo, con
+  //  valores distintos a los de Pedidos.jsx para los mismos estados, y tenía el
+  //  mismo fallo: `'var(--c-danger)' + '20'` no es un color. Ahora: EstadoBadge.)
 
   // Total gastado por el usuario
   const totalGastado = pedidosUsuario.filter(p => p.estado === 'entregado').reduce((s, p) => s + (p.total || 0), 0)
@@ -172,7 +175,7 @@ export default function Usuarios() {
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
                   <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--c-text)' }}>{p.codigo}</span>
-                  <span style={{ ...ds.badge, background: (estadoColor[p.estado] || '#6B7280') + '20', color: estadoColor[p.estado] || '#6B7280', fontSize: 10 }}>{p.estado?.replace('_', ' ')}</span>
+                  <EstadoBadge estado={p.estado} />
                   <span style={{ fontSize: 10, color: p.metodo_pago === 'tarjeta' ? 'var(--c-info)' : 'var(--c-success)' }}>{p.metodo_pago === 'tarjeta' ? '💳' : '💵'}</span>
                   <span style={{ fontSize: 9, color: 'var(--c-muted)', fontWeight: 600 }}>PIDO</span>
                 </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { ds, colors } from '../lib/darkStyles'
+import { EstadoBadge, Chip } from '../lib/ui'
 import AsignarManualModal from '../components/AsignarManualModal'
 
 const ESTADOS_ACTIVOS = ['nuevo', 'aceptado', 'preparando', 'listo', 'recogido', 'en_camino']
@@ -103,7 +104,12 @@ export default function Pedidos() {
     return true
   })
 
-  const estadoColor = { nuevo: '#C5562C', aceptado: '#C5562C', preparando: '#C5562C', listo: 'var(--c-text-soft)', recogido: 'var(--c-text-soft)', en_camino: '#C5562C', entregado: 'var(--c-text)', cancelado: 'var(--c-danger)', fallido: 'var(--c-danger)' }
+  // El mapa de colores por estado vivía aquí (y otro distinto en Usuarios.jsx).
+  // Se pintaba con `estadoColor[estado] + '15'` para lograr el fondo claro, y eso
+  // solo produce un color válido cuando el valor es un hex: con `var(--c-danger)`
+  // salía la cadena `var(--c-danger)15`, que el navegador descarta — listo,
+  // recogido, entregado y cancelado se quedaban SIN fondo. Ahora lo resuelve
+  // EstadoBadge, que además escribe la etiqueta en castellano.
   const estados = ['todos', 'nuevo', 'aceptado', 'preparando', 'listo', 'en_camino', 'entregado', 'cancelado']
 
   if (detalle) {
@@ -121,9 +127,9 @@ export default function Pedidos() {
             <div>
               <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)' }}>{detalle.codigo}</h2>
               <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
-                <span style={{ ...ds.badge, background: (estadoColor[detalle.estado] || '#6B7280') + '15', color: estadoColor[detalle.estado] }}>{detalle.estado}</span>
-                <span style={{ ...ds.badge, background: detalle.metodo_pago === 'tarjeta' ? 'var(--c-info-soft)' : 'var(--c-warning-soft)', color: detalle.metodo_pago === 'tarjeta' ? 'var(--c-info)' : 'var(--c-warning)' }}>{detalle.metodo_pago}</span>
-                <span style={{ ...ds.badge, background: 'var(--c-primary-soft)', color: '#C5562C' }}>PIDO</span>
+                <EstadoBadge estado={detalle.estado} />
+                <Chip tono={detalle.metodo_pago === 'tarjeta' ? 'info' : 'warning'}>{detalle.metodo_pago}</Chip>
+                <Chip tono="terracotta">PIDO</Chip>
                 {sinRider && (
                   <span style={{ ...ds.badge, background: colors.dangerSoft, color: colors.danger, border: `1px solid ${colors.danger}` }}>
                     🚨 Sin rider
@@ -305,7 +311,7 @@ export default function Pedidos() {
       <div style={ds.table}>
         <div style={ds.tableHeader}>
           <span style={{ width: 80, flexShrink: 0 }}>Codigo</span>
-          <span style={{ flex: '2 1 90px', minWidth: 0 }}>Restaurante</span>
+          <span style={{ flex: '3 1 150px', minWidth: 0 }}>Restaurante</span>
           <span style={{ width: 84, flexShrink: 0 }}>Total</span>
           <span style={{ flex: '1 1 96px', minWidth: 0 }}>Estado</span>
           <span style={{ width: 84, flexShrink: 0 }}>Pago</span>
@@ -323,16 +329,16 @@ export default function Pedidos() {
           return (
             <div key={p.id} className="ds-row-touch" style={ds.tableRow}>
               <span style={{ width: 80, flexShrink: 0, fontWeight: 700, fontSize: 12 }}>{p.codigo}</span>
-              <span style={{ flex: '2 1 90px', minWidth: 0, fontSize: 12.5, color: 'var(--c-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{ flex: '3 1 150px', minWidth: 0, fontSize: 12.5, color: 'var(--c-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {p.establecimientos?.nombre || '—'}
               </span>
               <span style={{ width: 84, flexShrink: 0, fontSize: 12 }}>{p.total?.toFixed(2)}EUR</span>
-              <span style={{ flex: '1 1 96px', minWidth: 0 }}><span style={{ ...ds.badge, background: (estadoColor[p.estado] || '#6B7280') + '15', color: estadoColor[p.estado] }}>{p.estado}</span></span>
-              <span style={{ width: 84, flexShrink: 0 }}><span style={{ ...ds.badge, background: p.metodo_pago === 'tarjeta' ? 'var(--c-info-soft)' : 'var(--c-warning-soft)', color: p.metodo_pago === 'tarjeta' ? 'var(--c-info)' : 'var(--c-warning)' }}>{p.metodo_pago}</span></span>
+              <span style={{ flex: '1 1 96px', minWidth: 0 }}><EstadoBadge estado={p.estado} /></span>
+              <span style={{ width: 84, flexShrink: 0 }}><Chip tono={p.metodo_pago === 'tarjeta' ? 'info' : 'warning'}>{p.metodo_pago}</Chip></span>
               <span data-tablet-sm-hide="true" style={{ flex: '1 1 76px', minWidth: 0 }}>
-                <span style={{ ...ds.badge, background: 'var(--c-primary-soft)', color: '#C5562C' }}>
+                <Chip tono="terracotta">
                   {p.origen_pedido === 'telefonico' ? 'Teléfono' : p.origen_pedido === 'marketplace_socio' ? 'Socio' : 'App'}
-                </span>
+                </Chip>
               </span>
               <span style={{ flex: '1 1 76px', minWidth: 0 }}>
                 {sinRider ? (

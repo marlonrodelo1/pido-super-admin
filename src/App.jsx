@@ -167,8 +167,9 @@ function AppContent() {
             </div>
             <div style={{ flex: 1 }} />
             <span style={{
-              fontSize: 9, letterSpacing: '0.12em', fontWeight: 700, textTransform: 'uppercase',
-              color: 'var(--c-primary)',
+              fontSize: 11, letterSpacing: '0.08em', fontWeight: 600, textTransform: 'uppercase',
+              // #C5562C sobre su propio tinte al 10% se queda en 3,69:1
+              color: '#8F3A18',
               padding: '3px 6px',
               border: '1px solid var(--c-primary-border)',
               background: 'var(--c-primary-soft)',

@@ -280,7 +280,8 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
         <div style={{
           width: 32, height: 32,
           borderRadius: '50%',
-          background: colors.terracotta,
+          // terracotta a secas deja el blanco en 4,43:1; terracotta2 lo sube a 5,9:1
+          background: colors.terracotta2,
           color: '#fff',
           display: 'flex',
           alignItems: 'center',
