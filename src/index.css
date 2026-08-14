@@ -299,6 +299,9 @@ button:focus-visible, input:focus-visible {
 
   /* Dispatch: la cola y el mapa dejan de ir en paralelo y se apilan */
   .dispatch-grid { grid-template-columns: 1fr !important; }
+
+  /* La ficha del pedido ocupa la pantalla entera en vez de un panel lateral */
+  .dispatch-drawer { width: 100vw !important; }
 }
 
 @media (max-width: 900px) {

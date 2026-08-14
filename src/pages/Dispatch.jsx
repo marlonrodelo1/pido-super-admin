@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { GoogleMap, useJsApiLoader, MarkerF, InfoWindowF, PolylineF } from '@react-google-maps/api'
+import { useJsApiLoader } from '@react-google-maps/api'
 import { supabase } from '../lib/supabase'
 import { ds, colors, type, radius } from '../lib/darkStyles'
 import { Card, Chip, EstadoBadge, GhostBtn, GlossyBtn, StatCard, Vacio, fmtEUR } from '../lib/ui'
 import { RefreshCw, MapPin, Phone, Navigation, AlertTriangle } from 'lucide-react'
 import AsignarManualModal from '../components/AsignarManualModal'
+import MapaFlota from '../components/MapaFlota'
+import PedidoDrawer from '../components/PedidoDrawer'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TORRE DE CONTROL
@@ -33,19 +35,6 @@ const GPS_FRESCO_MIN = 12
 
 const ESTADOS_EN_VUELO = ['nuevo', 'aceptado', 'preparando', 'listo', 'recogido', 'en_camino']
 
-const mapStyle = { width: '100%', height: 540, borderRadius: radius.lg }
-
-const temaClaro = [
-  { elementType: 'geometry', stylers: [{ color: '#EFE9DD' }] },
-  { elementType: 'labels.text.stroke', stylers: [{ color: '#FFFFFF' }] },
-  { elementType: 'labels.text.fill', stylers: [{ color: '#6B6356' }] },
-  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#FFFFFF' }] },
-  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#2B2823' }] },
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#DCE8F0' }] },
-  { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#E8E1D3' }] },
-  { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#E8E1D3' }] },
-]
-
 function metros(lat1, lng1, lat2, lng2) {
   if ([lat1, lng1, lat2, lng2].some(v => v == null)) return null
   const R = 6371000
@@ -67,23 +56,13 @@ function hace(iso) {
   return h < 24 ? `${h} h` : `${Math.floor(h / 24)} d`
 }
 
-// Marcador SVG: círculo de color con un glifo dentro
-function pin(fondo, borde, glifo) {
-  return {
-    url: `data:image/svg+xml,${encodeURIComponent(
-      `<svg xmlns="http://www.w3.org/2000/svg" width="38" height="38"><circle cx="19" cy="19" r="15" fill="${fondo}" stroke="${borde}" stroke-width="3"/><text x="19" y="24" text-anchor="middle" font-size="15">${glifo}</text></svg>`
-    )}`,
-    scaledSize: window.google ? new window.google.maps.Size(38, 38) : undefined,
-  }
-}
-
 export default function Dispatch() {
   const [pedidos, setPedidos] = useState([])
   const [socios, setSocios] = useState([])
   const [cuentas, setCuentas] = useState([])          // rider_accounts
   const [establecimientos, setEstablecimientos] = useState([])
-  const [pedidoSel, setPedidoSel] = useState(null)     // id del pedido elegido
-  const [marcador, setMarcador] = useState(null)       // { tipo, dato } para el InfoWindow
+  const [pedidoSel, setPedidoSel] = useState(null)     // id del pedido elegido (lo enfoca el mapa)
+  const [ficha, setFicha] = useState(null)             // id del pedido con la ficha abierta
   const [modalAsignar, setModalAsignar] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [ultima, setUltima] = useState(null)
@@ -110,13 +89,13 @@ export default function Dispatch() {
         .in('estado', ESTADOS_EN_VUELO)
         .order('created_at', { ascending: true }),
       supabase.from('socios')
-        .select('id, nombre, telefono, en_servicio, activo, latitud_actual, longitud_actual, last_gps_at')
+        .select('id, nombre, telefono, logo_url, en_servicio, activo, latitud_actual, longitud_actual, last_gps_at')
         .eq('activo', true),
       supabase.from('rider_accounts')
         .select('id, nombre, socio_id, activa, estado')
         .eq('activa', true).eq('estado', 'activa'),
       supabase.from('establecimientos')
-        .select('id, nombre, latitud, longitud, activo, estado')
+        .select('id, nombre, latitud, longitud, logo_url, activo, estado')
         .eq('activo', true),
     ])
     setPedidos(pedRes.data || [])
@@ -176,13 +155,6 @@ export default function Dispatch() {
     return [...pedidos].sort((a, b) => urgencia(a) - urgencia(b) || new Date(a.created_at) - new Date(b.created_at))
   }, [pedidos])
 
-  const centro = useMemo(() => {
-    const conGps = flota.filter(f => f.gpsFresco)
-    if (pedido?.establecimientos?.latitud) return { lat: pedido.establecimientos.latitud, lng: pedido.establecimientos.longitud }
-    if (conGps.length) return { lat: conGps[0].latitud_actual, lng: conGps[0].longitud_actual }
-    return { lat: 28.4148, lng: -16.5477 } // Puerto de la Cruz
-  }, [pedido, flota])
-
   function abrirAsignar(p) {
     const est = establecimientos.find(e => e.id === p.establecimiento_id)
       || (p.establecimientos ? { ...p.establecimientos, id: p.establecimiento_id } : null)
@@ -237,7 +209,7 @@ export default function Dispatch() {
               return (
                 <div
                   key={p.id}
-                  onClick={() => { setPedidoSel(activo ? null : p.id); setMarcador(null) }}
+                  onClick={() => { setPedidoSel(p.id); setFicha(p.id) }}
                   style={{
                     padding: '12px 14px',
                     borderBottom: `1px solid ${colors.border}`,
@@ -282,78 +254,13 @@ export default function Dispatch() {
               Cargando mapa…
             </div>
           ) : (
-            <GoogleMap
-              mapContainerStyle={mapStyle}
-              center={centro}
-              zoom={13}
-              options={{ styles: temaClaro, disableDefaultUI: true, zoomControl: true }}
-              onClick={() => setMarcador(null)}
-            >
-              {establecimientos.map(e => e.latitud && e.longitud && (
-                <MarkerF
-                  key={`est-${e.id}`}
-                  position={{ lat: e.latitud, lng: e.longitud }}
-                  onClick={() => setMarcador({ tipo: 'est', dato: e })}
-                  icon={pin('#FFFFFF', pedido?.establecimiento_id === e.id ? '#A8451F' : '#D8CDB8', '🍽️')}
-                  zIndex={pedido?.establecimiento_id === e.id ? 3 : 1}
-                />
-              ))}
-
-              {flota.filter(f => f.latitud_actual && f.longitud_actual && (f.en_servicio || f.gpsFresco)).map(f => (
-                <MarkerF
-                  key={`soc-${f.id}`}
-                  position={{ lat: f.latitud_actual, lng: f.longitud_actual }}
-                  onClick={() => setMarcador({ tipo: 'socio', dato: f })}
-                  icon={pin(f.disponible ? '#DDE3D3' : '#EFE9DD', f.disponible ? '#6F8460' : '#8A8174', '🛵')}
-                  zIndex={f.disponible ? 4 : 2}
-                />
-              ))}
-
-              {pedido?.lat_entrega && pedido?.lng_entrega && (
-                <MarkerF
-                  position={{ lat: pedido.lat_entrega, lng: pedido.lng_entrega }}
-                  icon={pin('#F1D9CC', '#A8451F', '🏠')}
-                  zIndex={5}
-                />
-              )}
-
-              {/* Restaurante → cliente del pedido elegido */}
-              {pedido?.lat_entrega && pedido?.establecimientos?.latitud && (
-                <PolylineF
-                  path={[
-                    { lat: pedido.establecimientos.latitud, lng: pedido.establecimientos.longitud },
-                    { lat: pedido.lat_entrega, lng: pedido.lng_entrega },
-                  ]}
-                  options={{ strokeColor: '#A8451F', strokeOpacity: 0.75, strokeWeight: 3 }}
-                />
-              )}
-
-              {marcador && (
-                <InfoWindowF
-                  position={marcador.tipo === 'socio'
-                    ? { lat: marcador.dato.latitud_actual, lng: marcador.dato.longitud_actual }
-                    : { lat: marcador.dato.latitud, lng: marcador.dato.longitud }}
-                  onCloseClick={() => setMarcador(null)}
-                  options={{ pixelOffset: new window.google.maps.Size(0, -20) }}
-                >
-                  <div style={{ fontFamily: type.family, padding: 2, minWidth: 170 }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, color: '#1A1815' }}>{marcador.dato.nombre}</div>
-                    {marcador.tipo === 'socio' ? (
-                      <>
-                        <div style={{ fontSize: 12, color: '#6B6356', marginTop: 2 }}>
-                          {marcador.dato.disponible ? 'Disponible' : marcador.dato.en_servicio ? 'En línea, sin GPS reciente' : 'Fuera de servicio'}
-                        </div>
-                        <div style={{ fontSize: 12, color: '#6B6356' }}>
-                          GPS de hace {hace(marcador.dato.last_gps_at)} · {marcador.dato.carga} pedido(s)
-                        </div>
-                      </>
-                    ) : (
-                      <div style={{ fontSize: 12, color: '#6B6356', marginTop: 2 }}>Restaurante abierto</div>
-                    )}
-                  </div>
-                </InfoWindowF>
-              )}
-            </GoogleMap>
+            <MapaFlota
+              socios={flota}
+              establecimientos={establecimientos}
+              pedido={pedido}
+              onSocio={(s) => { if (pedido && pedido.modo_entrega === 'delivery') abrirAsignar(pedido) }}
+              onEstablecimiento={() => {}}
+            />
           )}
         </div>
       </div>
@@ -402,6 +309,15 @@ export default function Dispatch() {
           <Vacio titulo="Ningún socio dado de alta" texto="Los socios aparecen aquí en cuanto completan su alta." />
         )}
       </div>
+
+      {ficha && (
+        <PedidoDrawer
+          pedido={pedidos.find(p => p.id === ficha) || null}
+          onClose={() => setFicha(null)}
+          onReasignar={(p) => abrirAsignar(p)}
+          onCambiado={cargar}
+        />
+      )}
 
       {modalAsignar && (
         <AsignarManualModal
