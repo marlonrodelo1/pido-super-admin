@@ -1,10 +1,21 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { ds, colors } from '../lib/darkStyles'
-import { EstadoBadge, Chip } from '../lib/ui'
+import { ds, colors, type } from '../lib/darkStyles'
+import { EstadoBadge, Chip, Segmented, PillTabs, Vacio, fmtEUR } from '../lib/ui'
 import AsignarManualModal from '../components/AsignarManualModal'
 
 const ESTADOS_ACTIVOS = ['nuevo', 'aceptado', 'preparando', 'listo', 'recogido', 'en_camino']
+
+// Fecha corta: en una tabla, "13/8/2026, 20:41:57" es ruido — el ano y los
+// segundos no aportan nada y en movil se comen la linea entera.
+function fechaCorta(iso) {
+  const d = new Date(iso)
+  const hoy = new Date()
+  if (d.toDateString() === hoy.toDateString()) {
+    return `Hoy · ${d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`
+  }
+  return d.toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
 
 // Detecta si un pedido delivery esta "atascado":
 // - Sin rider y > 5 min desde creado, o
@@ -288,29 +299,44 @@ export default function Pedidos() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <h1 style={ds.h1}>Pedidos</h1>
-        <span style={{ fontSize: 13, color: 'var(--c-muted)', fontWeight: 600 }}>{filtrados.length} pedidos</span>
+      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20, gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <h1 style={{ ...ds.h1, marginBottom: 4 }}>Pedidos</h1>
+          <div style={{ ...type.body, color: colors.textMute }}>
+            {filtrados.length === items.length
+              ? `${items.length} pedidos`
+              : `${filtrados.length} de ${items.length} pedidos`}
+          </div>
+        </div>
+        <Segmented
+          value={filtroPago}
+          onChange={setFiltroPago}
+          options={[
+            { value: 'todos', label: 'Todo' },
+            { value: 'tarjeta', label: 'Tarjeta' },
+            { value: 'efectivo', label: 'Efectivo' },
+          ]}
+        />
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-        {estados.map(e => (
-          <button key={e} onClick={() => setFiltro(e)} style={{ ...ds.filterBtn, background: filtro === e ? '#C5562C' : 'var(--c-surface2)', color: filtro === e ? '#fff' : 'var(--c-muted)' }}>
-            {e === 'todos' ? 'Todos' : e.charAt(0).toUpperCase() + e.slice(1).replace('_', ' ')}
-          </button>
-        ))}
-      </div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-        {['todos', 'tarjeta', 'efectivo'].map(p => (
-          <button key={p} onClick={() => setFiltroPago(p)} style={{ ...ds.filterBtn, background: filtroPago === p ? '#C5562C' : 'var(--c-surface2)', color: filtroPago === p ? '#fff' : 'var(--c-muted)' }}>
-            {p.charAt(0).toUpperCase() + p.slice(1)}
-          </button>
-        ))}
-      </div>
+      {/* Cada filtro lleva su recuento: antes había que pinchar para descubrir
+          que un estado estaba vacío. */}
+      <PillTabs
+        style={{ marginBottom: 20 }}
+        value={filtro}
+        onChange={setFiltro}
+        options={estados.map(e => ({
+          value: e,
+          label: e === 'todos' ? 'Todos' : e.charAt(0).toUpperCase() + e.slice(1).replace('_', ' '),
+          count: e === 'todos'
+            ? items.length
+            : items.filter(p => p.estado === e && (filtroPago === 'todos' || p.metodo_pago === filtroPago)).length,
+        }))}
+      />
 
-      <div style={ds.table}>
-        <div style={ds.tableHeader}>
-          <span style={{ width: 80, flexShrink: 0 }}>Codigo</span>
+      <div className="ds-table-stack" style={ds.table}>
+        <div className="ds-th" style={ds.tableHeader}>
+          <span style={{ width: 104, flexShrink: 0 }}>Código</span>
           <span style={{ flex: '3 1 150px', minWidth: 0 }}>Restaurante</span>
           <span style={{ width: 84, flexShrink: 0 }}>Total</span>
           <span style={{ flex: '1 1 96px', minWidth: 0 }}>Estado</span>
@@ -328,31 +354,33 @@ export default function Pedidos() {
             && p.estado !== 'cancelado'
           return (
             <div key={p.id} className="ds-row-touch" style={ds.tableRow}>
-              <span style={{ width: 80, flexShrink: 0, fontWeight: 700, fontSize: 12 }}>{p.codigo}</span>
-              <span style={{ flex: '3 1 150px', minWidth: 0, fontSize: 12.5, color: 'var(--c-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span data-col="cod" style={{ ...type.mono, width: 104, flexShrink: 0, fontSize: 13 }}>{p.codigo}</span>
+              <span data-col="nom" style={{ flex: '3 1 150px', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={p.establecimientos?.nombre || ''}>
                 {p.establecimientos?.nombre || '—'}
               </span>
-              <span style={{ width: 84, flexShrink: 0, fontSize: 12 }}>{p.total?.toFixed(2)}EUR</span>
-              <span style={{ flex: '1 1 96px', minWidth: 0 }}><EstadoBadge estado={p.estado} /></span>
-              <span style={{ width: 84, flexShrink: 0 }}><Chip tono={p.metodo_pago === 'tarjeta' ? 'info' : 'warning'}>{p.metodo_pago}</Chip></span>
-              <span data-tablet-sm-hide="true" style={{ flex: '1 1 76px', minWidth: 0 }}>
+              <span data-col="tot" style={{ width: 84, flexShrink: 0, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{fmtEUR(p.total)}</span>
+              <span data-col="est" style={{ flex: '1 1 96px', minWidth: 0 }}><EstadoBadge estado={p.estado} /></span>
+              <span data-col="pag" style={{ width: 84, flexShrink: 0 }}>
+                <Chip tono={p.metodo_pago === 'tarjeta' ? 'info' : 'warning'}>
+                  {p.metodo_pago === 'tarjeta' ? 'Tarjeta' : p.metodo_pago === 'datafono' ? 'Datáfono' : 'Efectivo'}
+                </Chip>
+              </span>
+              <span data-col="ori" data-tablet-sm-hide="true" style={{ flex: '1 1 76px', minWidth: 0 }}>
                 <Chip tono="terracotta">
                   {p.origen_pedido === 'telefonico' ? 'Teléfono' : p.origen_pedido === 'marketplace_socio' ? 'Socio' : 'App'}
                 </Chip>
               </span>
-              <span style={{ flex: '1 1 76px', minWidth: 0 }}>
-                {sinRider ? (
-                  <span style={{ ...ds.badge, background: colors.dangerSoft, color: colors.danger, border: `1px solid ${colors.danger}` }}>
-                    🚨 Sin rider
-                  </span>
-                ) : atascado ? (
-                  <span style={{ ...ds.badge, background: colors.warningSoft, color: colors.warning, border: `1px solid ${colors.warning}` }}>
-                    ⏰ Atascado
-                  </span>
-                ) : null}
-              </span>
-              <span data-tablet-sm-hide="true" style={{ width: 120, flexShrink: 0, fontSize: 11, color: 'var(--c-muted)' }}>{new Date(p.created_at).toLocaleString('es-ES')}</span>
-              <span style={{ width: 140, flexShrink: 0, display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+              {/* En movil cada celda ocupa su propia linea, asi que una celda de
+                  alerta VACIA gastaria una linea entera en las 119 filas */}
+              {(sinRider || atascado) ? (
+                <span data-col="ale" style={{ flex: '1 1 76px', minWidth: 0 }}>
+                  {sinRider
+                    ? <Chip tono="danger" style={{ border: `1px solid ${colors.danger}` }}>🚨 Sin rider</Chip>
+                    : <Chip tono="warning" style={{ border: `1px solid ${colors.warning}` }}>⏰ Atascado</Chip>}
+                </span>
+              ) : <span className="ds-col-hueco" style={{ flex: '1 1 76px', minWidth: 0 }} />}
+              <span data-col="fec" data-tablet-sm-hide="true" style={{ width: 120, flexShrink: 0, ...type.caption, color: colors.textMute }}>{fechaCorta(p.created_at)}</span>
+              <span data-col="acc" style={{ width: 140, flexShrink: 0, display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                 {puedeAsignar && (sinRider || atascado) && (
                   <button
                     className="admin-action-btn"
@@ -371,7 +399,14 @@ export default function Pedidos() {
             </div>
           )
         })}
-        {filtrados.length === 0 && <div style={{ padding: 32, textAlign: 'center', color: 'var(--c-muted)', fontSize: 13 }}>Sin pedidos</div>}
+        {filtrados.length === 0 && (
+          <Vacio
+            titulo="Ningún pedido con esos filtros"
+            texto={filtro === 'todos' && filtroPago === 'todos'
+              ? 'Todavía no ha entrado ningún pedido.'
+              : 'Prueba a quitar el filtro de estado o el de método de pago.'}
+          />
+        )}
       </div>
 
       {modalAsignar && (

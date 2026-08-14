@@ -84,7 +84,9 @@ export default function Dashboard() {
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12, marginBottom: 32 }}>
+      {/* minmax(155px) y no 190: en un móvil de 375px eso da DOS columnas de
+          KPI en vez de siete tarjetas en fila india */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(155px, 1fr))', gap: 12, marginBottom: 32 }}>
         <StatCard label="Pedidos"              value={stats.pedidos}            sub={subPeriodo} />
         <StatCard label="Entregados"           value={stats.entregados}         sub={`de ${stats.pedidos} pedidos`} />
         <StatCard label="GMV entregado"        value={fmtEUR(stats.gmv)}        sub="Valor total entregado" tone="terracotta" />
@@ -95,8 +97,8 @@ export default function Dashboard() {
       </div>
 
       <h2 style={ds.h2}>Pedidos recientes</h2>
-      <div style={ds.table}>
-        <div style={ds.tableHeader}>
+      <div className="ds-table-stack" style={ds.table}>
+        <div className="ds-th" style={ds.tableHeader}>
           <span style={{ width: 104, flexShrink: 0 }}>Código</span>
           <span style={{ width: 88, flexShrink: 0 }}>Total</span>
           <span style={{ flex: '1 1 120px', minWidth: 0 }}>Estado</span>
@@ -107,20 +109,20 @@ export default function Dashboard() {
 
         {recientes.map(p => (
           <div key={p.id} className="ds-row-touch" style={ds.tableRow}>
-            <span style={{ ...type.mono, width: 104, flexShrink: 0, fontSize: 13, color: colors.ink }}>{p.codigo}</span>
-            <span style={{ width: 88, flexShrink: 0, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{fmtEUR(p.total)}</span>
-            <span style={{ flex: '1 1 120px', minWidth: 0 }}>
+            <span data-col="cod" style={{ ...type.mono, width: 104, flexShrink: 0, fontSize: 13, color: colors.ink }}>{p.codigo}</span>
+            <span data-col="tot" style={{ width: 88, flexShrink: 0, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{fmtEUR(p.total)}</span>
+            <span data-col="est" style={{ flex: '1 1 120px', minWidth: 0 }}>
               <EstadoBadge estado={p.estado} />
             </span>
-            <span data-tablet-sm-hide="true" style={{ flex: '1 1 92px', minWidth: 0 }}>
+            <span data-col="pag" data-tablet-sm-hide="true" style={{ flex: '1 1 92px', minWidth: 0 }}>
               <Chip tono={p.metodo_pago === 'tarjeta' ? 'info' : 'warning'}>
                 {p.metodo_pago === 'tarjeta' ? 'Tarjeta' : 'Efectivo'}
               </Chip>
             </span>
-            <span data-tablet-hide="true" style={{ flex: '1 1 92px', minWidth: 0 }}>
+            <span data-col="ori" data-tablet-hide="true" style={{ flex: '1 1 92px', minWidth: 0 }}>
               <Chip tono="neutral">{canalLabel(p.origen_pedido)}</Chip>
             </span>
-            <span style={{ flex: '1 1 132px', minWidth: 0, ...type.label, color: colors.textMute }}>{fecha(p.created_at)}</span>
+            <span data-col="fec" style={{ flex: '1 1 132px', minWidth: 0, ...type.label, color: colors.textMute }}>{fecha(p.created_at)}</span>
           </div>
         ))}
 
