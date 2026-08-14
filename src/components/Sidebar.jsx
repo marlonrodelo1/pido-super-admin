@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
-  BarChart3, Store, Users, User, ClipboardList, Map,
+  BarChart3, Store, Users, User, ClipboardList, Radar,
   MessageCircle, Settings, LogOut, X, Truck, Bell, RotateCcw, FileText, Receipt,
   Activity, Scale, Video,
 } from 'lucide-react'
@@ -25,8 +25,11 @@ const grupos = [
     titulo: 'Operación',
     items: [
       { id: 'dashboard',        label: 'Dashboard',         Icon: BarChart3 },
+      // "Mapa en vivo" (MapaAdmin) desaparece: solo pintaba los restaurantes y no
+      // servía para operar. Dispatch lo absorbe y además trae la cola de pedidos,
+      // el GPS de los socios y la asignación manual.
+      { id: 'dispatch',         label: 'Dispatch',          Icon: Radar },
       { id: 'pedidos',          label: 'Pedidos',           Icon: ClipboardList },
-      { id: 'mapa',             label: 'Mapa en vivo',      Icon: Map },
     ],
   },
   {

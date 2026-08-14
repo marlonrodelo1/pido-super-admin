@@ -14,6 +14,7 @@ import { toast } from '../App'
 // Llama a la edge function `asignar-pedido-manual` con JWT del admin actual.
 
 const PESO_CARGA = 1500 // mismo peso que el algoritmo automatico
+const GPS_FRESCO_MIN = 12 // igual que el auto-offline de socios (cron 28)
 
 function distanceMeters(lat1, lng1, lat2, lng2) {
   const R = 6371000
@@ -49,7 +50,7 @@ export default function AsignarManualModal({ pedido, establecimiento, onClose, o
       // Vinculados al restaurante
       const { data: rrData } = await supabase
         .from('restaurante_riders')
-        .select('prioridad, rider_account_id, rider_accounts!inner(id, nombre, telefono, activa, estado)')
+        .select('prioridad, rider_account_id, rider_accounts!inner(id, nombre, telefono, activa, estado, socio_id)')
         .eq('establecimiento_id', pedido.establecimiento_id)
         .eq('rider_accounts.activa', true)
         .eq('rider_accounts.estado', 'activa')
@@ -61,20 +62,45 @@ export default function AsignarManualModal({ pedido, establecimiento, onClose, o
       // Todos los activos (para forzar)
       const { data: allRiders } = await supabase
         .from('rider_accounts')
-        .select('id, nombre, telefono, activa, estado')
+        .select('id, nombre, telefono, activa, estado, socio_id')
         .eq('activa', true)
         .eq('estado', 'activa')
       setTodos(allRiders || [])
 
-      // rider_status para todos los ids relevantes
       const ids = Array.from(new Set([...(allRiders || []).map((r) => r.id), ...vincList.map((r) => r.id)]))
       if (ids.length > 0) {
-        const { data: stData } = await supabase
-          .from('rider_status')
-          .select('rider_account_id, is_online, last_checked')
-          .in('rider_account_id', ids)
+        // La disponibilidad sale de `socios`, NO de `rider_status`.
+        // `rider_status` es la tabla de Shipday: tiene 0 filas y ya no la alimenta
+        // ningun cron, asi que este modal pintaba a TODO el mundo como desconectado.
+        // El dato bueno es `socios.en_servicio` + la frescura de `last_gps_at`
+        // (el socio se auto-marca fuera a los 12 min sin posicion, cron 28), y de
+        // paso trae el GPS, con lo que ya se puede ordenar por distancia real.
+        const socioIds = Array.from(new Set(
+          [...(allRiders || []), ...vincList].map((r) => r.socio_id).filter(Boolean)
+        ))
         const sm = {}
-        for (const s of stData || []) sm[s.rider_account_id] = s
+        if (socioIds.length > 0) {
+          const { data: socData } = await supabase
+            .from('socios')
+            .select('id, en_servicio, latitud_actual, longitud_actual, last_gps_at')
+            .in('id', socioIds)
+          const porSocio = {}
+          for (const s of socData || []) porSocio[s.id] = s
+          for (const r of [...(allRiders || []), ...vincList]) {
+            const s = r.socio_id ? porSocio[r.socio_id] : null
+            if (!s) continue
+            const minGps = s.last_gps_at ? (Date.now() - new Date(s.last_gps_at).getTime()) / 60000 : null
+            const gpsFresco = minGps != null && minGps <= GPS_FRESCO_MIN
+            sm[r.id] = {
+              is_online: !!s.en_servicio && gpsFresco,
+              en_servicio: !!s.en_servicio,
+              gpsFresco,
+              last_checked: s.last_gps_at,
+              lat: s.latitud_actual,
+              lng: s.longitud_actual,
+            }
+          }
+        }
         setStatusMap(sm)
 
         // Cargar pedidos activos (asignaciones esperando o aceptadas no resueltas)
@@ -104,15 +130,19 @@ export default function AsignarManualModal({ pedido, establecimiento, onClose, o
     const calcular = (r) => {
       const st = statusMap[r.id]
       const carga = cargaMap[r.id] || 0
-      // No tenemos GPS live aqui, usariamos rider_status si tuviera lat/lng — pero la tabla
-      // no la guarda. Asi que distancia se queda null en la UI; el backend la recalcula al asignar.
-      const distancia = null
+      // Ahora SI hay GPS: viene de `socios` a traves de rider_accounts.socio_id.
+      // Solo se usa si la posicion es reciente; con GPS viejo la distancia mentiria.
+      const distancia = (st?.gpsFresco && restLat != null && restLng != null)
+        ? distanceMeters(st.lat, st.lng, restLat, restLng)
+        : null
       const score = distancia != null ? carga * PESO_CARGA + distancia : null
       return {
         ...r,
         prioridad: r.prioridad ?? 999,
         vinculado: idsVinc.has(r.id),
         is_online: !!st?.is_online,
+        en_servicio: !!st?.en_servicio,
+        gpsFresco: !!st?.gpsFresco,
         last_checked: st?.last_checked || null,
         carga,
         distancia,
@@ -121,9 +151,12 @@ export default function AsignarManualModal({ pedido, establecimiento, onClose, o
     }
     const enriched = base.map(calcular)
     enriched.sort((a, b) => {
-      // Online primero, luego menos carga, luego prioridad
+      // Disponible primero, luego menos carga, luego el mas cercano, luego prioridad
       if (a.is_online !== b.is_online) return a.is_online ? -1 : 1
       if (a.carga !== b.carga) return a.carga - b.carga
+      if (a.distancia != null && b.distancia != null) return a.distancia - b.distancia
+      if (a.distancia != null) return -1
+      if (b.distancia != null) return 1
       return (a.prioridad || 999) - (b.prioridad || 999)
     })
     return enriched
@@ -275,12 +308,18 @@ export default function AsignarManualModal({ pedido, establecimiento, onClose, o
                     cursor: 'pointer', fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
                   }}
                 >
-                  {/* Punto online/offline */}
+                  {/* Disponible / en linea sin posicion / fuera de servicio.
+                      Son TRES estados, no dos: "en servicio" con el GPS caducado
+                      no se puede repartir, y antes se pintaba igual que fuera. */}
                   <span
-                    title={r.is_online ? 'Online' : 'Offline'}
+                    title={
+                      r.is_online ? 'Disponible: en servicio y con posicion reciente'
+                        : r.en_servicio ? 'En servicio pero sin posicion reciente: el dispatcher no puede darle pedidos'
+                        : 'Fuera de servicio'
+                    }
                     style={{
                       width: 10, height: 10, borderRadius: '50%',
-                      background: r.is_online ? colors.success : colors.textFaint,
+                      background: r.is_online ? colors.sage : r.en_servicio ? colors.warning : colors.textFaint,
                       flexShrink: 0,
                     }}
                   />

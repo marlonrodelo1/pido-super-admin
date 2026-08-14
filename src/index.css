@@ -296,6 +296,9 @@ button:focus-visible, input:focus-visible {
 
   /* El título de página a 32px se come media pantalla en un móvil */
   .admin-page-header h1 { font-size: 26px !important; }
+
+  /* Dispatch: la cola y el mapa dejan de ir en paralelo y se apilan */
+  .dispatch-grid { grid-template-columns: 1fr !important; }
 }
 
 @media (max-width: 900px) {

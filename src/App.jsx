@@ -13,7 +13,7 @@ import SoporteRider from './pages/SoporteRider'
 import SaludSistema from './pages/SaludSistema'
 import Configuracion from './pages/Configuracion'
 import Notificaciones from './pages/Notificaciones'
-import MapaAdmin from './pages/MapaAdmin'
+import Dispatch from './pages/Dispatch'
 import Reembolsos from './pages/Reembolsos'
 import Liquidaciones from './pages/Liquidaciones'
 import Cargos from './pages/Cargos'
@@ -28,7 +28,7 @@ const SECCION_TITULOS = {
   establecimientos: 'Establecimientos',
   usuarios: 'Usuarios',
   pedidos: 'Pedidos',
-  mapa: 'Mapa en vivo',
+  dispatch: 'Dispatch',
   notificaciones: 'Notificaciones',
   soporte: 'Soporte',
   'soporte-rider': 'Soporte rider',
@@ -193,7 +193,7 @@ function AppContent() {
           {seccion === 'establecimientos' && <Establecimientos />}
           {seccion === 'usuarios' && <Usuarios />}
           {seccion === 'pedidos' && <Pedidos />}
-          {seccion === 'mapa' && <MapaAdmin />}
+          {seccion === 'dispatch' && <Dispatch />}
           {seccion === 'notificaciones' && <Notificaciones />}
           {seccion === 'soporte' && <SoporteAdmin />}
           {seccion === 'soporte-rider' && <SoporteRider />}
