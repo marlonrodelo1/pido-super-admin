@@ -159,7 +159,10 @@ export default function MapaFlota({
     if (m) m.setZoom((m.getZoom() || 13) + delta)
   }
 
-  const anilloSocio = (s) => (s.disponible ? colors.sage : s.en_servicio ? colors.warning : colors.stone2)
+  // Solo llegan aquí socios en servicio, así que son dos estados: puede recibir pedidos
+  // (verde) o está en servicio pero con la posición caducada y el dispatcher no le puede
+  // asignar nada (ámbar).
+  const anilloSocio = (s) => (s.disponible ? colors.sage : colors.warning)
 
   return (
     <div style={{ position: 'relative' }}>
@@ -194,8 +197,16 @@ export default function MapaFlota({
           </OverlayViewF>
         ))}
 
-        {/* Repartidores: solo los que están en servicio o con posición fresca */}
-        {socios.filter(s => s.latitud_actual != null && s.longitud_actual != null && (s.en_servicio || s.gpsFresco)).map(s => (
+        {/* Repartidores EN SERVICIO. Nadie más.
+            ⚠️ Antes el filtro era `(s.en_servicio || s.gpsFresco)`, y ese OR es lo que hacía
+            que un socio que acababa de quitarse siguiera saliendo en el mapa hasta 12 minutos
+            (los que tarda su última posición en caducar). Se reportó justo así: "me quité de
+            en línea y sigo saliendo con mi foto".
+            La posición de alguien que se ha quitado es una posición VIEJA — ya no manda GPS —,
+            así que pintarla invita a contar con alguien que no está. Quien no está en
+            servicio desaparece del mapa; en la lista de abajo sigue apareciendo como "Fuera",
+            que es donde tiene sentido verlo. */}
+        {socios.filter(s => s.latitud_actual != null && s.longitud_actual != null && s.en_servicio).map(s => (
           <OverlayViewF
             key={`soc-${s.id}`}
             position={{ lat: s.latitud_actual, lng: s.longitud_actual }}
@@ -270,9 +281,10 @@ export default function MapaFlota({
         boxShadow: '0 1px 6px rgba(26,24,21,0.16)',
         ...type.caption, letterSpacing: 0, color: colors.stone,
       }}>
+        {/* "Fuera" ya no está: quien no está en servicio no se pinta en el mapa */}
         <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: colors.sage, marginRight: 5 }} />Disponible</span>
-        <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: colors.warning, marginRight: 5 }} />Sin GPS</span>
-        <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: colors.stone2, marginRight: 5 }} />Fuera</span>
+        <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: colors.warning, marginRight: 5 }} />En servicio, sin GPS</span>
+        <span style={{ color: colors.stone2 }}>Los que están fuera no salen en el mapa</span>
       </div>
     </div>
   )
