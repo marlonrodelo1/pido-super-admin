@@ -33,6 +33,45 @@ import EliminarEntidadModal from '../components/EliminarEntidadModal'
 
 const ESTADOS_VINC = ['pendiente', 'activa', 'rechazada']
 
+// ──────────────────────────────────────────────────────────────────────────────
+// QUIÉN ESTÁ EN LÍNEA
+// ──────────────────────────────────────────────────────────────────────────────
+// ⚠️ Antes esto salía de `rider_status.is_online`. Esa tabla es de Shipday, tiene
+// CERO filas y ya no la alimenta ningún cron, así que la pantalla decía "0 online"
+// y "0/1 online" en los once socios, SIEMPRE — incluso con tres repartiendo.
+// Es el mismo fallo que tenía el modal de asignación de Dispatch.
+//
+// La verdad está en `socios`: la PERSONA es quien se pone en servicio y quien
+// manda el GPS. Y hacen falta las dos cosas: con el GPS más viejo de 12 min el
+// socio sigue diciendo "En línea" pero el dispatcher NO le puede dar pedidos
+// porque no sabe dónde está (mismo umbral que el cron 28 de auto-offline).
+//
+// Por eso son TRES estados y no dos, igual que en Dispatch.
+const GPS_FRESCO_MIN = 12
+
+export function estadoLineaSocio(s) {
+  if (!s?.en_servicio) return 'fuera'
+  const t = s.last_gps_at ? new Date(s.last_gps_at).getTime() : 0
+  const fresco = t > 0 && (Date.now() - t) < GPS_FRESCO_MIN * 60000
+  return fresco ? 'disponible' : 'sin_gps'
+}
+
+const LINEA = {
+  disponible: { tono: 'sage',    label: 'En línea',  ayuda: 'En servicio y con posición reciente: puede recibir pedidos' },
+  sin_gps:    { tono: 'warning', label: 'Sin GPS',   ayuda: `En servicio pero sin posición desde hace más de ${GPS_FRESCO_MIN} min: el dispatcher no le puede asignar` },
+  fuera:      { tono: 'neutral', label: 'Fuera',     ayuda: 'No está en servicio' },
+}
+
+function hace(iso) {
+  if (!iso) return 'nunca'
+  const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
+  if (m < 1) return 'ahora'
+  if (m < 60) return `hace ${m} min`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `hace ${h} h`
+  return `hace ${Math.floor(h / 24)} d`
+}
+
 // Las pestañas de la ficha van con `PillTabs`, que espera { value, label, count }.
 const TABS = [
   { value: 'resumen', label: 'Resumen' },
@@ -46,7 +85,6 @@ const TABS = [
 export default function Socios() {
   const [socios, setSocios] = useState([])
   const [riderAccounts, setRiderAccounts] = useState([])
-  const [riderStatus, setRiderStatus] = useState({}) // rider_account_id -> {is_online, last_checked, ...}
   const [vinculaciones, setVinculaciones] = useState([])
   const [balances, setBalances] = useState({})
   const [loading, setLoading] = useState(true)
@@ -69,16 +107,18 @@ export default function Socios() {
 
   useEffect(() => { load() }, [])
 
-  // Realtime: refresca riders/status para puntito online en vista listado y ficha
+  // Realtime: el estado en línea sale de `socios` (en_servicio + last_gps_at),
+  // que es justo lo que el socio actualiza al ponerse en servicio y al latir.
   useEffect(() => {
     const channel = supabase.channel('socios-hub-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'rider_status' }, () => loadRiderStatus())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'rider_accounts' }, () => loadRiders())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'socios' }, () => loadSocios())
       .subscribe()
 
-    // Fallback polling 30s por si Realtime falla
-    const interval = setInterval(() => { loadRiderStatus() }, 30000)
+    // Cada 30s se recargan los socios aunque no llegue nada por realtime. No es
+    // solo por si falla: la frescura del GPS CADUCA con el reloj, así que sin
+    // volver a pintar, un socio se quedaría "En línea" en pantalla para siempre.
+    const interval = setInterval(() => { loadSocios() }, 30000)
 
     return () => {
       supabase.removeChannel(channel)
@@ -88,7 +128,7 @@ export default function Socios() {
 
   async function load() {
     setLoading(true)
-    await Promise.all([loadSocios(), loadRiders(), loadRiderStatus(), loadVinc(), loadBalances()])
+    await Promise.all([loadSocios(), loadRiders(), loadVinc(), loadBalances()])
     setLoading(false)
   }
 
@@ -101,13 +141,6 @@ export default function Socios() {
   async function loadRiders() {
     const { data } = await supabase.from('rider_accounts').select('*').order('created_at', { ascending: false })
     setRiderAccounts(data || [])
-  }
-
-  async function loadRiderStatus() {
-    const { data } = await supabase.from('rider_status').select('*')
-    const map = {}
-    ;(data || []).forEach(s => { map[s.rider_account_id] = s })
-    setRiderStatus(map)
   }
 
   async function loadVinc() {
@@ -199,11 +232,8 @@ export default function Socios() {
       if (fEstado === 'inactivos' && s.activo) return false
       if (fMarketplace === 'activos' && !s.marketplace_activo) return false
       if (fMarketplace === 'inactivos' && s.marketplace_activo) return false
-      if (fOnline === 'online') {
-        const riders = ridersBySocio[s.id] || []
-        const anyOnline = riders.some(r => riderStatus[r.id]?.is_online && r.estado === 'activa')
-        if (!anyOnline) return false
-      }
+      if (fOnline === 'online' && estadoLineaSocio(s) !== 'disponible') return false
+      if (fOnline === 'sin_gps' && estadoLineaSocio(s) !== 'sin_gps') return false
       if (buscar) {
         const q = buscar.toLowerCase()
         if (!(s.nombre_comercial || '').toLowerCase().includes(q)
@@ -213,19 +243,16 @@ export default function Socios() {
       }
       return true
     })
-  }, [socios, ridersBySocio, riderStatus, fEstado, fMarketplace, fOnline, buscar])
+  }, [socios, fEstado, fMarketplace, fOnline, buscar])
 
   const stats = useMemo(() => {
     const activos = socios.filter(s => s.activo).length
     const marketplaces = socios.filter(s => s.marketplace_activo && s.slug).length
-    let online = 0
-    socios.forEach(s => {
-      const riders = ridersBySocio[s.id] || []
-      if (riders.some(r => riderStatus[r.id]?.is_online && r.estado === 'activa')) online++
-    })
+    const online = socios.filter(s => estadoLineaSocio(s) === 'disponible').length
+    const sinGps = socios.filter(s => estadoLineaSocio(s) === 'sin_gps').length
     const pendientes = riderAccounts.filter(r => r.estado === 'pendiente').length
-    return { activos, marketplaces, online, pendientes }
-  }, [socios, ridersBySocio, riderStatus, riderAccounts])
+    return { activos, marketplaces, online, sinGps, pendientes }
+  }, [socios, riderAccounts])
 
   async function toggleActivo(s) {
     const { error } = await supabase.from('socios').update({ activo: !s.activo }).eq('id', s.id)
@@ -249,7 +276,6 @@ export default function Socios() {
         <SocioDetalle
           socio={sActual}
           riders={ridersBySocio[sActual.id] || []}
-          riderStatus={riderStatus}
           vinculaciones={vinculaciones.filter(v => v.socio_id === sActual.id)}
           balance={balances[sActual.id]}
           tab={tab}
@@ -297,10 +323,16 @@ export default function Socios() {
       </div>
 
       {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12, marginBottom: 20 }}>
+      <div className="ds-cards" style={{ marginBottom: 20 }}>
         <StatCard label="Socios activos" value={stats.activos} sub={`de ${socios.length} registrados`} icon={<Users size={16} />} />
         <StatCard label="Marketplaces abiertos" value={stats.marketplaces} sub="Con tienda pública" icon={<Store size={16} />} />
-        <StatCard label="Online ahora" value={stats.online} sub="Con algún rider conectado" tone="sage" icon={<Truck size={16} />} />
+        <StatCard
+          label="En línea ahora"
+          value={stats.online}
+          sub={stats.sinGps > 0 ? `+${stats.sinGps} en servicio sin GPS` : 'En servicio y con GPS'}
+          tone={stats.online > 0 ? 'sage' : 'ink'}
+          icon={<Truck size={16} />}
+        />
         <StatCard
           label="Riders pendientes"
           value={stats.pendientes}
@@ -331,9 +363,10 @@ export default function Socios() {
           <option value="activos">Abierto</option>
           <option value="inactivos">Cerrado</option>
         </select>
-        <select value={fOnline} onChange={e => setFOnline(e.target.value)} style={{ ...ds.select, width: 140 }}>
-          <option value="todos">Online: todos</option>
-          <option value="online">Online ahora</option>
+        <select value={fOnline} onChange={e => setFOnline(e.target.value)} style={{ ...ds.select, width: 160 }}>
+          <option value="todos">En línea: todos</option>
+          <option value="online">En línea ahora</option>
+          <option value="sin_gps">En servicio sin GPS</option>
         </select>
       </div>
 
@@ -360,9 +393,7 @@ export default function Socios() {
         )}
 
         {sociosFiltered.map(s => {
-          const riders = ridersBySocio[s.id] || []
-          const ridersActivos = riders.filter(r => r.estado === 'activa')
-          const ridersOnline = ridersActivos.filter(r => riderStatus[r.id]?.is_online).length
+          const linea = LINEA[estadoLineaSocio(s)]
           const hasMarketplace = s.marketplace_activo && s.slug
           const bal = balances[s.id]
           const ganadoSemana = bal?.ganado_semana || 0
@@ -400,11 +431,11 @@ export default function Socios() {
               </span>
               <span data-col="est" style={{ width: 116, flexShrink: 0 }}>
                 <Chip
-                  tono={ridersOnline > 0 ? 'sage' : 'neutral'}
-                  dot={ridersActivos.length > 0}
-                  title={`${ridersOnline} de ${ridersActivos.length} riders activos conectados ahora`}
+                  tono={linea.tono}
+                  dot
+                  title={`${linea.ayuda}${s.last_gps_at ? ` · última posición ${hace(s.last_gps_at)}` : ''}`}
                 >
-                  {ridersActivos.length === 0 ? 'Sin riders' : `${ridersOnline}/${ridersActivos.length} online`}
+                  {linea.label}
                 </Chip>
               </span>
               <span data-col="pag" data-tablet-sm-hide="true" style={{ width: 96, flexShrink: 0 }}>
@@ -455,11 +486,11 @@ export default function Socios() {
 // Vista DETALLE de un socio
 // ──────────────────────────────────────────────────────────────────────────────
 function SocioDetalle({
-  socio, riders, riderStatus, vinculaciones, balance, tab, setTab,
+  socio, riders, vinculaciones, balance, tab, setTab,
   onBack, onReload, onResetPwd, onEdit, onDelete, onToggleActivo, onToggleMarketplace,
 }) {
   const ridersActivos = riders.filter(r => r.estado === 'activa')
-  const ridersOnline = ridersActivos.filter(r => riderStatus[r.id]?.is_online).length
+  const linea = LINEA[estadoLineaSocio(socio)]
   const hasMarketplace = socio.marketplace_activo && socio.slug
 
   return (
@@ -482,11 +513,7 @@ function SocioDetalle({
               <h1 style={{ ...ds.h1, margin: 0 }}>{socio.nombre_comercial || socio.nombre || '—'}</h1>
               {!socio.activo && <Chip tono="danger">Inactivo</Chip>}
               {hasMarketplace && <Chip tono="sage">Marketplace</Chip>}
-              <Chip tono={ridersOnline > 0 ? 'sage' : 'neutral'} dot={ridersActivos.length > 0}>
-                {ridersActivos.length === 0
-                  ? 'Sin riders'
-                  : ridersOnline > 0 ? `${ridersOnline}/${ridersActivos.length} online` : 'Riders offline'}
-              </Chip>
+              <Chip tono={linea.tono} dot title={linea.ayuda}>{linea.label}</Chip>
             </div>
             <div style={{ ...type.body, color: colors.stone, marginBottom: 8 }}>
               {socio.nombre && socio.nombre !== socio.nombre_comercial ? socio.nombre : ''}
@@ -495,6 +522,7 @@ function SocioDetalle({
             <div style={{ display: 'flex', gap: 14, ...type.label, color: colors.stone, flexWrap: 'wrap' }}>
               {socio.email && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Mail size={13} /> {socio.email}</span>}
               {socio.telefono && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Phone size={13} /> {socio.telefono}</span>}
+              <span title="Última posición recibida del móvil del socio">Posición {hace(socio.last_gps_at)}</span>
               {hasMarketplace && (
                 <a href={`https://pidoo.es/s/${socio.slug}`} target="_blank" rel="noopener noreferrer"
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: colors.terracotta2, textDecoration: 'none', fontWeight: 600 }}>
@@ -548,11 +576,11 @@ function SocioDetalle({
       />
 
       {tab === 'resumen' && <TabResumen socio={socio} balance={balance} />}
-      {tab === 'riders' && <TabRiders socio={socio} riders={riders} riderStatus={riderStatus} onReload={onReload} />}
+      {tab === 'riders' && <TabRiders socio={socio} riders={riders} onReload={onReload} />}
       {tab === 'restaurantes' && <TabRestaurantes socio={socio} vinculaciones={vinculaciones} onReload={onReload} />}
       {tab === 'pedidos' && <TabPedidos socio={socio} riders={riders} />}
       {tab === 'finanzas' && <TabFinanzas socio={socio} />}
-      {tab === 'config' && <TabConfig socio={socio} riders={riders} riderStatus={riderStatus} />}
+      {tab === 'config' && <TabConfig socio={socio} riders={riders} />}
     </div>
   )
 }
@@ -621,7 +649,12 @@ function TabResumen({ socio, balance }) {
 // ──────────────────────────────────────────────────────────────────────────────
 // Tab: Riders
 // ──────────────────────────────────────────────────────────────────────────────
-function TabRiders({ socio, riders, riderStatus }) {
+function TabRiders({ socio, riders }) {
+  // socio = rider: la cuenta de reparto la lleva la misma persona, así que su
+  // estado en línea es el del socio (en_servicio + GPS fresco), no el de la
+  // tabla `rider_status`, que está vacía.
+  const linea = LINEA[estadoLineaSocio(socio)]
+  const enLinea = estadoLineaSocio(socio) === 'disponible'
   const [pedidosCount, setPedidosCount] = useState({}) // rider_account_id -> count entregados
 
   useEffect(() => {
@@ -664,10 +697,9 @@ function TabRiders({ socio, riders, riderStatus }) {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+      <div className="ds-panels">
         {riders.map(r => {
-          const st = riderStatus[r.id]
-          const isOnline = !!st?.is_online
+          const isOnline = enLinea
           return (
             <Card key={r.id} pad={14} style={{ opacity: r.activa === false ? 0.6 : 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
@@ -698,13 +730,8 @@ function TabRiders({ socio, riders, riderStatus }) {
               <div style={{ ...type.label, color: colors.stone, lineHeight: 1.6 }}>
                 {r.estado === 'activa' && r.activa !== false && (
                   <div>
-                    <b style={{ color: isOnline ? colors.onSageSoft : colors.ink2 }}>{isOnline ? 'Online' : 'Offline'}</b>
-                    {st?.last_checked && <span> · revisado {fmtRelative(st.last_checked)}</span>}
-                  </div>
-                )}
-                {st?.last_error && (
-                  <div style={{ color: colors.onDangerSoft, marginTop: 2 }}>
-                    <AlertCircle size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> {st.last_error}
+                    <b style={{ color: isOnline ? colors.onSageSoft : colors.ink2 }}>{linea.label}</b>
+                    <span> · posición {hace(socio.last_gps_at)}</span>
                   </div>
                 )}
                 <div>Pedidos entregados: <b style={{ color: colors.text }}>{pedidosCount[r.id] || 0}</b></div>
@@ -965,7 +992,7 @@ function TabFinanzas({ socio }) {
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12, marginBottom: 10 }}>
+      <div className="ds-cards" style={{ marginBottom: 10 }}>
         <StatCard label="Esta semana" value={fmtEUR(stats.semana)} sub="Pendiente del corte del lunes" tone={stats.semana > 0 ? 'terracotta' : 'ink'} />
         <StatCard label="Este mes" value={fmtEUR(stats.mes)} sub="Desde el día 1" />
         <StatCard label="Total entregado" value={fmtEUR(stats.total)} sub={`${pedidos.length} pedidos entregados`} tone="sage" />
@@ -1009,16 +1036,8 @@ function TabFinanzas({ socio }) {
 // ──────────────────────────────────────────────────────────────────────────────
 // Tab: Configuración avanzada
 // ──────────────────────────────────────────────────────────────────────────────
-function TabConfig({ socio, riders, riderStatus }) {
+function TabConfig({ socio, riders }) {
   const [showKey, setShowKey] = useState(false)
-  const ultimaSync = useMemo(() => {
-    let max = null
-    riders.forEach(r => {
-      const t = riderStatus[r.id]?.last_checked
-      if (t && (!max || new Date(t) > new Date(max))) max = t
-    })
-    return max
-  }, [riders, riderStatus])
 
   function copy(value) {
     if (!value) return
@@ -1052,8 +1071,16 @@ function TabConfig({ socio, riders, riderStatus }) {
         <DetailRow label="Carrier ID">
           <span style={type.mono}>{socio.shipday_carrier_id || '—'}</span>
         </DetailRow>
-        <DetailRow label="Última sync rider_status">
-          {ultimaSync ? fmtRelative(ultimaSync) : 'Sin datos'}
+        {/* Antes aquí ponía "Última sync rider_status", que salía siempre de una
+            tabla vacía y por tanto siempre "Sin datos". Lo que de verdad dice si
+            se le puede asignar un pedido es la última posición de su móvil. */}
+        <DetailRow label="Última posición">
+          {socio.last_gps_at
+            ? `${hace(socio.last_gps_at)} · ${fmtDateTime(socio.last_gps_at)}`
+            : 'Nunca ha mandado posición'}
+        </DetailRow>
+        <DetailRow label="En servicio">
+          {socio.en_servicio ? 'Sí (interruptor de su app)' : 'No'}
         </DetailRow>
       </Card>
 
