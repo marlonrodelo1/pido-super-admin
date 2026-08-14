@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { uploadImage } from '../lib/upload'
 import { ds, colors, type, radius } from '../lib/darkStyles'
 import { Card, Chip, EstadoBadge, GhostBtn, GlossyBtn, MiniBtn, PillTabs, SectionLabel, Toggle, Vacio } from '../lib/ui'
-import { Plus, X, Upload, Save, Trash2, KeyRound, Search, ChevronLeft, ChevronRight, Pencil, Copy, Eye, EyeOff, Wand2, Check, Share2 } from 'lucide-react'
+import { Plus, X, Upload, Save, Trash2, KeyRound, Search, ChevronLeft, ChevronRight, Pencil, Copy, Eye, EyeOff, Wand2, Check, Share2, ExternalLink } from 'lucide-react'
 import { toast, confirmar } from '../App'
 import CargaMasivaModal from '../components/CargaMasivaModal'
 import ImportUrlModal from '../components/ImportUrlModal'
@@ -1461,31 +1461,18 @@ export default function Establecimientos() {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Alta y plan del restaurante (modelo 10% por pedido — sin cuota mensual)
-// Sustituye a PlanTiendaCard (suscripción 39€ muerta). plan_pro = flag gratis.
+// Visibilidad y permisos del restaurante.
+// Solo quedan los dos interruptores que MUEVEN algo de verdad (comprobado contra
+// producción el 14 ago 2026): la carta de mesa y el destacado de la Home.
 // ──────────────────────────────────────────────────────────────────────────────
 function AltaPlanCard({ establecimiento, onChanged }) {
   const [busy, setBusy] = useState(false)
   const e = establecimiento || {}
-  const planPro = !!e.plan_pro
-  const altaCobrada = !!e.alta_150_cobrada
   // El interruptor propio de esta tarjeta (46×26, naranja a pelo) se sustituye por
   // el `Toggle` del sistema: mismos permisos, mismas escrituras, un solo aspecto.
   const rowStyle = {
     display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
     borderRadius: radius.md, border: `1px solid ${colors.border}`, background: colors.cream,
-  }
-
-  async function togglePlanPro() {
-    setBusy(true)
-    const nuevo = !planPro
-    const { error } = await supabase.from('establecimientos')
-      .update({ plan_pro: nuevo, plan_pro_activado_en: nuevo ? new Date().toISOString() : null })
-      .eq('id', e.id)
-    setBusy(false)
-    if (error) return toast('Error: ' + error.message, 'error')
-    toast(nuevo ? 'Tienda publica activada (gratis)' : 'Tienda publica desactivada')
-    onChanged?.()
   }
 
   async function toggleDestacado() {
@@ -1516,36 +1503,54 @@ function AltaPlanCard({ establecimiento, onChanged }) {
     onChanged?.()
   }
 
-  async function toggleAlta() {
-    const nuevo = !altaCobrada
-    if (nuevo && !(await confirmar('Marcar el alta de 150 EUR como cobrada en efectivo?'))) return
-    setBusy(true)
-    const { error } = await supabase.from('establecimientos')
-      .update({ alta_150_cobrada: nuevo, alta_150_cobrada_at: nuevo ? new Date().toISOString() : null })
-      .eq('id', e.id)
-    setBusy(false)
-    if (error) return toast('Error: ' + error.message, 'error')
-    toast(nuevo ? 'Alta de 150 EUR registrada' : 'Alta marcada como no cobrada')
-    onChanged?.()
-  }
-
   return (
     <Card style={{ marginTop: 20 }}>
-      <h3 style={{ ...ds.h3, marginBottom: 4 }}>Alta y plan</h3>
+      {/* 14 ago 2026: fuera la fila "Alta de 150 EUR (efectivo)" y la frase que
+          la explicaba. El alta se cobra en mano y fuera de la plataforma, así
+          que no pinta nada en una tarjeta de permisos; y el interruptor no lo
+          había usado nadie (0 de 9 restaurantes marcados). La columna
+          `alta_150_cobrada` se queda en la base de datos por si algún día se
+          quiere un registro de cobros, pero no se toca desde aquí. */}
+      <h3 style={{ ...ds.h3, marginBottom: 4 }}>Visibilidad y permisos</h3>
       <div style={{ ...type.body, color: colors.textMute, marginBottom: 14 }}>
-        Pidoo cobra el 10% por pedido. El alta son 150 EUR unicos en efectivo (fuera de plataforma). Sin cuota mensual.
+        Donde aparece este restaurante y que paginas publicas tiene abiertas.
       </div>
 
+      {/* 14 ago 2026: aqui habia un interruptor "Tienda publica" que escribia
+          `establecimientos.plan_pro`. NO LO LEIA NADIE: en los cuatro repos solo
+          aparecia dentro de dos `select(...)` sin usarse, y en la base de datos
+          solo lo menciona el trigger que se lo congela al dueno. Comprobado
+          contra produccion: Rincon de Fran tiene plan_pro=false y su tienda
+          `pidoo.es/rincon-de-fran` carga entera. Era un resto del plan SaaS de
+          39 EUR/mes, cuando decidia si se usaba `precio_tienda_publica` (columna
+          hoy muerta: un trigger la iguala a `precio`).
+          Un interruptor que miente es peor que ninguno: se puede apagar creyendo
+          que se cierra una tienda. La pagina publica es gratis y esta siempre
+          abierta; lo que de verdad la cierra es `activo` + el horario, que se
+          gobiernan desde "Horario y estado". Aqui queda el enlace para verla. */}
       <div style={rowStyle}>
-        <div style={{ flex: 1 }}>
-          <div style={{ ...type.body, fontWeight: 600, color: colors.text }}>
-            Tienda publica {e.slug ? `(pidoo.es/${e.slug})` : ''}
-          </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ ...type.body, fontWeight: 600, color: colors.text }}>Tienda publica</div>
           <div style={{ ...type.label, color: colors.textMute, marginTop: 2 }}>
-            Gratis. Activa la pagina publica del restaurante y sus precios de tienda.
+            {e.slug
+              ? 'Gratis y siempre abierta. Se cierra al cliente desde "Horario y estado", no desde aqui.'
+              : 'Este restaurante no tiene slug, asi que no tiene pagina publica.'}
           </div>
         </div>
-        <Toggle on={planPro} disabled={busy} tone="terracotta" onChange={togglePlanPro} aria-label="Tienda publica del restaurante" />
+        {e.slug && (
+          <a
+            href={`https://pidoo.es/${e.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              ...type.label, fontWeight: 600, color: colors.terracotta2,
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              textDecoration: 'none', flexShrink: 0, whiteSpace: 'nowrap',
+            }}
+          >
+            pidoo.es/{e.slug} <ExternalLink size={13} />
+          </a>
+        )}
       </div>
 
       <div style={{ ...rowStyle, marginTop: 10 }}>
@@ -1569,18 +1574,6 @@ function AltaPlanCard({ establecimiento, onChanged }) {
           </div>
         </div>
         <Toggle on={!!e.destacado} disabled={busy} tone="terracotta" onChange={toggleDestacado} aria-label="Destacado en la Home de pidoo.es" />
-      </div>
-
-      <div style={{ ...rowStyle, marginTop: 10 }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ ...type.body, fontWeight: 600, color: colors.text }}>Alta de 150 EUR (efectivo)</div>
-          <div style={{ ...type.label, color: colors.textMute, marginTop: 2 }}>
-            {altaCobrada && e.alta_150_cobrada_at
-              ? `Cobrada el ${new Date(e.alta_150_cobrada_at).toLocaleDateString('es-ES')}`
-              : 'Pendiente de cobrar'}
-          </div>
-        </div>
-        <Toggle on={altaCobrada} disabled={busy} tone="terracotta" onChange={toggleAlta} aria-label="Alta de 150 EUR cobrada en efectivo" />
       </div>
     </Card>
   )
