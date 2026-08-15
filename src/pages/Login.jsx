@@ -28,12 +28,12 @@ export default function Login() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: colors.ink,
+      background: colors.bg,
       fontFamily: FONT,
       padding: 16,
     }}>
       <div style={{
-        background: colors.ink2,
+        background: colors.surface,
         borderRadius: 16,
         padding: '44px 36px',
         width: 400,
@@ -41,25 +41,22 @@ export default function Login() {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        border: '1px solid #3A3530',
-        boxShadow: '0 30px 80px rgba(0,0,0,0.45)',
+        border: `1px solid ${colors.border}`,
+        boxShadow: '0 24px 60px -24px rgba(26,24,21,0.18)',
       }}>
-        {/* Brand */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 10,
-            background: `linear-gradient(135deg, ${colors.terracotta} 0%, ${colors.terracotta2} 100%)`,
-            display: 'grid', placeItems: 'center',
-            color: '#fff', fontWeight: 900, fontSize: 16,
-            boxShadow: '0 0 0 1px rgba(197,86,44,0.35), 0 8px 20px -6px rgba(197,86,44,0.45)',
-          }}>P</div>
-          <div style={{ fontWeight: 800, fontSize: 20, color: colors.cream, letterSpacing: '-0.3px' }}>pidoo</div>
-        </div>
+        {/* Brand — el logo de verdad del kit de identidad (`public/pidoo-logo.svg`),
+            el mismo que la barra lateral. Antes aquí había una pastilla naranja
+            con una "P" y la palabra "pidoo" escrita con la fuente del panel. */}
+        <img
+          src="/pidoo-logo.svg"
+          alt="Pidoo"
+          style={{ height: 34, width: 'auto', maxWidth: '70%', objectFit: 'contain', marginBottom: 10 }}
+        />
         <div style={{
           fontSize: 10,
           textTransform: 'uppercase',
           letterSpacing: '0.14em',
-          color: colors.stone2,
+          color: colors.stone,
           marginBottom: 32,
           fontWeight: 700,
         }}>Super Admin</div>
@@ -89,13 +86,15 @@ export default function Login() {
             />
           </div>
 
+          {/* `onDangerSoft` y no `danger`: sobre el fondo claro, el acento como
+              texto se queda en 3,3:1. Es la misma regla que ya sigue el panel. */}
           {denied && (
             <div style={{
-              color: colors.danger,
+              color: colors.onDangerSoft,
               fontSize: 12,
               fontWeight: 600,
-              background: 'rgba(181,86,74,0.12)',
-              border: '1px solid rgba(181,86,74,0.30)',
+              background: colors.dangerSoft,
+              border: `1px solid rgba(181,86,74,0.35)`,
               padding: '10px 14px',
               borderRadius: 8,
               textAlign: 'center',
@@ -105,10 +104,10 @@ export default function Login() {
           )}
           {error && !denied && (
             <div style={{
-              color: colors.danger,
+              color: colors.onDangerSoft,
               fontSize: 12,
               fontWeight: 600,
-              background: 'rgba(181,86,74,0.10)',
+              background: colors.dangerSoft,
               padding: '8px 12px',
               borderRadius: 8,
               textAlign: 'center',
@@ -137,9 +136,9 @@ export default function Login() {
         <div style={{
           marginTop: 28,
           paddingTop: 18,
-          borderTop: '1px solid #3A3530',
+          borderTop: `1px solid ${colors.border}`,
           fontSize: 11,
-          color: colors.stone2,
+          color: colors.stone,
           width: '100%',
           textAlign: 'center',
         }}>
@@ -154,7 +153,8 @@ const labelStyle = {
   display: 'block',
   fontSize: 11,
   fontWeight: 700,
-  color: colors.stone2,
+  // `stone` y no `stone2`: a 11px sobre crema, stone2 se queda en 3,6:1.
+  color: colors.stone,
   textTransform: 'uppercase',
   letterSpacing: '0.08em',
   marginBottom: 6,
@@ -165,11 +165,13 @@ const inputStyle = {
   padding: '0 12px',
   height: 42,
   borderRadius: 10,
-  border: '1px solid #3A3530',
+  border: `1px solid ${colors.border}`,
   fontSize: 14,
   fontFamily: FONT,
   outline: 'none',
-  background: '#1F1C18',
-  color: colors.cream,
+  // Blanco sobre la tarjeta crema: con `surface` en los dos, el campo
+  // desaparecía dentro de la tarjeta.
+  background: '#FFFFFF',
+  color: colors.text,
   boxSizing: 'border-box',
 }

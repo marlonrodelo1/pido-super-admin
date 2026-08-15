@@ -280,6 +280,29 @@ button:focus-visible, input:focus-visible {
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
 }
 
+/* Separador de grupo (En línea / Fuera de servicio). Ocupa la fila entera para
+   no colarse como una tarjeta más cuando la lista va en varias columnas. */
+.dispatch-flota-sep {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 2px 0;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  line-height: 1.35;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6B6356; /* stone: a 11px, stone2 se queda en 3,6:1 sobre crema */
+}
+.dispatch-flota-sep:not(:first-child) {
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid #E8E1D3;
+}
+
 @media (min-width: 1700px) {
   /* La columna de repartidores baja de 360 a 300: la ficha compacta cabe de
      sobra y esos 60px se los queda el mapa, que es lo que se mira */

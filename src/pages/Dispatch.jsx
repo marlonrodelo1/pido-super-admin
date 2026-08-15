@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, Fragment } from 'react'
 import { useJsApiLoader } from '@react-google-maps/api'
 import { supabase } from '../lib/supabase'
 import { ds, colors, type, radius } from '../lib/darkStyles'
@@ -173,6 +173,13 @@ export default function Dispatch() {
   const disponibles = flota.filter(f => f.disponible)
   const enLineaSinGps = flota.filter(f => f.en_servicio && !f.gpsFresco)
 
+  // La lista se parte en dos por `en_servicio`, que es el interruptor que toca
+  // el socio. Dentro de "En línea" siguen conviviendo DOS estados y por eso el
+  // badge no desaparece: en servicio sin GPS fresco NO recibe pedidos (el
+  // dispatcher lo descarta), así que fundirlo con "Disponible" mentiría.
+  const enLinea = flota.filter(f => f.en_servicio)
+  const fueraServicio = flota.filter(f => !f.en_servicio)
+
   // Cola: primero lo que necesita mano, después por antigüedad
   const cola = useMemo(() => {
     const urgencia = (p) =>
@@ -345,60 +352,29 @@ export default function Dispatch() {
               </span>
             </div>
             <div className="dispatch-flota" style={{ maxHeight: altoPanel, overflowY: 'auto', padding: 12 }}>
-              {/* Ficha compacta: dos líneas en vez de cuatro (de ~120px de alto a
-                  ~62). Lo que se ganó de sitio: la cuenta de reparto, el GPS y la
-                  carga viven en UNA línea de datos, y "Llamar" pasa de botón con
-                  texto a icono al final de esa misma línea. El botón de asignar
-                  solo aparece cuando hay un pedido elegido, que es cuando sirve. */}
-              {flota.map(f => (
-                <Card key={f.id} pad={10} style={{ borderRadius: 12, borderColor: f.disponible ? colors.sage : colors.border }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div
-                      title={f.nombre}
-                      style={{ ...type.label, fontWeight: 600, color: colors.text, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                    >{f.nombre}</div>
-                    {f.disponible
-                      ? <Chip tono="sage" dot style={{ fontSize: 11, padding: '2px 7px' }}>Disponible</Chip>
-                      : f.en_servicio
-                        ? <Chip tono="warning" title={`Última posición hace ${hace(f.last_gps_at)}`} style={{ fontSize: 11, padding: '2px 7px' }}>Sin GPS</Chip>
-                        : <Chip tono="neutral" style={{ fontSize: 11, padding: '2px 7px' }}>Fuera</Chip>}
+              {/* Dos grupos, no una lista corrida de diez. Con nueve de diez
+                  socios fuera de servicio, el único que puede coger el pedido
+                  se perdía entre los que no. El separador ocupa la fila entera
+                  (`.dispatch-flota-sep`) para que no se cuele como una tarjeta
+                  más cuando la lista va en varias columnas. */}
+              {[
+                { clave: 'linea', titulo: 'En línea', socios: enLinea },
+                { clave: 'fuera', titulo: 'Fuera de servicio', socios: fueraServicio },
+              ].filter(g => g.socios.length > 0).map(g => (
+                <Fragment key={g.clave}>
+                  <div className="dispatch-flota-sep">
+                    <span>{g.titulo}</span>
+                    <span style={{ color: colors.stone, fontWeight: 700 }}>{g.socios.length}</span>
                   </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
-                    <div style={{ ...type.caption, color: colors.stone, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {f.cuenta?.nombre || 'Sin cuenta'}
-                      {' · '}
-                      <Navigation size={10} style={{ verticalAlign: -1 }} /> {f.gpsFresco ? hace(f.last_gps_at) : 'sin posición'}
-                      {' · '}{f.carga} en curso
-                      {pedido && f.distancia != null && (
-                        <span style={{ color: colors.onSageSoft, fontWeight: 700 }}>{' · '}<MapPin size={10} style={{ verticalAlign: -1 }} /> {km(f.distancia)}</span>
-                      )}
-                    </div>
-                    {f.telefono && (
-                      <button
-                        onClick={() => window.open(`tel:${f.telefono}`)}
-                        title={`Llamar a ${f.nombre} · ${f.telefono}`}
-                        aria-label={`Llamar a ${f.nombre}`}
-                        style={{
-                          width: 26, height: 26, borderRadius: 7, flexShrink: 0,
-                          display: 'grid', placeItems: 'center',
-                          border: `1px solid ${colors.border}`,
-                          background: colors.paper, color: colors.stone, cursor: 'pointer',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.color = colors.terracotta2 }}
-                        onMouseLeave={e => { e.currentTarget.style.color = colors.stone }}
-                      >
-                        <Phone size={12} />
-                      </button>
-                    )}
-                  </div>
-
-                  {pedido && pedido.modo_entrega === 'delivery' && (
-                    <GlossyBtn size="sm" accent full onClick={() => abrirAsignar(pedido)} style={{ marginTop: 8, height: 30 }}>
-                      Asignar {pedido.codigo}
-                    </GlossyBtn>
-                  )}
-                </Card>
+                  {g.socios.map(f => (
+                    <FichaSocio
+                      key={f.id}
+                      f={f}
+                      pedido={pedido}
+                      onAsignar={() => abrirAsignar(pedido)}
+                    />
+                  ))}
+                </Fragment>
               ))}
               {flota.length === 0 && !cargando && (
                 <Vacio titulo="Ningún socio dado de alta" texto="Los socios aparecen aquí en cuanto completan su alta." />
@@ -426,5 +402,80 @@ export default function Dispatch() {
         />
       )}
     </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Ficha compacta del repartidor: dos líneas en vez de cuatro (de ~120px de alto
+// a ~62). La cuenta de reparto, el GPS y la carga viven en UNA línea de datos, y
+// "Llamar" es un icono al final de esa misma línea. El botón de asignar solo
+// aparece cuando hay un pedido elegido, que es cuando sirve.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+function FichaSocio({ f, pedido, onAsignar }) {
+  return (
+    <Card pad={10} style={{ borderRadius: 12, borderColor: f.disponible ? colors.sage : colors.border }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div
+          title={f.nombre}
+          style={{ ...type.label, fontWeight: 600, color: colors.text, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+        >{f.nombre}</div>
+        {f.disponible
+          ? <Chip tono="sage" dot style={{ fontSize: 11, padding: '2px 7px' }}>Disponible</Chip>
+          : f.en_servicio
+            ? <Chip tono="warning" title={`Última posición hace ${hace(f.last_gps_at)}`} style={{ fontSize: 11, padding: '2px 7px' }}>Sin GPS</Chip>
+            : <Chip tono="neutral" style={{ fontSize: 11, padding: '2px 7px' }}>Fuera</Chip>}
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
+        {/* Medido: con la línea entera en una sola fila de 208px, 7 de 10 fichas
+            se cortaban con puntos suspensivos. Y lo que se cortaba era siempre lo
+            mismo: "sin posición · 0 en curso" de los que están fuera de servicio,
+            que no aporta nada — si no está en servicio, ni manda GPS ni recibe
+            pedidos, y eso ya lo dice el badge. Así que a los de fuera solo se les
+            pinta la cuenta de reparto, y la línea cabe entera.
+            La excepción es la que importa: alguien fuera de servicio CON pedidos
+            todavía encima. Eso no se calla nunca. */}
+        <div style={{ ...type.caption, color: colors.stone, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {f.cuenta?.nombre || 'Sin cuenta'}
+          {f.en_servicio && (
+            <>
+              {' · '}
+              <Navigation size={10} style={{ verticalAlign: -1 }} /> {f.gpsFresco ? hace(f.last_gps_at) : 'sin posición'}
+              {' · '}{f.carga} en curso
+            </>
+          )}
+          {!f.en_servicio && f.carga > 0 && (
+            <span style={{ color: colors.onWarningSoft, fontWeight: 700 }}>{' · '}{f.carga} en curso</span>
+          )}
+          {pedido && f.distancia != null && (
+            <span style={{ color: colors.onSageSoft, fontWeight: 700 }}>{' · '}<MapPin size={10} style={{ verticalAlign: -1 }} /> {km(f.distancia)}</span>
+          )}
+        </div>
+        {f.telefono && (
+          <button
+            onClick={() => window.open(`tel:${f.telefono}`)}
+            title={`Llamar a ${f.nombre} · ${f.telefono}`}
+            aria-label={`Llamar a ${f.nombre}`}
+            style={{
+              width: 26, height: 26, borderRadius: 7, flexShrink: 0,
+              display: 'grid', placeItems: 'center',
+              border: `1px solid ${colors.border}`,
+              background: colors.paper, color: colors.stone, cursor: 'pointer',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.color = colors.terracotta2 }}
+            onMouseLeave={e => { e.currentTarget.style.color = colors.stone }}
+          >
+            <Phone size={12} />
+          </button>
+        )}
+      </div>
+
+      {pedido && pedido.modo_entrega === 'delivery' && (
+        <GlossyBtn size="sm" accent full onClick={onAsignar} style={{ marginTop: 8, height: 30 }}>
+          Asignar {pedido.codigo}
+        </GlossyBtn>
+      )}
+    </Card>
   )
 }
