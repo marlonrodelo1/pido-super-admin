@@ -1487,6 +1487,46 @@ function AltaPlanCard({ establecimiento, onChanged }) {
     onChanged?.()
   }
 
+  // ── Visible en la app del cliente ───────────────────────────────────────────
+  // Escribe `estado`, NO `activo`. Es la diferencia que hace que esto funcione:
+  //   · `activo`  = "¿está abierto AHORA?". Lo recalcula cada minuto el motor de
+  //     presencia (cron 32) según el horario y si la app del restaurante está
+  //     conectada. Apagarlo a mano desde aquí duraría 60 segundos, y además el
+  //     trigger `trg_establecimientos_intencion_apertura` lo leería como si el
+  //     DUEÑO hubiera cerrado su local.
+  //   · `estado`  = "¿existe para el cliente?". No lo toca ningún cron, y
+  //     `guard_establecimientos_protected_fields` se lo congela al dueño: solo lo
+  //     cambia el super-admin.
+  //
+  // Con `estado='pausado'` el restaurante desaparece de Home, Mapa, Favoritos, la
+  // tienda pública y los deep links (los seis sitios de pido-app filtran
+  // `.eq('estado','activo')`), y además `enforce_restaurante_abierto` rechaza
+  // cualquier pedido con PD101 aunque alguien tuviera la ficha ya abierta.
+  // 'pausado' ya estaba permitido por el CHECK de la columna y no lo usaba nadie.
+  // Nada lo revierte solo: `autoactivar_alta_confirmada` solo actúa sobre
+  // 'pendiente_verificacion'.
+  //
+  // Por eso esto NO necesita tocar pido-app ni compilar una build nativa.
+  const visibleEnApp = e.estado === 'activo'
+  const pendienteDeAlta = e.estado === 'pendiente_verificacion' || e.estado === 'rechazado'
+
+  async function toggleVisibleEnApp() {
+    const nuevo = visibleEnApp ? 'pausado' : 'activo'
+    if (!visibleEnApp && pendienteDeAlta) {
+      return toast('Este restaurante está en "' + e.estado + '": termina su alta antes de publicarlo', 'error')
+    }
+    setBusy(true)
+    const { error } = await supabase.from('establecimientos')
+      .update({ estado: nuevo })
+      .eq('id', e.id)
+    setBusy(false)
+    if (error) return toast('Error: ' + error.message, 'error')
+    toast(nuevo === 'activo'
+      ? 'Visible en la app del cliente'
+      : 'Oculto: ya no aparece en la app y no puede recibir pedidos')
+    onChanged?.()
+  }
+
   // Carta del local (QR de mesa). Solo la puede activar el super-admin: el
   // trigger guard_establecimientos_protected_fields la congela para el dueño,
   // porque es la palanca con la que podría empujar su volumen fuera de Pidoo.
@@ -1528,6 +1568,37 @@ function AltaPlanCard({ establecimiento, onChanged }) {
           que se cierra una tienda. La pagina publica es gratis y esta siempre
           abierta; lo que de verdad la cierra es `activo` + el horario, que se
           gobiernan desde "Horario y estado". Aqui queda el enlace para verla. */}
+      {/* Va la PRIMERA porque es la que decide si el restaurante existe o no para
+          el cliente; todo lo demás de esta tarjeta es secundario si está oculto. */}
+      <div style={{
+        ...rowStyle,
+        marginBottom: 10,
+        // Cuando está oculto se ve, sin tener que leer: el interruptor es lo
+        // único de esta pantalla que puede dejar a un restaurante sin ventas.
+        borderColor: visibleEnApp ? colors.border : colors.warning,
+        background: visibleEnApp ? colors.cream : colors.warningSoft,
+      }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ ...type.body, fontWeight: 600, color: colors.text }}>
+            Visible en la app del cliente
+          </div>
+          <div style={{ ...type.label, color: visibleEnApp ? colors.textMute : colors.onWarningSoft, marginTop: 2 }}>
+            {pendienteDeAlta
+              ? `Su alta está en "${e.estado}": termina el alta para poder publicarlo.`
+              : visibleEnApp
+                ? 'Sale en el listado, el mapa, los favoritos y su página pública.'
+                : 'OCULTO: no aparece en ningún sitio de la app y no puede recibir pedidos. Su horario y sus pedidos en curso no se tocan.'}
+          </div>
+        </div>
+        <Toggle
+          on={visibleEnApp}
+          disabled={busy || pendienteDeAlta}
+          tone="terracotta"
+          onChange={toggleVisibleEnApp}
+          aria-label="Visible en la app del cliente"
+        />
+      </div>
+
       <div style={rowStyle}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ ...type.body, fontWeight: 600, color: colors.text }}>Tienda publica</div>
