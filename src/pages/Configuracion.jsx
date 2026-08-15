@@ -22,6 +22,8 @@ function sanitizeHtml(html) {
 export default function Configuracion() {
   // Configuración de plataforma (desde DB)
   const [config, setConfig] = useState({})
+  // Copia de lo que se cargó, para saber QUÉ ha cambiado y mandar solo eso.
+  const [configOriginal, setConfigOriginal] = useState({})
   const [configLoading, setConfigLoading] = useState(true)
   const [configSaving, setConfigSaving] = useState(false)
   const [configMsg, setConfigMsg] = useState(null)
@@ -46,6 +48,7 @@ export default function Configuracion() {
     const map = {}
     for (const row of (data || [])) map[row.clave] = row.valor
     setConfig(map)
+    setConfigOriginal(map)
     setConfigLoading(false)
   }
 
@@ -53,23 +56,50 @@ export default function Configuracion() {
     setConfig(prev => ({ ...prev, [clave]: valor }))
   }
 
+  // Lo que ha cambiado respecto a lo cargado. Es la pieza central del arreglo:
+  // antes se mandaban las 40 claves de la tabla aunque la pantalla solo controle
+  // 11, así que las otras 29 —los tiempos de los crons, presencia, creadores, la
+  // IA, y `comision_pidoo_pct`, que es la que reparte el dinero de verdad— se
+  // reescribían a ciegas con lo que hubiera en memoria de React. Y son justo las
+  // que se tocan por SQL cada pocos días.
+  const cambios = Object.fromEntries(
+    Object.entries(config).filter(([k, v]) => String(v) !== String(configOriginal[k] ?? ''))
+  )
+  const hayCambios = Object.keys(cambios).length > 0
+
   async function guardarConfig() {
+    if (!hayCambios) {
+      setConfigMsg('No has cambiado nada')
+      setTimeout(() => setConfigMsg(null), 3000)
+      return
+    }
     setConfigSaving(true)
     setConfigMsg(null)
-    try {
-      const updates = Object.entries(config).map(([clave, valor]) => ({
-        clave,
-        valor: String(valor),
-        updated_at: new Date().toISOString(),
-      }))
-      for (const u of updates) {
-        await supabase.from('configuracion_plataforma').upsert({ clave: u.clave, valor: u.valor, updated_at: u.updated_at }, { onConflict: 'clave' })
-      }
-      setConfigMsg('Configuración guardada correctamente')
-      setTimeout(() => setConfigMsg(null), 3000)
-    } catch (err) {
-      setConfigMsg('Error al guardar: ' + err.message)
+
+    // Una sola llamada transaccional. La RPC valida TODO antes de escribir nada,
+    // así que o entra entero o no entra nada.
+    //
+    // ⚠️ HAY QUE LEER `error`: supabase-js NO lanza excepción cuando la llamada
+    // falla, la devuelve en `{ error }`. El código anterior tenía un try/catch que
+    // por eso no saltaba nunca, y enseñaba "guardada correctamente" aunque no se
+    // hubiera guardado nada. Es la mitad del bug, y sobrevive a la RPC si esto no
+    // se mira.
+    const { data, error } = await supabase.rpc('guardar_configuracion_plataforma', {
+      p_cambios: cambios,
+    })
+
+    if (error) {
+      // El mensaje de la RPC viene en español y nombra la clave y el motivo.
+      setConfigMsg('Error al guardar: ' + (error.message || 'no se pudo guardar'))
+      setConfigSaving(false)
+      return
     }
+
+    setConfigOriginal(config)
+    setConfigMsg(data === 0
+      ? 'No había nada que cambiar'
+      : `Configuración guardada (${data} ${data === 1 ? 'clave' : 'claves'})`)
+    setTimeout(() => setConfigMsg(null), 3000)
     setConfigSaving(false)
   }
 
@@ -157,25 +187,25 @@ export default function Configuracion() {
             <div className="ds-fields" style={{ marginBottom: 20 }}>
               <div>
                 <label style={ds.label}>Tarifa base (€)</label>
-                <input type="number" step="0.10" min="0" value={config.envio_tarifa_base ?? '2.50'}
+                <input type="number" step="0.10" min="0" max="20" value={config.envio_tarifa_base ?? '2.50'}
                   onChange={e => setConfigVal('envio_tarifa_base', e.target.value)} style={ds.formInput} />
                 <div style={hint}>Coste mínimo de envío</div>
               </div>
               <div>
                 <label style={ds.label}>Radio base (km)</label>
-                <input type="number" step="0.5" min="0.5" value={config.envio_radio_base_km ?? '2'}
+                <input type="number" step="0.5" min="0.5" max="30" value={config.envio_radio_base_km ?? '2'}
                   onChange={e => setConfigVal('envio_radio_base_km', e.target.value)} style={ds.formInput} />
                 <div style={hint}>Distancia cubierta por la tarifa base</div>
               </div>
               <div>
                 <label style={ds.label}>€ por km adicional</label>
-                <input type="number" step="0.10" min="0" value={config.envio_precio_km_adicional ?? '0.50'}
+                <input type="number" step="0.10" min="0" max="5" value={config.envio_precio_km_adicional ?? '0.50'}
                   onChange={e => setConfigVal('envio_precio_km_adicional', e.target.value)} style={ds.formInput} />
                 <div style={hint}>Cada km fuera del radio base</div>
               </div>
               <div>
                 <label style={ds.label}>Tarifa máxima (€)</label>
-                <input type="number" step="0.50" min="0" value={config.envio_tarifa_maxima ?? '15.00'}
+                <input type="number" step="0.50" min="0.5" max="50" value={config.envio_tarifa_maxima ?? '15.00'}
                   onChange={e => setConfigVal('envio_tarifa_maxima', e.target.value)} style={ds.formInput} />
                 <div style={hint}>Tope máximo que paga el cliente</div>
               </div>
@@ -208,11 +238,22 @@ export default function Configuracion() {
             {/* Una sola casilla: con `1fr` se estiraba a todo el ancho de la
                 pantalla para pedir un número de dos cifras */}
             <div className="ds-fields">
+              {/* ⚠️ Este campo escribe `comision_plataforma`, que NO cobra nada: solo
+                  es el % con el que el Dashboard pinta las comisiones estimadas.
+                  La que se queda Pidoo de verdad es `comision_pidoo_pct`, que la usa
+                  el corte de los lunes y hoy NO está en esta pantalla (se toca por
+                  SQL). El rótulo decía "Se cobra al restaurante por cada pedido", que
+                  era falso; en la BD las dos claves tenían además la MISMA
+                  `descripcion`, palabra por palabra. */}
               <div>
-                <label style={ds.label}>Comisión plataforma (%)</label>
-                <input type="number" min={0} max={50} value={config.comision_plataforma ?? '10'}
+                <label style={ds.label}>Comisión mostrada en el Dashboard (%)</label>
+                <input type="number" step="0.1" min={0} max={50} value={config.comision_plataforma ?? '10'}
                   onChange={e => setConfigVal('comision_plataforma', e.target.value)} style={ds.formInput} />
-                <div style={hint}>Se cobra al restaurante por cada pedido</div>
+                <div style={hint}>
+                  Solo cambia el número que estima el Dashboard. <strong>No cobra nada.</strong> Lo
+                  que Pidoo se queda de verdad ({config.comision_pidoo_pct ?? '10'} %) vive en
+                  <code style={{ fontSize: 11 }}> comision_pidoo_pct</code> y lo aplica el corte de los lunes.
+                </div>
               </div>
             </div>
           </Seccion>
@@ -300,7 +341,7 @@ export default function Configuracion() {
             titulo="Radio de descubrimiento (visibilidad)"
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <input type="range" min={1} max={100} value={config.radio_descubrimiento_km ?? '15'}
+              <input type="range" min={3} max={100} value={config.radio_descubrimiento_km ?? '15'}
                 aria-label="Radio de descubrimiento en kilómetros"
                 onChange={e => setConfigVal('radio_descubrimiento_km', e.target.value)}
                 style={{ flex: 1, maxWidth: 400, accentColor: colors.terracotta }} />
@@ -314,8 +355,8 @@ export default function Configuracion() {
 
           {/* Botón guardar toda la configuración */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
-            <GlossyBtn accent size="lg" onClick={guardarConfig} disabled={configSaving} style={{ opacity: configSaving ? 0.6 : 1 }}>
-              <Check size={16} /> {configSaving ? 'Guardando…' : 'Guardar toda la configuración'}
+            <GlossyBtn accent size="lg" onClick={guardarConfig} disabled={configSaving || !hayCambios} style={{ opacity: (configSaving || !hayCambios) ? 0.6 : 1 }}>
+              <Check size={16} /> {configSaving ? 'Guardando…' : hayCambios ? `Guardar ${Object.keys(cambios).length} ${Object.keys(cambios).length === 1 ? 'cambio' : 'cambios'}` : 'Sin cambios'}
             </GlossyBtn>
             {configMsg && (
               <Chip tono={errorAlGuardar ? 'danger' : 'sage'} style={{ whiteSpace: 'normal' }}>
