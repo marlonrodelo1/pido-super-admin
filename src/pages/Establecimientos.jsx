@@ -648,6 +648,12 @@ export default function Establecimientos() {
           onChanged={async () => { await load(); const { data } = await supabase.from('establecimientos').select('*').eq('id', detalle.id).single(); if (data) setDetalle(data) }}
         />
 
+        {/* Cómo cobra Pidoo a este restaurante (comisión por puerta + reparto) */}
+        <ComisionCard
+          establecimiento={detalle}
+          onChanged={async () => { const { data } = await supabase.from('establecimientos').select('*').eq('id', detalle.id).single(); if (data) setDetalle(data) }}
+        />
+
         {/* Pidoo Creadores — interruptor maestro (el dueño solo puede pausar) */}
         <CreadoresCard establecimiento={detalle} />
 
@@ -1457,6 +1463,196 @@ export default function Establecimientos() {
         </div>
       )}
     </div>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// CÓMO COBRA PIDOO A ESTE RESTAURANTE.
+//
+// Hasta hoy esto no se podía tocar desde ninguna pantalla: la comisión era una
+// sola cifra global para los nueve, y `delivery_sin_socio` se ponía por SQL a
+// mano. Por eso el trato con Max's Pizza (30 €/mes sin comisión por su tienda)
+// vivía solo en la cabeza de Marlon mientras la plataforma le cobraba el 10 %.
+//
+// Dos ejes, y NO se tocan entre ellos:
+//   · qué se cobra  -> `establecimiento_comision`, una fila por puerta de entrada
+//   · quién reparte -> `establecimientos.delivery_sin_socio`
+// Un restaurante puede repartir por su cuenta Y pagar el 10 %: de hecho ese es el
+// estado correcto por defecto. Atarlos sería impedir esa combinación.
+//
+// Los presets son solo eso, atajos que escriben las mismas filas. La verdad vive
+// en los datos, no en el botón.
+// ──────────────────────────────────────────────────────────────────────────────
+const PUERTAS = [
+  { clave: 'pido',              nombre: 'Por Pidoo',        detalle: 'La app y pidoo.es' },
+  { clave: 'tienda_publica',    nombre: 'Su propia tienda', detalle: 'pidoo.es/su-slug y su QR' },
+  { clave: 'marketplace_socio', nombre: 'Marketplace socio', detalle: 'Poco usado' },
+]
+
+function ComisionCard({ establecimiento, onChanged }) {
+  const e = establecimiento || {}
+  const [tarifas, setTarifas] = useState({})   // { puerta: pct } solo las pactadas
+  const [global, setGlobal] = useState('10')
+  const [busy, setBusy] = useState(false)
+  const [cargando, setCargando] = useState(true)
+
+  useEffect(() => { cargar() }, [e.id])
+
+  async function cargar() {
+    if (!e.id) return
+    setCargando(true)
+    const [{ data: filas }, { data: cfg }] = await Promise.all([
+      supabase.from('establecimiento_comision').select('origen_pedido, pct').eq('establecimiento_id', e.id),
+      supabase.from('configuracion_plataforma').select('valor').eq('clave', 'comision_pidoo_pct').maybeSingle(),
+    ])
+    const m = {}
+    for (const f of (filas || [])) m[f.origen_pedido] = String(Number(f.pct))
+    setTarifas(m)
+    if (cfg?.valor) setGlobal(String(Number(cfg.valor)))
+    setCargando(false)
+  }
+
+  // Guardar una puerta. Dejarla vacía borra el trato y vuelve al global.
+  async function guardarPuerta(puerta, valor) {
+    setBusy(true)
+    const txt = String(valor ?? '').trim()
+    let error
+    if (txt === '') {
+      ;({ error } = await supabase.from('establecimiento_comision').delete()
+        .eq('establecimiento_id', e.id).eq('origen_pedido', puerta))
+    } else {
+      const n = Number(txt.replace(',', '.'))
+      if (!Number.isFinite(n) || n < 0 || n > 100) {
+        setBusy(false)
+        return toast('El porcentaje tiene que estar entre 0 y 100', 'error')
+      }
+      ;({ error } = await supabase.from('establecimiento_comision').upsert({
+        establecimiento_id: e.id, origen_pedido: puerta, pct: n,
+        nota: `Puesto desde el super-admin el ${new Date().toLocaleDateString('es-ES')}`,
+        actualizado_at: new Date().toISOString(),
+      }, { onConflict: 'establecimiento_id,origen_pedido' }))
+    }
+    setBusy(false)
+    if (error) return toast('Error: ' + error.message, 'error')
+    toast(txt === '' ? 'Vuelve a la comisión general' : `Guardado: ${txt} %`)
+    cargar()
+  }
+
+  async function aplicarPreset(cual) {
+    const ok = await confirmar(cual === 'estandar'
+      ? '¿Poner a este restaurante en el trato estándar? Pagará la comisión general por todo.'
+      : '¿Dejar sin comisión lo que entre por su propia tienda? Seguirá pagando la comisión general por lo que entre por Pidoo, y repartirá él sus pedidos.')
+    if (!ok) return
+    setBusy(true)
+    let error
+    if (cual === 'estandar') {
+      ;({ error } = await supabase.from('establecimiento_comision').delete().eq('establecimiento_id', e.id))
+      if (!error) ({ error } = await supabase.from('establecimientos')
+        .update({ delivery_sin_socio: false }).eq('id', e.id))
+    } else {
+      ;({ error } = await supabase.from('establecimiento_comision').upsert({
+        establecimiento_id: e.id, origen_pedido: 'tienda_publica', pct: 0,
+        nota: 'Sin comisión en su propia tienda. Reparte por su cuenta.',
+        actualizado_at: new Date().toISOString(),
+      }, { onConflict: 'establecimiento_id,origen_pedido' }))
+      if (!error) ({ error } = await supabase.from('establecimientos')
+        .update({ delivery_sin_socio: true }).eq('id', e.id))
+    }
+    setBusy(false)
+    if (error) return toast('Error: ' + error.message, 'error')
+    toast(cual === 'estandar' ? 'Trato estándar aplicado' : 'Aplicado: sin comisión en su tienda')
+    cargar(); onChanged?.()
+  }
+
+  async function toggleRepartoPropio() {
+    const nuevo = !e.delivery_sin_socio
+    setBusy(true)
+    const { error } = await supabase.from('establecimientos')
+      .update({ delivery_sin_socio: nuevo }).eq('id', e.id)
+    setBusy(false)
+    if (error) return toast('Error: ' + error.message, 'error')
+    toast(nuevo ? 'Reparte por su cuenta: Pidoo no le busca repartidor' : 'Vuelve al reparto de Pidoo')
+    onChanged?.()
+  }
+
+  const rowStyle = {
+    display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+    borderRadius: radius.md, border: `1px solid ${colors.border}`, background: colors.cream,
+  }
+  const pactadas = Object.keys(tarifas).length
+
+  return (
+    <Card style={{ marginTop: 20 }}>
+      <h3 style={{ ...ds.h3, marginBottom: 4 }}>Cómo cobra Pidoo a este restaurante</h3>
+      <div style={{ ...type.body, color: colors.textMute, marginBottom: 14 }}>
+        Por defecto paga la comisión general ({global} %) por todo. Aquí se pactan las excepciones.
+      </div>
+
+      {cargando ? (
+        <div style={{ ...type.body, color: colors.textMute, padding: 12 }}>Cargando…</div>
+      ) : (
+        <>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+            <GhostBtn disabled={busy} onClick={() => aplicarPreset('estandar')}>Trato estándar</GhostBtn>
+            <GhostBtn disabled={busy} onClick={() => aplicarPreset('solo_tienda')}>Sin comisión en su tienda</GhostBtn>
+          </div>
+
+          {PUERTAS.map(pu => {
+            const pactada = tarifas[pu.clave] !== undefined
+            return (
+              <div key={pu.clave} style={{ ...rowStyle, marginBottom: 8 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ ...type.body, fontWeight: 600, color: colors.text }}>{pu.nombre}</div>
+                  <div style={{ ...type.label, color: colors.textMute, marginTop: 2 }}>
+                    {pu.detalle}{pactada ? ' · trato pactado' : ` · comisión general (${global} %)`}
+                  </div>
+                </div>
+                <input
+                  type="number" step="0.5" min="0" max="100"
+                  placeholder={global}
+                  defaultValue={tarifas[pu.clave] ?? ''}
+                  disabled={busy}
+                  onBlur={ev => { if (String(ev.target.value) !== String(tarifas[pu.clave] ?? '')) guardarPuerta(pu.clave, ev.target.value) }}
+                  aria-label={`Comisión para ${pu.nombre}`}
+                  style={{ ...ds.formInput, width: 88, flexShrink: 0, textAlign: 'right' }}
+                />
+                <span style={{ ...type.label, color: colors.textMute, flexShrink: 0 }}>%</span>
+              </div>
+            )
+          })}
+          <div style={{ ...type.label, color: colors.textMute, marginBottom: 14 }}>
+            Deja una casilla vacía para que esa puerta vuelva a la comisión general.
+          </div>
+
+          <div style={{
+            ...rowStyle,
+            borderColor: e.delivery_sin_socio ? colors.warning : colors.border,
+            background: e.delivery_sin_socio ? colors.warningSoft : colors.cream,
+          }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ ...type.body, fontWeight: 600, color: colors.text }}>Reparte por su cuenta</div>
+              <div style={{ ...type.label, color: e.delivery_sin_socio ? colors.onWarningSoft : colors.textMute, marginTop: 2 }}>
+                {e.delivery_sin_socio
+                  ? 'Pidoo no le busca repartidor y sus pedidos no salen como urgentes en Dispatch.'
+                  : 'Sus pedidos entran en el reparto de Pidoo.'}
+              </div>
+            </div>
+            <Toggle on={!!e.delivery_sin_socio} disabled={busy} tone="terracotta"
+              onChange={toggleRepartoPropio} aria-label="Reparte por su cuenta" />
+          </div>
+
+          {pactadas > 0 && Object.values(tarifas).some(v => Number(v) === 0) && !e.delivery_sin_socio && (
+            <div style={{
+              ...type.label, marginTop: 10, padding: '10px 12px', borderRadius: radius.md,
+              background: colors.warningSoft, color: colors.onWarningSoft,
+            }}>
+              Tiene una puerta al 0 % pero sigue en el reparto de Pidoo. Esos pedidos no se le
+              podrán asignar a un repartidor: o le pones comisión, o marca que reparte por su cuenta.
+            </div>
+          )}
+        </>
+      )}
+    </Card>
   )
 }
 

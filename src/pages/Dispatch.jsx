@@ -103,7 +103,7 @@ export default function Dispatch() {
         // SIEMPRE, porque una columna que no se pide llega como undefined y eso
         // es falsy. Es la misma clase de fallo que documenta lib/estColumns.js
         // en pido-app: cada listado escribiendo su propia lista de columnas.
-        .select('id, codigo, estado, modo_entrega, total, created_at, aceptado_at, assigned_at, socio_id, rider_account_id, shipday_status, intento_asignacion, establecimiento_id, direccion_entrega, lat_entrega, lng_entrega, metodo_pago, establecimientos(nombre, latitud, longitud)')
+        .select('id, codigo, estado, modo_entrega, total, created_at, aceptado_at, assigned_at, socio_id, rider_account_id, shipday_status, intento_asignacion, establecimiento_id, direccion_entrega, lat_entrega, lng_entrega, metodo_pago, establecimientos(nombre, latitud, longitud, delivery_sin_socio)')
         .in('estado', ESTADOS_EN_VUELO)
         .order('created_at', { ascending: true }),
       supabase.from('socios')
@@ -168,8 +168,19 @@ export default function Dispatch() {
     })
   }, [socios, cuentas, pedidos, pedido])
 
-  const sinAsignar = pedidos.filter(p => p.modo_entrega === 'delivery' && !p.socio_id)
-  const enApuros = pedidos.filter(p => p.shipday_status === 'no_rider' || (p.intento_asignacion || 0) >= 2)
+  // Restaurantes que reparten por su cuenta (Max's Pizza hoy): sus pedidos de
+  // delivery NUNCA van a tener socio de Pidoo, así que salían aquí eternamente
+  // en rojo, arriba de la cola y con botón "Asignar" — el cliente que menos
+  // atención necesita era el que más gritaba.
+  //
+  // Se filtra la INTERPRETACIÓN, no la consulta: sus pedidos siguen viéndose en
+  // la cola, porque si uno se queda sin aceptar eso sí hay que verlo (es donde
+  // está el dinero perdido: 10 pedidos y 162,78 € en 45 días). Lo que se quita
+  // es tratarlos como una avería del reparto, que no lo son.
+  const repartoPropio = (p) => p?.establecimientos?.delivery_sin_socio === true
+
+  const sinAsignar = pedidos.filter(p => p.modo_entrega === 'delivery' && !p.socio_id && !repartoPropio(p))
+  const enApuros = pedidos.filter(p => !repartoPropio(p) && (p.shipday_status === 'no_rider' || (p.intento_asignacion || 0) >= 2))
   const disponibles = flota.filter(f => f.disponible)
   const enLineaSinGps = flota.filter(f => f.en_servicio && !f.gpsFresco)
 
@@ -180,10 +191,12 @@ export default function Dispatch() {
   const enLinea = flota.filter(f => f.en_servicio)
   const fueraServicio = flota.filter(f => !f.en_servicio)
 
-  // Cola: primero lo que necesita mano, después por antigüedad
+  // Cola: primero lo que necesita mano, después por antigüedad. El reparto propio
+  // va al fondo (4): sigue estando, pero no compite con lo que sí hay que resolver.
   const cola = useMemo(() => {
     const urgencia = (p) =>
-      p.shipday_status === 'no_rider' ? 0
+      repartoPropio(p) ? 4
+        : p.shipday_status === 'no_rider' ? 0
         : (p.modo_entrega === 'delivery' && !p.socio_id) ? 1
         : (p.intento_asignacion || 0) >= 2 ? 2
         : 3
@@ -243,7 +256,9 @@ export default function Dispatch() {
             {cola.map(p => {
               const activo = p.id === pedidoSel
               const socio = socios.find(s => s.id === p.socio_id)
-              const huerfano = p.modo_entrega === 'delivery' && !p.socio_id
+              // Un pedido de reparto propio no es huérfano: no le falta un socio,
+              // es que no lleva. Sin esto se pintaba con la franja roja de avería.
+              const huerfano = p.modo_entrega === 'delivery' && !p.socio_id && !repartoPropio(p)
               return (
                 <div
                   key={p.id}
@@ -274,6 +289,10 @@ export default function Dispatch() {
                     )}
                     {p.modo_entrega === 'recogida'
                       ? <Chip tono="neutral">Recogida</Chip>
+                      : repartoPropio(p)
+                      ? <Chip tono="neutral" title="Este restaurante reparte por su cuenta: Pidoo no le busca repartidor">
+                          Reparto propio
+                        </Chip>
                       : socio
                         ? (
                           // Con repartidor asignado hay dos situaciones muy
@@ -297,7 +316,11 @@ export default function Dispatch() {
                     <MiniBtn onClick={() => { setPedidoSel(p.id); setFicha(p.id) }} aria-label={`Ver el pedido ${p.codigo}`}>
                       <Eye size={12} /> Ver pedido
                     </MiniBtn>
-                    {p.modo_entrega === 'delivery' && !['cancelado', 'fallido', 'entregado'].includes(p.estado) && (
+                    {/* Sin botón de asignar en reparto propio: ofrecerlo era una
+                        trampa. El modal manda `forzar: true` al no encontrar
+                        socios vinculados, y desde el 15 ago el candado PD220
+                        rechaza asignar un socio de Pidoo a un pedido al 0 %. */}
+                    {p.modo_entrega === 'delivery' && !repartoPropio(p) && !['cancelado', 'fallido', 'entregado'].includes(p.estado) && (
                       <MiniBtn onClick={() => abrirAsignar(p)} aria-label={`Reasignar el pedido ${p.codigo}`}>
                         <RefreshCw size={12} /> {p.socio_id ? 'Reasignar' : 'Asignar'}
                       </MiniBtn>
