@@ -1671,6 +1671,35 @@ function AltaPlanCard({ establecimiento, onChanged }) {
     borderRadius: radius.md, border: `1px solid ${colors.border}`, background: colors.cream,
   }
 
+  // ── Sale o no en el marketplace de la app del cliente ───────────────────────
+  // Para los clientes de CUOTA FIJA: tienen su tienda en pidoo.es/<slug> y trabajan
+  // solo por ahi, asi que no pintan nada en el listado ni en el mapa de la app.
+  //
+  // Es una tercera cosa, distinta de las dos que ya habia, y por eso hizo falta
+  // columna propia:
+  //   · `activo` = "¿esta abierto AHORA?" — lo recalcula el motor de presencia.
+  //   · `estado` = "¿existe para el cliente?" — apagarlo mata TAMBIEN su tienda,
+  //     porque los seis sitios de pido-app filtran `.eq('estado','activo')`,
+  //     incluida la tienda por slug.
+  //   · `visible_en_marketplace` = "¿se promociona en la app de Pidoo?" — solo lo
+  //     miran el listado de la Home y el mapa. Su URL abre igual.
+  //
+  // Ojo con no confundirlo con "Destacado": destacado es salir DELANTE en el
+  // carrusel; esto es salir o no salir.
+  async function toggleMarketplace() {
+    setBusy(true)
+    const nuevo = !e.visible_en_marketplace
+    const { error } = await supabase.from('establecimientos')
+      .update({ visible_en_marketplace: nuevo })
+      .eq('id', e.id)
+    setBusy(false)
+    if (error) return toast('Error: ' + error.message, 'error')
+    toast(nuevo
+      ? 'Vuelve a salir en la app del cliente'
+      : 'Fuera del marketplace: solo se le encuentra por su URL')
+    onChanged?.()
+  }
+
   async function toggleDestacado() {
     setBusy(true)
     const nuevo = !e.destacado
@@ -1833,11 +1862,33 @@ function AltaPlanCard({ establecimiento, onChanged }) {
         <Toggle on={!!e.carta_local_activa} disabled={busy} tone="terracotta" onChange={toggleCartaLocal} aria-label="Carta del local (QR de mesa)" />
       </div>
 
-      <div style={{ ...rowStyle, marginTop: 10 }}>
+      <div style={{
+        ...rowStyle, marginTop: 10,
+        borderColor: e.visible_en_marketplace === false ? colors.warning : colors.border,
+        background: e.visible_en_marketplace === false ? colors.warningSoft : colors.cream,
+      }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ ...type.body, fontWeight: 600, color: colors.text }}>Sale en la app del cliente</div>
+          <div style={{
+            ...type.label, marginTop: 2,
+            color: e.visible_en_marketplace === false ? colors.onWarningSoft : colors.textMute,
+          }}>
+            {e.visible_en_marketplace === false
+              ? `Fuera del listado, de Destacados y del mapa. Solo se le encuentra por ${e.slug ? `pidoo.es/${e.slug}` : 'su URL'}, que sigue funcionando con su carta, su recogida y su delivery.`
+              : 'Aparece en el listado, en el mapa y puede entrar en Destacados. Apagalo para los clientes de cuota fija que solo trabajan por su propia URL.'}
+          </div>
+        </div>
+        <Toggle on={e.visible_en_marketplace !== false} disabled={busy} tone="terracotta"
+          onChange={toggleMarketplace} aria-label="Sale en la app del cliente" />
+      </div>
+
+      <div style={{ ...rowStyle, marginTop: 10, opacity: e.visible_en_marketplace === false ? 0.5 : 1 }}>
         <div style={{ flex: 1 }}>
           <div style={{ ...type.body, fontWeight: 600, color: colors.text }}>Destacado en la Home</div>
           <div style={{ ...type.label, color: colors.textMute, marginTop: 2 }}>
-            Sale en el carrusel "Destacados" de pidoo.es, por delante de los automaticos por rating.
+            {e.visible_en_marketplace === false
+              ? 'No hace nada mientras no salga en la app del cliente.'
+              : 'Sale en el carrusel "Destacados" de pidoo.es, por delante de los automaticos por rating. Ojo: ahi entra solo todo el que tenga 4,5 o mas de nota, este marcado o no.'}
           </div>
         </div>
         <Toggle on={!!e.destacado} disabled={busy} tone="terracotta" onChange={toggleDestacado} aria-label="Destacado en la Home de pidoo.es" />
