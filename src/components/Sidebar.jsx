@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   BarChart3, Store, Users, User, ClipboardList, Radar,
   MessageCircle, Settings, LogOut, X, Truck, Bell, RotateCcw, FileText, Receipt,
-  Activity, Scale, Video, PanelLeftClose, PanelLeftOpen, Workflow,
+  Activity, Scale, Video, PanelLeftClose, PanelLeftOpen, Workflow, Tag,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { colors, type, radius } from '../lib/darkStyles'
@@ -39,6 +39,7 @@ const grupos = [
       { id: 'socios',           label: 'Socios',            Icon: Users },
       { id: 'usuarios',         label: 'Usuarios',          Icon: User },
       { id: 'creadores',        label: 'Creadores',         Icon: Video },
+      { id: 'promociones',      label: 'Promociones',       Icon: Tag },
     ],
   },
   {

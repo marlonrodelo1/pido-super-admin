@@ -20,6 +20,7 @@ import Liquidaciones from './pages/Liquidaciones'
 import Cargos from './pages/Cargos'
 import Socios from './pages/Socios'
 import Creadores from './pages/Creadores'
+import Promociones from './pages/Promociones'
 import { useMediaQuery, BP } from './lib/useMediaQuery'
 import './index.css'
 
@@ -232,6 +233,7 @@ function AppContent() {
           {seccion === 'cargos' && <Cargos />}
           {seccion === 'socios' && <Socios />}
           {seccion === 'creadores' && <Creadores />}
+          {seccion === 'promociones' && <Promociones />}
           {seccion === 'salud' && <SaludSistema />}
           {seccion === 'algoritmo' && <Algoritmo />}
           {seccion === 'config' && <Configuracion />}
