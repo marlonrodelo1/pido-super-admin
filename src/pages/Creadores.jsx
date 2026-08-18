@@ -21,7 +21,7 @@ const ESTADOS = {
   en_espera_tope:       { label: 'Espera tope',   color: '#C99551', bg: 'rgba(201,149,81,0.16)' },
   caducada:             { label: 'Caducada',      color: '#8A8174', bg: 'rgba(138,129,116,0.15)' },
   rechazada:            { label: 'Rechazada',     color: '#B5564A', bg: 'rgba(181,86,74,0.15)' },
-  pendiente_validacion: { label: 'Sin validar',   color: '#7B8FA8', bg: 'rgba(123,143,168,0.15)' },
+  pendiente_validacion: { label: 'Por revisar',   color: '#C99551', bg: 'rgba(201,149,81,0.16)' },
 }
 
 const fmtEur = (n) => `${Number(n || 0).toFixed(2).replace('.', ',')} €`
@@ -53,7 +53,7 @@ export default function Creadores() {
     const [parts, kpiPedidos, kpiCupones] = await Promise.all([
       supabase
         .from('participaciones_creador')
-        .select('id, estado, red, video_id, share_url, usuario_red, views_actual, nivel_alcanzado, created_at, ultima_revision_at, caduca_at, motivo_rechazo, usuario_id, establecimiento_id, establecimientos(nombre), usuarios(nombre)')
+        .select('id, estado, origen, red, video_id, share_url, usuario_red, views_actual, nivel_alcanzado, created_at, ultima_revision_at, caduca_at, motivo_rechazo, validado_at, validado_por, usuario_id, establecimiento_id, establecimientos(nombre), usuarios(nombre)')
         .order('created_at', { ascending: false })
         .limit(300),
       // El KPI que justifica la feature entera: cuántos pedidos ha traído un vídeo.
@@ -118,6 +118,10 @@ export default function Creadores() {
     else if (r === 'en_espera_tope') toast('Guardado, pero el restaurante ha llegado a su tope del mes. Queda en espera.', 'error')
     else if (r === 'sin_escalon_nuevo') toast('Guardado. Todavía no llega al siguiente escalón.')
     else if (r === 'ya_premiada')    toast('Guardado. Este vídeo ya tenía premio.')
+    // Sin este aviso, teclear visualizaciones en un vídeo de mesa sin validar
+    // parece que no hace nada y da la sensación de que está roto. Sí hace: guarda
+    // el contador. Lo que no puede es premiar hasta que el restaurante lo acepte.
+    else if (r === 'sin_efecto')     toast('Visualizaciones guardadas, pero no premia: el restaurante todavía no ha validado este vídeo.', 'error')
     else                             toast('Guardado.')
 
     setViews(v => ({ ...v, [p.id]: undefined }))
@@ -265,6 +269,15 @@ export default function Creadores() {
               <div key={p.id} className="ds-row-touch" style={ds.tableRow}>
                 <span style={{ flex: '2 1 130px', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>
                   {p.establecimientos?.nombre || '—'}
+                  {/* Un vídeo de mesa no tiene pedido detrás: nadie puede
+                      comprobar que esa persona comió allí salvo el restaurante.
+                      Por eso espera su visto bueno y por eso se distingue aquí. */}
+                  {p.origen === 'mesa' && (
+                    <span style={{
+                      marginLeft: 6, fontSize: 10, fontWeight: 700, letterSpacing: '0.03em',
+                      color: '#C99551', textTransform: 'uppercase',
+                    }}>mesa</span>
+                  )}
                 </span>
 
                 <span data-tablet-sm-hide="true" style={{ flex: '1 1 100px', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--c-muted)' }}>

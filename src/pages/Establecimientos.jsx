@@ -1917,6 +1917,8 @@ function AltaPlanCard({ establecimiento, onChanged }) {
         <Toggle on={!!e.carta_local_activa} disabled={busy} tone="terracotta" onChange={toggleCartaLocal} aria-label="Carta del local (QR de mesa)" />
       </div>
 
+      {e.carta_local_activa && <AvisoSaltoPrecios establecimientoId={e.id} />}
+
       <div style={{
         ...rowStyle, marginTop: 10,
         borderColor: e.visible_en_marketplace === false ? colors.warning : colors.border,
@@ -1949,5 +1951,80 @@ function AltaPlanCard({ establecimiento, onChanged }) {
         <Toggle on={!!e.destacado} disabled={busy} tone="terracotta" onChange={toggleDestacado} aria-label="Destacado en la Home de pidoo.es" />
       </div>
     </Card>
+  )
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * AvisoSaltoPrecios — cuánto sube un plato del local al domicilio.
+ *
+ * El QR de la mesa enseña `precio_local` y la app enseña `precio`. Cuando la
+ * diferencia es grande, el QR trabaja EN CONTRA de la app: el cliente paga 7,80 €
+ * por un sándwich en la mesa, se descarga Pidoo porque se lo hemos sugerido, y ve
+ * el mismo sándwich a 15,50 €. No piensa "el reparto": piensa que le engañamos.
+ *
+ * Medido el 18 ago en Café Bar Australia: de 30 platos a la venta, 24 subían más
+ * de un 25 % y 14 costaban más del doble. Por eso este aviso está aquí, pegado al
+ * interruptor: para verlo ANTES de imprimir el QR y pegarlo en las mesas.
+ *
+ * Solo mira los productos que se pueden PEDIR (`disponible = true`). Los de
+ * `solo_carta_local` no se venden a domicilio, así que comparar sus precios no
+ * significa nada — y son mayoría (120 de 150 en Australia): incluirlos diluía la
+ * media hasta hacerla inútil.
+ * ────────────────────────────────────────────────────────────────────────── */
+const SALTO_AVISO_PCT = 25
+
+function AvisoSaltoPrecios({ establecimientoId }) {
+  const [datos, setDatos] = useState(null)
+
+  useEffect(() => {
+    if (!establecimientoId) return
+    let vivo = true
+    supabase
+      .from('productos')
+      .select('nombre, precio, precio_local')
+      .eq('establecimiento_id', establecimientoId)
+      .eq('disponible', true)
+      .not('precio_local', 'is', null)
+      .then(({ data }) => {
+        if (!vivo) return
+        const filas = (data || [])
+          .filter(p => Number(p.precio_local) > 0)
+          .map(p => ({
+            nombre: p.nombre,
+            pct: Math.round((Number(p.precio) - Number(p.precio_local)) / Number(p.precio_local) * 100),
+          }))
+        setDatos({
+          total: filas.length,
+          pasados: filas.filter(f => f.pct > SALTO_AVISO_PCT).length,
+          dobles: filas.filter(f => f.pct >= 100).length,
+          // Un plato más barato a domicilio que en la mesa no lo explica nadie.
+          invertidos: filas.filter(f => f.pct < 0).length,
+          peor: filas.sort((a, b) => b.pct - a.pct)[0] || null,
+        })
+      })
+    return () => { vivo = false }
+  }, [establecimientoId])
+
+  if (!datos || datos.total === 0) return null
+  if (datos.pasados === 0 && datos.invertidos === 0) return null
+
+  return (
+    <div style={{
+      marginTop: 8, padding: '10px 12px', borderRadius: radius.sm,
+      background: colors.warningSoft, border: `1px solid ${colors.warning}`,
+    }}>
+      <div style={{ ...type.body, fontWeight: 600, color: colors.text }}>
+        {datos.pasados > 0
+          ? `${datos.pasados} de ${datos.total} platos suben más de un ${SALTO_AVISO_PCT} % a domicilio`
+          : `${datos.invertidos} plato${datos.invertidos === 1 ? '' : 's'} cuesta${datos.invertidos === 1 ? '' : 'n'} menos a domicilio que en el local`}
+      </div>
+      <div style={{ ...type.label, color: colors.onWarningSoft, marginTop: 3, lineHeight: 1.5 }}>
+        {datos.dobles > 0 && <>· <strong>{datos.dobles}</strong> cuesta{datos.dobles === 1 ? '' : 'n'} más del doble.<br /></>}
+        {datos.peor && datos.peor.pct > SALTO_AVISO_PCT && <>· El mayor salto es «{datos.peor.nombre}», un +{datos.peor.pct} %.<br /></>}
+        {datos.invertidos > 0 && datos.pasados > 0 && <>· Y {datos.invertidos} {datos.invertidos === 1 ? 'es más barato' : 'son más baratos'} a domicilio, que no lo explica nadie.<br /></>}
+        El cliente ve el precio del local en la mesa y este otro en la app. Con saltos así,
+        el QR le quita las ganas de pedir a casa en vez de dárselas.
+      </div>
+    </div>
   )
 }
