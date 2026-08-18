@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { colors, type, radius, ds } from '../lib/darkStyles'
 import { Chip, EstadoBadge, GhostBtn, GlossyBtn, MiniBtn, Vacio, fmtEUR } from '../lib/ui'
-import { X, Phone, RefreshCw, Ban, Copy, ExternalLink, Undo2, AlertTriangle, User } from 'lucide-react'
+import { X, Phone, RefreshCw, Ban, Copy, ExternalLink, Undo2, AlertTriangle, User, CheckCircle2 } from 'lucide-react'
 import { toast, confirmar } from '../App'
+import { marcarPedidoEntregado } from '../lib/cerrarPedido'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LA ficha de pedido. Una sola para Dispatch y para Pedidos: antes eran dos
@@ -141,6 +142,18 @@ export default function PedidoDrawer({ pedido: pedidoProp, onClose, onReasignar,
     { k: 'Cancelado', ts: pedido.cancelado_at },
     { k: 'Fallido', ts: pedido.fallido_at },
   ].filter(h => h.ts || ['Entró'].includes(h.k))
+
+  // El repartidor entregó y se le olvidó marcarlo: aquí se cierra a mano.
+  // Las reglas (socio_id antes, entregado_at en el update) viven en
+  // lib/cerrarPedido.js, que es el único sitio que escribe este cierre.
+  async function entregar() {
+    setTrabajando('entregado')
+    const ok = await marcarPedidoEntregado(supabase, pedido, { confirmar, toast })
+    setTrabajando(null)
+    if (!ok) return
+    onCambiado?.()
+    onClose?.()
+  }
 
   async function cancelar() {
     const ok = await confirmar(
@@ -430,6 +443,13 @@ export default function PedidoDrawer({ pedido: pedidoProp, onClose, onReasignar,
         {puedeReembolsar && (
           <GhostBtn size="sm" danger onClick={reembolsar} disabled={trabajando === 'reembolso'}>
             <Undo2 size={13} /> {trabajando === 'reembolso' ? 'Reembolsando…' : 'Reembolsar'}
+          </GhostBtn>
+        )}
+        {/* La acción que más se usa va la primera y sin `danger`: cerrar un
+            pedido que ya se entregó es lo normal, no una avería. */}
+        {!cerrado && (
+          <GhostBtn size="sm" onClick={entregar} disabled={trabajando === 'entregado'}>
+            <CheckCircle2 size={13} /> {trabajando === 'entregado' ? 'Cerrando…' : 'Marcar entregado'}
           </GhostBtn>
         )}
         {!cerrado && (

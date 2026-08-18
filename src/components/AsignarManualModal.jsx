@@ -189,13 +189,16 @@ export default function AsignarManualModal({ pedido, establecimiento, onClose, o
         setEnviando(false)
         return
       }
-      const forzar = !seleccionado.vinculado
+      // Sin `forzar`: la edge NUNCA lo ha leido y no existe tal bypass. Quien
+      // decide es el trigger guard_asignacion_socio_vinculado, que exige vinculo
+      // activo en socio_establecimiento. Mandarlo hacia creer que habia un modo
+      // de saltarse la regla, y lo que pasaba de verdad era que la asignacion se
+      // rechazaba en silencio y el panel decia "asignado" igual.
       const { data, error: fnErr } = await supabase.functions.invoke('asignar-pedido-manual', {
         body: {
           pedido_id: pedido.id,
           rider_account_id: seleccionado.id,
           motivo: motivo || null,
-          forzar,
         },
       })
       if (fnErr) {
@@ -269,15 +272,17 @@ export default function AsignarManualModal({ pedido, establecimiento, onClose, o
               onChange={(e) => { setMostrarTodos(e.target.checked); setSeleccionado(null) }}
               style={{ cursor: 'pointer' }}
             />
-            Mostrar tambien riders no vinculados a este restaurante
+            Ver tambien los repartidores de otros restaurantes
           </label>
           {mostrarTodos && (
-            <span style={{
-              ...ds.badge,
-              background: colors.warningSoft, color: colors.warning,
-              border: `1px solid ${colors.warningSoft}`,
-            }}>
-              Modo forzar
+            <span
+              title="Se pueden ver, pero no asignar: hay que vincularlos antes al restaurante desde su ficha"
+              style={{
+                ...ds.badge,
+                background: colors.warningSoft, color: colors.warning,
+                border: `1px solid ${colors.warningSoft}`,
+              }}>
+              Solo consulta
             </span>
           )}
         </div>
@@ -302,7 +307,7 @@ export default function AsignarManualModal({ pedido, establecimiento, onClose, o
             <span>
               {mostrarTodos
                 ? 'No hay riders activos en el sistema.'
-                : 'Este restaurante no tiene riders vinculados. Activa la opcion de "mostrar todos" para forzar.'}
+                : 'Este restaurante no tiene ningun repartidor vinculado, asi que no se le puede asignar el pedido a nadie. Vinculale uno desde la ficha del establecimiento.'}
             </span>
           </div>
         ) : (

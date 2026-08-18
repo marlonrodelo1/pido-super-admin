@@ -2,8 +2,10 @@ import { useState, useEffect, useMemo, useRef, Fragment } from 'react'
 import { useJsApiLoader } from '@react-google-maps/api'
 import { supabase } from '../lib/supabase'
 import { ds, colors, type, radius } from '../lib/darkStyles'
-import { Card, Chip, EstadoBadge, GhostBtn, GlossyBtn, MiniBtn, StatCard, Vacio, fmtEUR } from '../lib/ui'
-import { RefreshCw, MapPin, Phone, Navigation, AlertTriangle, Eye } from 'lucide-react'
+import { Card, Chip, EstadoBadge, GhostBtn, MiniBtn, StatCard, Vacio, fmtEUR } from '../lib/ui'
+import { RefreshCw, MapPin, Phone, Navigation, AlertTriangle, Eye, CheckCircle2 } from 'lucide-react'
+import { toast, confirmar } from '../App'
+import { marcarPedidoEntregado, sePuedeCerrar } from '../lib/cerrarPedido'
 import AsignarManualModal from '../components/AsignarManualModal'
 import MapaFlota from '../components/MapaFlota'
 import PedidoDrawer from '../components/PedidoDrawer'
@@ -68,6 +70,7 @@ export default function Dispatch() {
   const [modalAsignar, setModalAsignar] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [ultima, setUltima] = useState(null)
+  const [cerrando, setCerrando] = useState(null)       // id del pedido que se está cerrando
 
   // A partir de 1500px caben TRES columnas (cola · mapa · repartidores). Por
   // debajo, los repartidores vuelven a su banda de siempre debajo del mapa:
@@ -123,7 +126,21 @@ export default function Dispatch() {
         .is('resolved_at', null)
         .order('intento', { ascending: false }),
     ])
-    setPedidos(pedRes.data || [])
+    // Los restaurantes que reparten por su cuenta NO entran al Dispatch.
+    // Max's Pizza paga cuota fija, no se vincula a ningún socio y Pidoo no le
+    // busca repartidor nunca: sus pedidos aquí solo eran ruido, y encima eran
+    // los únicos en pantalla. Decisión de Marlon, 18 ago 2026.
+    //
+    // Se filtra AQUÍ y no en la consulta a propósito: `delivery_sin_socio` vive
+    // en la tabla embebida, y en PostgREST un .neq sobre un embed además se
+    // comería las filas con la columna a NULL — que son todos los demás.
+    //
+    // ⚠️ Con esto pierden el chip rojo "Sin aceptar" de esta pantalla. Les sigue
+    // cubriendo el aviso de Telegram (bloque `va_a_morir` de telegram-avisos,
+    // que NO excluye reparto propio) y la pantalla Pedidos, que pinta el mismo
+    // chip. Lo que NO cubre nadie es un pedido suyo atascado en un estado
+    // intermedio: eso hay que mirarlo en Pedidos.
+    setPedidos((pedRes.data || []).filter(p => p?.establecimientos?.delivery_sin_socio !== true))
     setSocios(socRes.data || [])
     setCuentas(cuentasRes.data || [])
     setEstablecimientos(estRes.data || [])
@@ -168,15 +185,10 @@ export default function Dispatch() {
     })
   }, [socios, cuentas, pedidos, pedido])
 
-  // Restaurantes que reparten por su cuenta (Max's Pizza hoy): sus pedidos de
-  // delivery NUNCA van a tener socio de Pidoo, así que salían aquí eternamente
-  // en rojo, arriba de la cola y con botón "Asignar" — el cliente que menos
-  // atención necesita era el que más gritaba.
-  //
-  // Se filtra la INTERPRETACIÓN, no la consulta: sus pedidos siguen viéndose en
-  // la cola, porque si uno se queda sin aceptar eso sí hay que verlo (es donde
-  // está el dinero perdido: 10 pedidos y 162,78 € en 45 días). Lo que se quita
-  // es tratarlos como una avería del reparto, que no lo son.
+  // Ya no debería quedar ninguno: se filtran al cargar (ver cargar()). Se deja
+  // como red por si algún pedido llega sin el embed del establecimiento — sin
+  // `delivery_sin_socio` a mano, un pedido de reparto propio se colaría como
+  // "Sin repartidor" y saldría en rojo arriba del todo.
   const repartoPropio = (p) => p?.establecimientos?.delivery_sin_socio === true
 
   const sinAsignar = pedidos.filter(p => p.modo_entrega === 'delivery' && !p.socio_id && !repartoPropio(p))
@@ -202,6 +214,15 @@ export default function Dispatch() {
         : 3
     return [...pedidos].sort((a, b) => urgencia(a) - urgencia(b) || new Date(a.created_at) - new Date(b.created_at))
   }, [pedidos])
+
+  // Las reglas del cierre (socio_id, entregado_at) están en lib/cerrarPedido.js,
+  // compartido con la ficha del pedido: esto escribe dinero y no se duplica.
+  async function entregar(p) {
+    setCerrando(p.id)
+    const ok = await marcarPedidoEntregado(supabase, p, { confirmar, toast })
+    setCerrando(null)
+    if (ok) cargar()
+  }
 
   function abrirAsignar(p) {
     const est = establecimientos.find(e => e.id === p.establecimiento_id)
@@ -325,6 +346,14 @@ export default function Dispatch() {
                         <RefreshCw size={12} /> {p.socio_id ? 'Reasignar' : 'Asignar'}
                       </MiniBtn>
                     )}
+                    {/* Cerrar sin bucear en la ficha: el caso que lo pide es un
+                        pedido que YA se entregó y al repartidor se le olvidó
+                        marcarlo, y ese se ve desde la cola. */}
+                    {sePuedeCerrar(p) && (
+                      <MiniBtn onClick={() => entregar(p)} disabled={cerrando === p.id} aria-label={`Marcar el pedido ${p.codigo} como entregado`}>
+                        <CheckCircle2 size={12} /> {cerrando === p.id ? 'Cerrando…' : 'Entregado'}
+                      </MiniBtn>
+                    )}
                   </div>
                 </div>
               )
@@ -390,12 +419,7 @@ export default function Dispatch() {
                     <span style={{ color: colors.stone, fontWeight: 700 }}>{g.socios.length}</span>
                   </div>
                   {g.socios.map(f => (
-                    <FichaSocio
-                      key={f.id}
-                      f={f}
-                      pedido={pedido}
-                      onAsignar={() => abrirAsignar(pedido)}
-                    />
+                    <FichaSocio key={f.id} f={f} pedido={pedido} />
                   ))}
                 </Fragment>
               ))}
@@ -431,11 +455,16 @@ export default function Dispatch() {
 // ─────────────────────────────────────────────────────────────────────────────
 // Ficha compacta del repartidor: dos líneas en vez de cuatro (de ~120px de alto
 // a ~62). La cuenta de reparto, el GPS y la carga viven en UNA línea de datos, y
-// "Llamar" es un icono al final de esa misma línea. El botón de asignar solo
-// aparece cuando hay un pedido elegido, que es cuando sirve.
+// "Llamar" es un icono al final de esa misma línea.
+//
+// SIN botón de asignar (quitado el 18 ago 2026). Había uno por repartidor y
+// era un engaño: los diez abrían el MISMO modal genérico, no asignaban a ese
+// repartidor. Salía además en los que están fuera de servicio, a los que no se
+// les puede dar nada. La asignación se hace desde el pedido, que es donde se
+// elige a quién, y de ahí sale la oferta que el repartidor tiene que aceptar.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-function FichaSocio({ f, pedido, onAsignar }) {
+function FichaSocio({ f, pedido }) {
   return (
     <Card pad={10} style={{ borderRadius: 12, borderColor: f.disponible ? colors.sage : colors.border }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -494,11 +523,6 @@ function FichaSocio({ f, pedido, onAsignar }) {
         )}
       </div>
 
-      {pedido && pedido.modo_entrega === 'delivery' && (
-        <GlossyBtn size="sm" accent full onClick={onAsignar} style={{ marginTop: 8, height: 30 }}>
-          Asignar {pedido.codigo}
-        </GlossyBtn>
-      )}
     </Card>
   )
 }
