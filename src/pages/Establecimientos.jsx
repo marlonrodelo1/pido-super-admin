@@ -1492,6 +1492,7 @@ const PUERTAS = [
 function ComisionCard({ establecimiento, onChanged }) {
   const e = establecimiento || {}
   const [tarifas, setTarifas] = useState({})   // { puerta: pct } solo las pactadas
+  const [suscripcion, setSuscripcion] = useState(null) // fila viva de suscripciones_tienda
   const [global, setGlobal] = useState('10')
   const [busy, setBusy] = useState(false)
   const [cargando, setCargando] = useState(true)
@@ -1501,14 +1502,20 @@ function ComisionCard({ establecimiento, onChanged }) {
   async function cargar() {
     if (!e.id) return
     setCargando(true)
-    const [{ data: filas }, { data: cfg }] = await Promise.all([
+    const [{ data: filas }, { data: cfg }, { data: sus }] = await Promise.all([
       supabase.from('establecimiento_comision').select('origen_pedido, pct').eq('establecimiento_id', e.id),
       supabase.from('configuracion_plataforma').select('valor').eq('clave', 'comision_pidoo_pct').maybeSingle(),
+      // Estado real del cobro. Lo escribe el webhook de Stripe, nunca el panel:
+      // aqui solo se lee para saber si el restaurante esta pagando de verdad.
+      supabase.from('suscripciones_tienda')
+        .select('estado, monto_mensual, fecha_proximo_pago, intentos_fallidos, stripe_subscription_id')
+        .eq('establecimiento_id', e.id).maybeSingle(),
     ])
     const m = {}
     for (const f of (filas || [])) m[f.origen_pedido] = String(Number(f.pct))
     setTarifas(m)
     if (cfg?.valor) setGlobal(String(Number(cfg.valor)))
+    setSuscripcion(sus?.stripe_subscription_id ? sus : null)
     setCargando(false)
   }
 
@@ -1562,6 +1569,31 @@ function ComisionCard({ establecimiento, onChanged }) {
     if (error) return toast('Error: ' + error.message, 'error')
     toast(cual === 'estandar' ? 'Trato estándar aplicado' : 'Aplicado: sin comisión en su tienda')
     cargar(); onChanged?.()
+  }
+
+  // ── Plan de cuota mensual ───────────────────────────────────────────────────
+  // Encenderlo NO cobra nada: hace aparecer la tarjeta "Mi plan" en el panel del
+  // restaurante para que el dueno meta su tarjeta. Quien da la suscripcion por
+  // buena es el webhook de Stripe cuando entra el pago.
+  async function togglePlanCuota() {
+    const nuevo = !e.plan_cuota_mensual
+    if (!nuevo && suscripcion?.estado === 'active') {
+      const ok = await confirmar(
+        ['Este restaurante tiene la suscripción ACTIVA en Stripe.',
+         '',
+         'Apagar el plan aquí NO cancela el cobro: le seguirán pasando la cuota cada mes.',
+         'Para dejar de cobrarle hay que cancelar la suscripción en Stripe.',
+         '',
+         '¿Apagar el plan igualmente?'].join('\n'))
+      if (!ok) return
+    }
+    setBusy(true)
+    const { error } = await supabase.from('establecimientos')
+      .update({ plan_cuota_mensual: nuevo }).eq('id', e.id)
+    setBusy(false)
+    if (error) return toast('Error: ' + error.message, 'error')
+    toast(nuevo ? 'Plan de cuota mensual activado: ya puede meter su tarjeta' : 'Plan de cuota mensual apagado')
+    onChanged?.()
   }
 
   async function toggleRepartoPropio() {
@@ -1639,6 +1671,29 @@ function ComisionCard({ establecimiento, onChanged }) {
             </div>
             <Toggle on={!!e.delivery_sin_socio} disabled={busy} tone="terracotta"
               onChange={toggleRepartoPropio} aria-label="Reparte por su cuenta" />
+          </div>
+
+          <div style={{
+            ...rowStyle, marginTop: 10,
+            borderColor: e.plan_cuota_mensual ? colors.sage : colors.border,
+            background: e.plan_cuota_mensual ? colors.sageSoft : colors.cream,
+          }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ ...type.body, fontWeight: 600, color: colors.text }}>Cuota mensual en vez de comisión</div>
+              <div style={{ ...type.label, color: colors.textMute, marginTop: 2 }}>
+                {e.plan_cuota_mensual
+                  ? (suscripcion?.estado === 'active'
+                      ? `Al día · ${fmtEUR(Number(suscripcion.monto_mensual || 30) * 1.07)}/mes${suscripcion.fecha_proximo_pago ? ' · próximo cobro el ' + new Date(suscripcion.fecha_proximo_pago).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : ''}`
+                      : suscripcion?.estado === 'unpaid'
+                        ? 'IMPAGADA: su tienda está pausada hasta que pague.'
+                        : suscripcion?.estado === 'past_due'
+                          ? `Cobro fallido (intento ${suscripcion.intentos_fallidos || 1} de 3). A la tercera se le pausa la tienda.`
+                          : 'Todavía no ha metido la tarjeta. Le sale el aviso en su panel.')
+                  : 'Paga comisión por pedido como todos. Enciéndelo para cobrarle una cuota fija.'}
+              </div>
+            </div>
+            <Toggle on={!!e.plan_cuota_mensual} disabled={busy} tone="terracotta"
+              onChange={togglePlanCuota} aria-label="Cuota mensual en vez de comisión" />
           </div>
 
           {pactadas > 0 && Object.values(tarifas).some(v => Number(v) === 0) && !e.delivery_sin_socio && (
