@@ -2,7 +2,13 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { uploadImage } from '../lib/upload'
 import { ds, colors, type, radius } from '../lib/darkStyles'
-import { Card, Chip, EstadoBadge, GhostBtn, GlossyBtn, MiniBtn, PillTabs, SectionLabel, Toggle, Vacio } from '../lib/ui'
+// ⚠️ `fmtEUR` se usa UNA sola vez, en la linea de la cuota mensual "Al dia · X/mes",
+// y esa rama solo se pinta cuando la suscripcion esta `active`. Faltaba en este
+// import desde que se escribio el bloque (18 ago) y nadie lo vio, porque hasta el
+// 20 de agosto ninguna suscripcion llego a estar activa: la primera que lo estuvo
+// tumbo la ficha entera con "fmtEUR is not defined". Un import que solo se ejerce
+// en un estado que todavia no existia.
+import { Card, Chip, EstadoBadge, GhostBtn, GlossyBtn, MiniBtn, PillTabs, SectionLabel, Toggle, Vacio, fmtEUR } from '../lib/ui'
 import { Plus, X, Upload, Save, Trash2, KeyRound, Search, ChevronLeft, ChevronRight, Pencil, Copy, Eye, EyeOff, Wand2, Check, Share2, ExternalLink } from 'lucide-react'
 import { toast, confirmar } from '../App'
 import CargaMasivaModal from '../components/CargaMasivaModal'
