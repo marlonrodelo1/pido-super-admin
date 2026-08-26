@@ -53,7 +53,12 @@ export default function Creadores() {
     const [parts, kpiPedidos, kpiCupones] = await Promise.all([
       supabase
         .from('participaciones_creador')
-        .select('id, estado, origen, red, video_id, share_url, usuario_red, views_actual, nivel_alcanzado, created_at, ultima_revision_at, caduca_at, motivo_rechazo, validado_at, validado_por, usuario_id, establecimiento_id, establecimientos(nombre), usuarios(nombre)')
+        // El nombre del cliente se pide POR SU CLAVE (`usuario_id`), no por la tabla:
+        // desde `creadores_premio_pendiente_y_autorizacion_dueno` (18 ago) esta tabla
+        // apunta a `usuarios` dos veces (`usuario_id` y `validado_por`) y un
+        // `usuarios(nombre)` a secas es ambiguo — PostgREST responde con error y la
+        // pantalla se queda entera en blanco.
+        .select('id, estado, origen, red, video_id, share_url, usuario_red, views_actual, nivel_alcanzado, created_at, ultima_revision_at, caduca_at, motivo_rechazo, validado_at, validado_por, usuario_id, establecimiento_id, establecimientos(nombre), usuarios!participaciones_creador_usuario_id_fkey(nombre)')
         .order('created_at', { ascending: false })
         .limit(300),
       // El KPI que justifica la feature entera: cuántos pedidos ha traído un vídeo.
