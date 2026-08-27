@@ -16,6 +16,7 @@ import ImportUrlModal from '../components/ImportUrlModal'
 import RidersCard from '../components/RidersCard'
 import HorarioEstadoCard from '../components/HorarioEstadoCard'
 import CreadoresCard from '../components/CreadoresCard'
+import TpvCard from '../components/TpvCard'
 // PlanTiendaCard eliminado: el plan SaaS 39€/mes está muerto. El alta/plan se gestiona en AltaPlanCard (abajo).
 import ResetPasswordModal from '../components/ResetPasswordModal'
 import EliminarEntidadModal from '../components/EliminarEntidadModal'
@@ -662,6 +663,9 @@ export default function Establecimientos() {
 
         {/* Pidoo Creadores — interruptor maestro (el dueño solo puede pausar) */}
         <CreadoresCard establecimiento={detalle} />
+
+        {/* TPV del mostrador — mismo patrón: lo enciende Pidoo, el dueño solo pausa */}
+        <TpvCard establecimiento={detalle} />
 
         {/* Categorías generales — chips asignadas + dropdown añadir */}
         <Card style={{ marginTop: 20 }}>
