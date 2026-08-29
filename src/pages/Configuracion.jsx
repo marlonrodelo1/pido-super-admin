@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { ds, colors, type, radius } from '../lib/darkStyles'
 import { Card, Chip, GlossyBtn, GhostBtn, SectionLabel, Toggle, Vacio, fmtEUR } from '../lib/ui'
-import { Trash2, Truck, DollarSign, MapPin, Zap, Tags, FileText, ChevronLeft, Plus, Check } from 'lucide-react'
+import { Trash2, Truck, DollarSign, MapPin, Zap, Tags, FileText, ChevronLeft, Plus, Check, Megaphone } from 'lucide-react'
 
 // Sanitizar HTML para prevenir XSS (mismo patron que PaginaLegal.jsx)
 function sanitizeHtml(html) {
@@ -317,6 +317,92 @@ export default function Configuracion() {
               <span style={{ fontWeight: 700 }}>Modelo Pidoo:</span>{' '}
               Pidoo cobra el <strong>10% del subtotal</strong> de cada pedido. El restaurante se queda el 80% del subtotal.
               El socio/rider cobra el envío + 10% del subtotal + el 100% de la propina. El alta son 150€ únicos en efectivo (fuera de plataforma). <strong>No hay cuota mensual.</strong>
+            </div>
+          </Seccion>
+
+          {/* ==================== BANNER DE SOCIOS ==================== */}
+          {/* Lo que se ve aqui sale en la app del cliente, bajo la cabecera de
+              inicio. Los limites de caracteres NO son un capricho: el banner mide
+              ~68 px y con un titular mas largo se va a tres lineas y se desmonta.
+              Los mismos limites estan en la BD (_config_reglas), asi que aunque
+              alguien los salte por aqui, guardar fallaria con un mensaje claro. */}
+          <Seccion
+            icono={<Megaphone size={18} color={colors.terracotta} />}
+            titulo="Banner para captar socios (app del cliente)"
+          >
+            <div style={{ marginBottom: 14 }}>
+              <ToggleRow
+                label="Mostrar el banner en la pantalla de inicio de la app"
+                value={config.banner_socios_activo === 'on'}
+                onChange={v => setConfigVal('banner_socios_activo', v ? 'on' : 'off')}
+              />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div>
+                <label style={ds.label}>Título (máx. 60 caracteres)</label>
+                <input
+                  style={ds.formInput}
+                  maxLength={60}
+                  value={config.banner_socios_titulo ?? ''}
+                  onChange={e => setConfigVal('banner_socios_titulo', e.target.value)}
+                />
+                <div style={hint}>{(config.banner_socios_titulo ?? '').length}/60</div>
+              </div>
+              <div>
+                <label style={ds.label}>Texto pequeño (máx. 80 caracteres)</label>
+                <input
+                  style={ds.formInput}
+                  maxLength={80}
+                  value={config.banner_socios_texto ?? ''}
+                  onChange={e => setConfigVal('banner_socios_texto', e.target.value)}
+                />
+                <div style={hint}>{(config.banner_socios_texto ?? '').length}/80</div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 14 }}>
+              <label style={ds.label}>A dónde lleva al pulsarlo</label>
+              <input
+                style={ds.formInput}
+                placeholder="https://socio.pidoo.es"
+                value={config.banner_socios_url ?? ''}
+                onChange={e => setConfigVal('banner_socios_url', e.target.value)}
+              />
+              <div style={hint}>Tiene que empezar por https://</div>
+            </div>
+
+            {/* Vista previa: lo que ve el cliente, con los mismos colores del
+                banner real. Evita tener que desplegar para saber si el texto
+                cabe. */}
+            <div style={{ marginTop: 18 }}>
+              <SectionLabel>Así lo verá el cliente</SectionLabel>
+              <div style={{
+                marginTop: 8, maxWidth: 360,
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '11px 12px', borderRadius: 14,
+                background: 'linear-gradient(135deg, #EDF1E8 0%, #DCE5D2 100%)',
+                border: '1px solid #8B9D7A',
+              }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 800, color: '#2E4025', lineHeight: 1.2 }}>
+                    {config.banner_socios_titulo || 'Monta tu marketplace con estos restaurantes'}
+                  </div>
+                  <div style={{ fontSize: 11.5, color: '#4A5D3A', marginTop: 2, lineHeight: 1.3 }}>
+                    {config.banner_socios_texto || 'Gana comisiones por venta y por reparto'}
+                  </div>
+                </div>
+                <div style={{
+                  width: 32, height: 32, flexShrink: 0, borderRadius: '50%',
+                  background: '#5C7048', display: 'grid', placeItems: 'center',
+                  color: '#fff', fontSize: 17, fontWeight: 700, lineHeight: 1,
+                }}>›</div>
+              </div>
+            </div>
+
+            <div style={hint}>
+              El banner solo aparece en la pantalla de inicio, y no dentro de la tienda de un socio.
+              No se puede cerrar: si quieres quitarlo, apágalo aquí y desaparece para todos.
             </div>
           </Seccion>
 
