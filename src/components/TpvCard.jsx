@@ -22,12 +22,14 @@ import { toast, confirmar } from '../App'
 // policy de INSERT para nadie más.
 
 const fmtEur = (n) => `${Number(n || 0).toFixed(2).replace('.', ',')} €`
+const fmtFecha = (iso) => new Date(iso).toLocaleDateString('es-ES',
+  { day: '2-digit', month: '2-digit', year: '2-digit' })
 
 export default function TpvCard({ establecimiento, onChanged }) {
   const estId = establecimiento?.id
 
   const [cfg, setCfg] = useState(null)
-  const [stats, setStats] = useState({ tickets: 0, ventas: 0, caja: null })
+  const [stats, setStats] = useState({ tickets: 0, ventas: 0, caja: null, ultimo: null })
   const [cargando, setCargando] = useState(true)
   const [busy, setBusy] = useState(false)
   const [serie, setSerie] = useState('A')
@@ -39,13 +41,19 @@ export default function TpvCard({ establecimiento, onChanged }) {
     const mes = new Date()
     mes.setDate(1); mes.setHours(0, 0, 0, 0)
 
-    const [c, t, caja] = await Promise.all([
+    const [c, t, caja, ult] = await Promise.all([
       supabase.from('tpv_config').select('*').eq('establecimiento_id', estId).maybeSingle(),
       supabase.from('tpv_tickets').select('total')
         .eq('establecimiento_id', estId).gte('emitido_at', mes.toISOString()),
       supabase.from('tpv_cajas')
         .select('id, abierta_at, fondo_inicial')
         .eq('establecimiento_id', estId).is('cerrada_at', null).maybeSingle(),
+      // El ultimo ticket de SIEMPRE, sin filtro de mes. Hace falta para distinguir
+      // "no lo ha estrenado nunca" de "lo usa, pero no este mes": los dos dan 0 en el
+      // contador de arriba y no son lo mismo ni de lejos.
+      supabase.from('tpv_tickets').select('emitido_at')
+        .eq('establecimiento_id', estId)
+        .order('emitido_at', { ascending: false }).limit(1).maybeSingle(),
     ])
 
     setCfg(c.data || null)
@@ -55,6 +63,7 @@ export default function TpvCard({ establecimiento, onChanged }) {
       tickets: filas.length,
       ventas: filas.reduce((s, x) => s + Number(x.total || 0), 0),
       caja: caja.data || null,
+      ultimo: ult.data?.emitido_at || null,
     })
     setCargando(false)
   }, [estId])
@@ -130,14 +139,27 @@ export default function TpvCard({ establecimiento, onChanged }) {
           <div style={{ ...type.body, fontWeight: 600, color: colors.text }}>
             {cfg ? 'Módulo dado de alta' : 'Módulo sin dar de alta'}
           </div>
+          {/* 🔴 Este texto decia "Cobrando en su mostrador" en cuanto el modulo estaba
+              encendido, y eso afirmaba un cobro que nadie habia comprobado: en la misma
+              tarjeta, tres centimetros mas abajo, podia poner 0 tickets y caja cerrada.
+              Marlon se topo con ello el 2 sep 2026 mirando Duende Burger.
+
+              Y no vale mirar solo `stats.tickets`, que cuenta DESDE EL DIA 1 DEL MES:
+              Duende Burger emitio sus 6 tickets el 31 de agosto, asi que en septiembre
+              da 0 sin haber dejado de usarlo. Por eso se mira ademas el ultimo ticket
+              de siempre, y salen tres estados distintos. */}
           <div style={{ ...type.label, color: colors.textMute, marginTop: 2 }}>
             {!cfg
               ? 'Al activarlo se crea su configuración con serie e IGIC.'
-              : activo
-                ? (pausado
+              : !activo
+                ? 'Dado de alta pero apagado: no puede cobrar.'
+                : pausado
                   ? 'Activo, pero el restaurante lo tiene en pausa ahora mismo.'
-                  : 'Cobrando en su mostrador. Sin comisión y fuera del corte.')
-                : 'Dado de alta pero apagado: no puede cobrar.'}
+                  : stats.tickets > 0
+                    ? 'Cobrando en su mostrador. Sin comisión y fuera del corte.'
+                    : stats.ultimo
+                      ? `Sin cobrar nada este mes. Su último ticket fue el ${fmtFecha(stats.ultimo)}.`
+                      : 'Todavía sin estrenar: no ha emitido ningún ticket. Necesita la app instalada en su tablet.'}
           </div>
         </div>
         <Toggle on={activo} disabled={busy} tone="terracotta" onChange={toggle} aria-label="Activar el TPV" />
