@@ -17,6 +17,7 @@ import RidersCard from '../components/RidersCard'
 import HorarioEstadoCard from '../components/HorarioEstadoCard'
 import CreadoresCard from '../components/CreadoresCard'
 import TpvCard from '../components/TpvCard'
+import AutomatismosCard from '../components/AutomatismosCard'
 import StockCard from '../components/StockCard'
 // PlanTiendaCard eliminado: el plan SaaS 39€/mes está muerto. El alta/plan se gestiona en AltaPlanCard (abajo).
 import ResetPasswordModal from '../components/ResetPasswordModal'
@@ -667,6 +668,10 @@ export default function Establecimientos() {
 
         {/* TPV del mostrador — mismo patrón: lo enciende Pidoo, el dueño solo pausa */}
         <TpvCard establecimiento={detalle} />
+
+        {/* Abre por horario (escape de Pidoo) + aceptar los pedidos solos */}
+        <AutomatismosCard establecimiento={detalle}
+          onChanged={async () => { const { data } = await supabase.from('establecimientos').select('*').eq('id', detalle.id).single(); if (data) setDetalle(data) }} />
 
         {/* Almacén y escandallos — se engancha al TPV. Mismo patrón de activación */}
         <StockCard establecimiento={detalle} />
