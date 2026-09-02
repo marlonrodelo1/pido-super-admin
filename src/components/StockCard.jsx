@@ -60,8 +60,8 @@ export default function StockCard({ establecimiento, onChanged }) {
     if (nuevo && !(await confirmar(
       `Vas a activar el Almacén de ${establecimiento?.nombre || 'este restaurante'}.\n\n` +
       `A partir de ese momento cada venta descuenta los artículos del escandallo, y los ` +
-      `productos que se queden sin existencias se agotan solos en pidoo.es y en la carta QR.\n\n` +
-      `El TPV NUNCA se bloquea: en barra se vende igual aunque el stock quede en negativo.\n\n` +
+      `platos que se queden sin género desaparecen de la carta en pidoo.es y en el QR hasta que vuelva a entrar.\n\n` +
+      `El TPV nunca se bloquea: en barra se vende igual aunque las existencias queden en negativo.\n\n` +
       `Tiene que hacer el recuento inicial antes de fiarse de los números.`
     ))) return
 
@@ -94,7 +94,8 @@ export default function StockCard({ establecimiento, onChanged }) {
         <h3 style={{ ...type.h3, color: colors.text, margin: 0 }}>Almacén y escandallos</h3>
       </div>
       <div style={{ ...type.label, color: colors.textMute, marginBottom: 14 }}>
-        Existencias, coste por plato y facturas de proveedor. Se gestiona desde el panel web.
+        Lo que le compra al proveedor, el coste de cada plato de su carta y las facturas.
+        Se gestiona desde el panel web.
       </div>
 
       <div style={{
@@ -113,7 +114,7 @@ export default function StockCard({ establecimiento, onChanged }) {
                   ? 'Activo, pero el restaurante lo tiene en pausa ahora mismo.'
                   : arrancado
                     ? 'Descontando existencias en cada venta.'
-                    : 'Encendido, pero todavía SIN recuento inicial: los números aún no valen.')
+                    : 'Encendido, pero todavía sin recuento inicial: los números aún no valen.')
                 : 'Dado de alta pero apagado: no descuenta nada.'}
           </div>
         </div>
@@ -123,7 +124,7 @@ export default function StockCard({ establecimiento, onChanged }) {
       {activo && (
         <>
           <div className="ds-cards" style={{ marginTop: 12 }}>
-            <Mini label="Artículos" value={stats.articulos} />
+            <Mini label="Artículos de compra" value={stats.articulos} />
             <Mini label="Valor del inventario" value={fmtEur(stats.valor)} />
             <Mini label="Movimientos este mes" value={stats.movsMes} />
             {stats.enNegativo > 0 && (
