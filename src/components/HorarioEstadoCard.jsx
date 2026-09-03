@@ -82,12 +82,18 @@ export default function HorarioEstadoCard({ establecimiento, onChanged }) {
 
   async function guardar() {
     setSaving(true)
+    // 🔴 SOLO el horario. Antes iba `{ horario, estado }` y guardar el horario
+    // arrastraba el estado que tuviera este componente en memoria: el 2 sep
+    // Marlon cambió el horario de un miércoles y el restaurante se fue a
+    // 'pausado' sin querer — y con `estado <> 'activo'`, el TPV no puede cobrar
+    // (PD101) y el motor del horario deja de gobernarlo. El estado tiene sus
+    // propios botones ahí arriba, con su confirmación: ese es su único camino.
     const { error } = await supabase.from('establecimientos')
-      .update({ horario, estado })
+      .update({ horario })
       .eq('id', establecimiento.id)
     setSaving(false)
     if (error) return toast('Error: ' + error.message, 'error')
-    toast('Horario y estado guardados')
+    toast('Horario guardado')
     setDirty(false)
     onChanged?.()
   }
