@@ -16,6 +16,25 @@ import { toast } from '../App'
 const PESO_CARGA = 1500 // mismo peso que el algoritmo automatico
 const GPS_FRESCO_MIN = 12 // igual que el auto-offline de socios (cron 28)
 
+// Saca el mensaje de verdad de un error de `functions.invoke`.
+// supabase-js, ante un status non-2xx, lanza FunctionsHttpError: `data` viene NULL y el
+// cuerpo de la respuesta se queda sin leer dentro de `err.context`. Si no se abre ese
+// Response, todo fallo del servidor —PD220, socio sin vinculo, pedido ya entregado— se
+// aplana en el mismo "Edge Function returned a non-2xx status code" y no hay forma de
+// saber que ha pasado. Las edges de Pidoo devuelven {error, codigo}: se pinta el error y
+// se le pega el codigo detras para poder buscarlo.
+async function leerErrorEdge(err) {
+  try {
+    const body = await err?.context?.json?.()
+    if (!body) return null
+    const msg = body.error || body.message
+    if (!msg) return null
+    return body.codigo ? `${msg} (${body.codigo})` : msg
+  } catch {
+    return null
+  }
+}
+
 function distanceMeters(lat1, lng1, lat2, lng2) {
   const R = 6371000
   const toRad = (d) => (d * Math.PI) / 180
@@ -202,7 +221,12 @@ export default function AsignarManualModal({ pedido, establecimiento, onClose, o
         },
       })
       if (fnErr) {
-        const msg = data?.error || fnErr.message || 'Error desconocido'
+        // `data` es NULL cuando la edge responde non-2xx: supabase-js devuelve el cuerpo
+        // dentro de fnErr.context (un Response sin leer), no en data. Con el
+        // `data?.error || fnErr.message` de antes se perdia SIEMPRE el motivo real y el
+        // admin leia el generico "Edge Function returned a non-2xx status code" —
+        // justo cuando entra a rescatar un pedido a mano y necesita saber por que no puede.
+        const msg = (await leerErrorEdge(fnErr)) || fnErr.message || 'Error desconocido'
         setError(msg)
         toast('Error: ' + msg, 'error')
       } else if (data?.success) {
