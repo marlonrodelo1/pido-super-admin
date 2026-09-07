@@ -6,6 +6,7 @@ import {
 import { supabase } from '../lib/supabase'
 import { ds, colors } from '../lib/darkStyles'
 import { toast } from '../App'
+import ConsumoIACard from '../components/ConsumoIACard'
 
 // Limite del free tier de Supabase
 const DB_LIMIT_BYTES = 500 * 1024 * 1024 // 500 MB
@@ -196,6 +197,9 @@ export default function SaludSistema() {
               </div>
             </SectionCard>
           </div>
+
+          {/* Camareros de voz: lo que gasta ElevenLabs este mes */}
+          <ConsumoIACard />
 
           {/* Crons */}
           <SectionCard icon={<Clock3 size={16} />} title="Crons (pg_cron)" sub={`${(data?.crons || []).length} jobs programados`}>
