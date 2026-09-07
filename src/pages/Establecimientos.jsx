@@ -17,6 +17,7 @@ import RidersCard from '../components/RidersCard'
 import HorarioEstadoCard from '../components/HorarioEstadoCard'
 import CreadoresCard from '../components/CreadoresCard'
 import TpvCard from '../components/TpvCard'
+import IaTelefonoCard from '../components/IaTelefonoCard'
 import AutomatismosCard from '../components/AutomatismosCard'
 import StockCard from '../components/StockCard'
 // PlanTiendaCard eliminado: el plan SaaS 39€/mes está muerto. El alta/plan se gestiona en AltaPlanCard (abajo).
@@ -668,6 +669,9 @@ export default function Establecimientos() {
 
         {/* TPV del mostrador — mismo patrón: lo enciende Pidoo, el dueño solo pausa */}
         <TpvCard establecimiento={detalle} />
+
+        {/* La IA que coge el teléfono — mismo patrón. Sin número no se enciende */}
+        <IaTelefonoCard establecimiento={detalle} />
 
         {/* Abre por horario (escape de Pidoo) + aceptar los pedidos solos */}
         <AutomatismosCard establecimiento={detalle}
