@@ -13,6 +13,9 @@ import {
 import { toast, confirmar } from '../App'
 import ResetPasswordModal from '../components/ResetPasswordModal'
 import EliminarEntidadModal from '../components/EliminarEntidadModal'
+import {
+  CobroTarjetaGeneral, CobroTarjetaSocio, ChipCobroTarjeta, cargarCobroTarjeta, COBRO_VACIO,
+} from '../components/CobroTarjeta'
 
 // ──────────────────────────────────────────────────────────────────────────────
 // NOTA SOBRE EL MODELO DE DATOS
@@ -153,6 +156,9 @@ export default function Socios() {
   const [riderAccounts, setRiderAccounts] = useState([])
   const [vinculaciones, setVinculaciones] = useState([])
   const [balances, setBalances] = useState({})
+  // Cobro con tarjeta en la puerta (Tap to Pay): modo general + socios elegidos.
+  // Se lee por RPC (admin_cobro_movil_estado); `configuracion_plataforma` no va por realtime.
+  const [cobro, setCobro] = useState(COBRO_VACIO)
   const [loading, setLoading] = useState(true)
 
   // Filtros listado
@@ -194,8 +200,15 @@ export default function Socios() {
 
   async function load() {
     setLoading(true)
-    await Promise.all([loadSocios(), loadRiders(), loadVinc(), loadBalances()])
+    await Promise.all([loadSocios(), loadRiders(), loadVinc(), loadBalances(), loadCobro()])
     setLoading(false)
+  }
+
+  // Devuelve el estado leído para que quien acaba de guardar compruebe que ha quedado bien.
+  async function loadCobro() {
+    const c = await cargarCobroTarjeta()
+    setCobro(c)
+    return c
   }
 
   async function loadSocios() {
@@ -358,6 +371,8 @@ export default function Socios() {
           onDelete={() => setEliminarSocio(sActual)}
           onToggleActivo={() => toggleActivo(sActual)}
           onToggleMarketplace={() => toggleMarketplace(sActual)}
+          cobro={cobro}
+          onCobroRecargar={loadCobro}
         />
         {eliminarSocio && (
           <EliminarEntidadModal
@@ -392,6 +407,15 @@ export default function Socios() {
           <Plus size={15} /> Nuevo socio
         </GlossyBtn>
       </div>
+
+      {/* Cobro con tarjeta en la puerta: interruptor general. Cada socio se elige en su ficha. */}
+      <CobroTarjetaGeneral
+        cfg={cobro}
+        socios={socios}
+        cargando={loading && socios.length === 0}
+        onRecargar={loadCobro}
+        style={{ marginBottom: 20 }}
+      />
 
       {/* KPIs */}
       <div className="ds-cards" style={{ marginBottom: 20 }}>
@@ -491,6 +515,7 @@ export default function Socios() {
                     </span>
                     {!s.activo && <Chip tono="neutral">Inactivo</Chip>}
                     {hasMarketplace && <Chip tono="sage" dot title="Marketplace público abierto">Tienda</Chip>}
+                    <ChipCobroTarjeta cfg={cobro} socio={s} />
                   </span>
                   <span style={{ display: 'block', ...type.caption, letterSpacing: 0, color: colors.stone, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {s.email || s.telefono || '—'}
@@ -559,6 +584,7 @@ export default function Socios() {
 function SocioDetalle({
   socio, riders, vinculaciones, balance, tab, setTab,
   onBack, onReload, onResetPwd, onEdit, onDelete, onToggleActivo, onToggleMarketplace,
+  cobro, onCobroRecargar,
 }) {
   const ridersActivos = riders.filter(r => r.estado === 'activa')
   const linea = LINEA[estadoLineaSocio(socio)]
@@ -585,6 +611,7 @@ function SocioDetalle({
               {!socio.activo && <Chip tono="danger">Inactivo</Chip>}
               {hasMarketplace && <Chip tono="sage">Marketplace</Chip>}
               <Chip tono={linea.tono} dot title={linea.ayuda}>{linea.label}</Chip>
+              <ChipCobroTarjeta cfg={cobro} socio={socio} largo onClick={() => setTab('config')} />
             </div>
             <div style={{ ...type.body, color: colors.stone, marginBottom: 8 }}>
               {socio.nombre && socio.nombre !== socio.nombre_comercial ? socio.nombre : ''}
@@ -651,7 +678,7 @@ function SocioDetalle({
       {tab === 'restaurantes' && <TabRestaurantes socio={socio} vinculaciones={vinculaciones} onReload={onReload} />}
       {tab === 'pedidos' && <TabPedidos socio={socio} riders={riders} />}
       {tab === 'finanzas' && <TabFinanzas socio={socio} />}
-      {tab === 'config' && <TabConfig socio={socio} riders={riders} />}
+      {tab === 'config' && <TabConfig socio={socio} riders={riders} cobro={cobro} onCobroRecargar={onCobroRecargar} />}
     </div>
   )
 }
@@ -1119,7 +1146,7 @@ function TabFinanzas({ socio }) {
 // ──────────────────────────────────────────────────────────────────────────────
 // Tab: Configuración avanzada
 // ──────────────────────────────────────────────────────────────────────────────
-function TabConfig({ socio, riders }) {
+function TabConfig({ socio, riders, cobro, onCobroRecargar }) {
   const [showKey, setShowKey] = useState(false)
 
   function copy(value) {
@@ -1130,6 +1157,14 @@ function TabConfig({ socio, riders }) {
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }} className="admin-grid-2col-collapse">
+      {/* A todo el ancho y lo primero: es lo único de esta pestaña que se cambia desde aquí. */}
+      <CobroTarjetaSocio
+        socio={socio}
+        cfg={cobro}
+        onRecargar={onCobroRecargar}
+        style={{ gridColumn: '1 / -1' }}
+      />
+
       <Card pad={18}>
         <h3 style={ds.h2}>Datos de reparto del socio</h3>
         <DetailRow label="API key">
