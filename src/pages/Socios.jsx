@@ -28,10 +28,67 @@ import EliminarEntidadModal from '../components/EliminarEntidadModal'
 // listamos como "rider en su red".
 //
 // Fuente principal de pedidos del socio: `pedidos.socio_id`.
-// Ganancias del socio: cálculo en vivo desde pedidos entregados (envío + 10% subtotal + propina).
+// Ganancias del socio: lo CONGELADO al entregar (`socio_liq_total`) y, si falta, el
+// pacto con el restaurante (ver gananciaSocio). Antes era envío + 10 % fijo, que
+// fallaba con tarifa fija y le sumaba una comisión que no cobraba en telefónicos.
 // ──────────────────────────────────────────────────────────────────────────────
 
 const ESTADOS_VINC = ['pendiente', 'activa', 'rechazada']
+
+// Lo que gana el socio con un pedido entregado. Misma regla que `calc_ganancia_socio`
+// en la BD (y que las RPC get_*): envío (o la tarifa fija pactada) + comisión pactada
+// sobre la comida + propina; con tarifa fija en un reparto no hay comisión. Con el
+// corte del teléfono puesto (`comision_telefonico_pct_desde`) el telefónico cobra
+// igual que la app; SIN corte (antes del cambio o tras la vuelta atrás) la BD le da
+// solo envío + propina, y aquí igual.
+function gananciaSocio(p, pacto = {}, corteTel = null) {
+  if (p?.socio_liq_total != null) {
+    return {
+      envio: Number(p.socio_liq_envio) || 0,
+      comision: Number(p.socio_liq_comision) || 0,
+      propina: Number(p.socio_liq_propina) || 0,
+      total: Number(p.socio_liq_total) || 0,
+    }
+  }
+  const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100
+  const delivery = p?.modo_entrega === 'delivery'
+  const fija = pacto.tarifa_modo === 'fija'
+  const pct = pacto.comision_pct != null ? Number(pacto.comision_pct) : 10
+  const envio = delivery ? r2(fija ? pacto.tarifa_fija : p?.coste_envio) : 0
+  const telSinComision = p?.origen_pedido === 'telefonico' && !corteTel
+  const comision = (telSinComision || (delivery && fija)) ? 0 : r2((Number(p?.subtotal) || 0) * pct / 100)
+  const propina = delivery ? r2(p?.propina) : 0
+  return { envio, comision, propina, total: r2(envio + comision + propina) }
+}
+
+// Corte del teléfono (UTC). Mismo formato que exige la BD (`_comision_telefonico_corte()`):
+// lo que la BD no acepta, aquí tampoco. Sin clave o ilegible → null (= como siempre).
+const RE_CORTE_UTC = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|\+00(:?00)?)$/
+async function cargarCorteTel() {
+  const { data } = await supabase.from('configuracion_plataforma')
+    .select('valor').eq('clave', 'comision_telefonico_pct_desde').maybeSingle()
+  const t = String(data?.valor ?? '').trim()
+  if (!t || !RE_CORTE_UTC.test(t)) return null
+  const iso = t.replace(' ', 'T').replace(/\+00(:?00)?$/, 'Z')
+  const d = new Date(iso)
+  // Fecha imposible (30 feb): la BD la toma como "sin clave"; aquí igual.
+  if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== iso.slice(0, 10)) return null
+  return d
+}
+
+// Pacto de cada socio con cada restaurante ("socio|establecimiento"). Si hay varias
+// filas, manda la activa, igual que congelar_ganancia_socio.
+async function cargarPactos(socioId = null) {
+  let q = supabase.from('socio_establecimiento')
+    .select('socio_id, establecimiento_id, estado, tarifa_modo, tarifa_fija, comision_pct')
+  if (socioId) q = q.eq('socio_id', socioId)
+  const { data } = await q
+  const map = {}
+  ;[...(data || [])]
+    .sort((a, b) => (a.estado === 'activa' ? 1 : 0) - (b.estado === 'activa' ? 1 : 0))
+    .forEach(v => { map[`${v.socio_id}|${v.establecimiento_id}`] = v })
+  return map
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // QUIÉN ESTÁ EN LÍNEA
@@ -160,18 +217,23 @@ export default function Socios() {
   }
 
   async function loadBalances() {
-    // La deuda al socio NO está materializada en ninguna tabla; se calcula en vivo
-    // desde los pedidos entregados de cada socio (envío + 10% subtotal + propina).
+    // La deuda al socio NO está materializada en ninguna tabla: se suma desde los
+    // pedidos entregados de cada socio, con lo congelado al entregar (socio_liq_total)
+    // o, si falta, con el pacto de ese restaurante (gananciaSocio).
     const lunes = new Date()
     lunes.setHours(0, 0, 0, 0)
     lunes.setDate(lunes.getDate() - ((lunes.getDay() + 6) % 7)) // lunes de esta semana
-    const { data } = await supabase.from('pedidos')
-      .select('socio_id, coste_envio, subtotal, propina, created_at')
-      .eq('estado', 'entregado')
-      .not('socio_id', 'is', null)
+    const [{ data }, pactos, corteTel] = await Promise.all([
+      supabase.from('pedidos')
+        .select('socio_id, establecimiento_id, modo_entrega, origen_pedido, coste_envio, subtotal, propina, created_at, socio_liq_envio, socio_liq_comision, socio_liq_propina, socio_liq_total')
+        .eq('estado', 'entregado')
+        .not('socio_id', 'is', null),
+      cargarPactos(),
+      cargarCorteTel().catch(() => null),
+    ])
     const map = {}
     ;(data || []).forEach(p => {
-      const ganado = (Number(p.coste_envio) || 0) + (Number(p.subtotal) || 0) * 0.10 + (Number(p.propina) || 0)
+      const ganado = gananciaSocio(p, pactos[`${p.socio_id}|${p.establecimiento_id}`], corteTel).total
       const e = map[p.socio_id] || { ganado_total: 0, ganado_semana: 0, pedidos_count: 0 }
       e.ganado_total += ganado
       e.pedidos_count += 1
@@ -967,22 +1029,34 @@ function TabPedidos({ socio, riders }) {
 // ──────────────────────────────────────────────────────────────────────────────
 function TabFinanzas({ socio }) {
   const [pedidos, setPedidos] = useState([])
+  const [pactos, setPactos] = useState({})
+  const [corteTel, setCorteTel] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     ;(async () => {
       setLoading(true)
-      const { data } = await supabase.from('pedidos')
-        .select('id, codigo, coste_envio, subtotal, propina, total, created_at')
-        .eq('socio_id', socio.id)
-        .eq('estado', 'entregado')
-        .order('created_at', { ascending: false })
+      const [{ data }, pac, corte] = await Promise.all([
+        supabase.from('pedidos')
+          .select('id, codigo, establecimiento_id, modo_entrega, origen_pedido, coste_envio, subtotal, propina, total, created_at, socio_liq_envio, socio_liq_comision, socio_liq_propina, socio_liq_total')
+          .eq('socio_id', socio.id)
+          .eq('estado', 'entregado')
+          .order('created_at', { ascending: false }),
+        cargarPactos(socio.id),
+        cargarCorteTel().catch(() => null),
+      ])
       setPedidos(data || [])
+      setPactos(pac)
+      setCorteTel(corte)
       setLoading(false)
     })()
   }, [socio.id])
 
-  const ganadoDe = (p) => (Number(p.coste_envio) || 0) + (Number(p.subtotal) || 0) * 0.10 + (Number(p.propina) || 0)
+  // Lo congelado al entregar o, si falta, el pacto de ese restaurante.
+  const gananciaDe = (p) => gananciaSocio(p, pactos[`${socio.id}|${p.establecimiento_id}`], corteTel)
+  // Lado del socio: basta con que exista la clave (calc_ganancia_socio no mira fechas).
+  const telSocioComoApp = !!corteTel
+  const ganadoDe = (p) => gananciaDe(p).total
 
   const stats = useMemo(() => {
     const ahora = new Date()
@@ -997,7 +1071,7 @@ function TabFinanzas({ socio }) {
       if (new Date(p.created_at) >= lunes) semana += g
     })
     return { semana, mes, total }
-  }, [pedidos])
+  }, [pedidos, pactos, socio.id, corteTel])
 
   return (
     <div>
@@ -1007,7 +1081,7 @@ function TabFinanzas({ socio }) {
         <StatCard label="Total entregado" value={fmtEUR(stats.total)} sub={`${pedidos.length} pedidos entregados`} tone="sage" />
       </div>
       <div style={{ ...type.label, color: colors.stone, marginBottom: 16, lineHeight: 1.5 }}>
-        Cálculo en vivo: por cada pedido entregado el socio cobra envío + 10% del subtotal + propina. La liquidación se paga los lunes.
+        Por cada pedido entregado el socio cobra lo pactado con ese restaurante: envío (o tarifa fija) + su comisión sobre la comida + propina{telSocioComoApp ? ', también en los telefónicos' : ' (en los telefónicos, solo envío y propina)'}. Se usa lo que quedó fijado al entregarlo. La liquidación se paga los lunes.
       </div>
 
       <div className="ds-table-stack" style={ds.table}>
@@ -1030,7 +1104,7 @@ function TabFinanzas({ socio }) {
             {/* Envío, subtotal y propina en una sola celda: cada uno con su
                 etiqueta, que en móvil la cabecera de la tabla ya no está */}
             <span data-col="ale" style={{ flex: '2 1 220px', minWidth: 0, ...type.label, color: colors.stone, fontVariantNumeric: 'tabular-nums' }}>
-              Envío {fmtEUR(p.coste_envio)} · Subtotal {fmtEUR(p.subtotal)} · Propina {fmtEUR(p.propina)}
+              Envío {fmtEUR(gananciaDe(p).envio)} · Comisión {fmtEUR(gananciaDe(p).comision)} de {fmtEUR(p.subtotal)} · Propina {fmtEUR(gananciaDe(p).propina)}
             </span>
             <span data-col="tot" style={{ width: 110, flexShrink: 0, textAlign: 'right', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: colors.text }}>
               {fmtEUR(ganadoDe(p))}

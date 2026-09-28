@@ -4,6 +4,23 @@ import { ds, colors, type, radius } from '../lib/darkStyles'
 import { Card, Chip, GhostBtn, fmtEUR } from '../lib/ui'
 import { RefreshCw, AlertTriangle } from 'lucide-react'
 
+// Corte del teléfono (`configuracion_plataforma.comision_telefonico_pct_desde`, UTC):
+// desde ese instante el telefónico paga el % como la app. Mismo formato que exige la
+// BD (`_comision_telefonico_corte()`); lo que la BD no acepta, aquí tampoco.
+const RE_CORTE_UTC = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|\+00(:?00)?)$/
+function parseCorteTel(v) {
+  const t = String(v ?? '').trim()
+  if (!t || !RE_CORTE_UTC.test(t)) return null
+  const iso = t.replace(' ', 'T').replace(/\+00(:?00)?$/, 'Z')
+  const d = new Date(iso)
+  // Fecha imposible (30 feb): la BD la toma como "sin clave"; aquí igual.
+  if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== iso.slice(0, 10)) return null
+  return d
+}
+const fmtCorteTel = (d) => (d ? d.toLocaleString('es-ES', {
+  timeZone: 'Atlantic/Canary', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+}) : '')
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ASÍ FUNCIONA PIDOO POR DENTRO
 //
@@ -97,6 +114,7 @@ export default function Algoritmo() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
   const [leidoEn, setLeidoEn] = useState(null)
+  const [corteTel, setCorteTel] = useState(null)
 
   useEffect(() => { cargar() }, [])
 
@@ -105,6 +123,14 @@ export default function Algoritmo() {
     const { data, error: e } = await supabase.rpc('algoritmo_datos')
     if (e) setError(e.message)
     else setDatos(data)
+
+    // El corte del teléfono no está en algoritmo_datos(): se lee aparte. Sin él, los
+    // textos cuentan lo de siempre (tarifa fija), que es lo que hace la BD sin corte.
+    try {
+      const { data: c } = await supabase.from('configuracion_plataforma')
+        .select('valor').eq('clave', 'comision_telefonico_pct_desde').maybeSingle()
+      setCorteTel(parseCorteTel(c?.valor))
+    } catch (_) { setCorteTel(null) }
 
     // Los relojes del reparto no están en la base de datos: se piden a la edge que los lee del
     // mismo sitio que el dispatcher. Si falla, la pantalla enseña huecos, no inventa.
@@ -130,6 +156,7 @@ export default function Algoritmo() {
 
   const pct = num(cfg.comision_pidoo_pct)
   const eurTel = num(cfg.comision_pedido_telefonico_eur)
+  const telComoApp = !!corteTel && Date.now() >= corteTel.getTime()
   const reping = num(cfg.reping_asignacion_seg)
   const puertas = datos?.puertas || {}
   const ej = datos?.ejemplo
@@ -198,10 +225,22 @@ export default function Algoritmo() {
               <li><b>La tienda de un socio.</b> El socio tiene su propia página con sus restaurantes. <Dato v={puertas.tienda_publica?.n} /> pedidos entregados.</li>
               <li><b>Por teléfono.</b> Llaman al restaurante y el pedido se mete a mano. <Dato v={puertas.telefonico?.n} /> pedidos entregados.</li>
             </ul>
-            <p style={{ marginTop: 10 }}>
-              Las dos primeras cobran igual. La tercera es la única distinta: en el teléfono no te
-              llevas el <Dato v={pct} sufijo="%" />, te llevas <Dato v={eurTel} sufijo="€" dec={2} /> fijo.
-            </p>
+            {telComoApp ? (
+              <p style={{ marginTop: 10 }}>
+                Las tres cobran igual: te llevas el <Dato v={pct} sufijo="%" /> de la comida (el de la
+                app de ese restaurante) y el socio cobra lo pactado. Hasta el {fmtCorteTel(corteTel)} el
+                teléfono pagaba <Dato v={eurTel} sufijo="€" dec={2} /> fijo por pedido: esa tarifa fija
+                solo sigue para los telefónicos hechos antes.
+              </p>
+            ) : (
+              <p style={{ marginTop: 10 }}>
+                Las dos primeras cobran igual. La tercera es la única distinta: en el teléfono no te
+                llevas el <Dato v={pct} sufijo="%" />, te llevas <Dato v={eurTel} sufijo="€" dec={2} /> fijo
+                {corteTel
+                  ? <>. Desde el {fmtCorteTel(corteTel)} las tres cobrarán igual (el socio ya cobra lo pactado también en el teléfono).</>
+                  : <> (y el socio, solo envío y propina).</>}
+              </p>
+            )}
           </Texto>
 
           <Lienzo alto={250} etiqueta="Las tres puertas de entrada convergen en un único pedido">
@@ -228,7 +267,7 @@ export default function Algoritmo() {
             <Caja x={430} y={80} w={250} h={90} borde={colors.terracotta} grosor={2.5} />
             <Txt x={555} y={118} size={19} peso={800} anchor="middle">UN PEDIDO</Txt>
             <Txt x={555} y={140} size={12.5} color={colors.stone} anchor="middle">mismo camino para todos</Txt>
-            <Txt x={352} y={214} size={11.5} peso={700} color={colors.onTerracottaSoft} anchor="middle">este cobra distinto</Txt>
+            <Txt x={352} y={214} size={11.5} peso={700} color={colors.onTerracottaSoft} anchor="middle">{telComoApp ? 'entra a mano, cobra igual' : 'este cobra distinto'}</Txt>
           </Lienzo>
         </Bloque>
 
@@ -613,7 +652,7 @@ export default function Algoritmo() {
             </div>
             {[
               ['Lo que te llevas de cada pedido', pct == null ? null : `${nf(pct)} %`, true],
-              ['Lo que te llevas de un pedido de teléfono', eurTel == null ? null : fmtEUR(eurTel), true],
+              [corteTel ? `Tarifa fija del teléfono (solo telefónicos de antes del ${fmtCorteTel(corteTel)})` : 'Lo que te llevas de un pedido de teléfono', eurTel == null ? null : fmtEUR(eurTel), true],
               ['Precio del envío base', cfg.envio_tarifa_base == null ? null : `${fmtEUR(cfg.envio_tarifa_base)} hasta ${nf(cfg.envio_radio_base_km)} km`, true],
               ['Cada km de más', cfg.envio_precio_km_adicional == null ? null : fmtEUR(cfg.envio_precio_km_adicional), true],
               ['Rodeo que se le suma a la línea recta', cfg.routing_factor_rodeo == null ? null : `× ${nf(cfg.routing_factor_rodeo, 2)}`, true],
