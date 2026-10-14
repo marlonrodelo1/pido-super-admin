@@ -20,6 +20,7 @@ import TpvCard from '../components/TpvCard'
 import IaTelefonoCard from '../components/IaTelefonoCard'
 import AutomatismosCard from '../components/AutomatismosCard'
 import StockCard from '../components/StockCard'
+import KioskoCard from '../components/KioskoCard'
 // PlanTiendaCard eliminado: el plan SaaS 39€/mes está muerto. El alta/plan se gestiona en AltaPlanCard (abajo).
 import ResetPasswordModal from '../components/ResetPasswordModal'
 import EliminarEntidadModal from '../components/EliminarEntidadModal'
@@ -679,6 +680,9 @@ export default function Establecimientos() {
 
         {/* Almacén y escandallos — se engancha al TPV. Mismo patrón de activación */}
         <StockCard establecimiento={detalle} />
+
+        {/* Kiosko de autopedido del local — mismo patrón: lo enciende Pidoo */}
+        <KioskoCard establecimiento={detalle} />
 
         {/* Categorías generales — chips asignadas + dropdown añadir */}
         <Card style={{ marginTop: 20 }}>
