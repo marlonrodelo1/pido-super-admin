@@ -33,6 +33,11 @@ const fmtFecha = (d) => d ? new Date(d).toLocaleDateString('es-ES', { day: '2-di
 // cliente ve la barra congelada y se le pasan las ganas mucho antes de que el
 // volumen sea un problema.
 function horasSinRevisar(p) {
+  // Una historia pendiente la revisa el RESTAURANTE (es quien recibe la mención);
+  // aquí cuenta desde que la apuntó el cliente, porque a las 24 h ya no existe.
+  if (p.formato === 'historia' && p.estado === 'pendiente_validacion') {
+    return Math.floor((Date.now() - new Date(p.created_at).getTime()) / 3600000)
+  }
   if (p.estado !== 'activa' && p.estado !== 'en_espera_tope') return null
   const ref = p.ultima_revision_at || p.created_at
   return Math.floor((Date.now() - new Date(ref).getTime()) / 3600000)
@@ -58,7 +63,7 @@ export default function Creadores() {
         // apunta a `usuarios` dos veces (`usuario_id` y `validado_por`) y un
         // `usuarios(nombre)` a secas es ambiguo — PostgREST responde con error y la
         // pantalla se queda entera en blanco.
-        .select('id, estado, origen, red, video_id, share_url, usuario_red, views_actual, nivel_alcanzado, created_at, ultima_revision_at, caduca_at, motivo_rechazo, validado_at, validado_por, usuario_id, establecimiento_id, establecimientos(nombre), usuarios!participaciones_creador_usuario_id_fkey(nombre)')
+        .select('id, estado, origen, formato, red, video_id, share_url, usuario_red, views_actual, nivel_alcanzado, created_at, ultima_revision_at, caduca_at, motivo_rechazo, validado_at, validado_por, usuario_id, establecimiento_id, establecimientos(nombre), usuarios!participaciones_creador_usuario_id_fkey(nombre)')
         .order('created_at', { ascending: false })
         .limit(300),
       // El KPI que justifica la feature entera: cuántos pedidos ha traído un vídeo.
@@ -73,7 +78,8 @@ export default function Creadores() {
 
     const cupones = kpiCupones.data || []
     setKpis({
-      activas: rows.filter(r => r.estado === 'activa' || r.estado === 'en_espera_tope').length,
+      activas: rows.filter(r => r.formato !== 'historia' && (r.estado === 'activa' || r.estado === 'en_espera_tope')).length,
+      historiasPendientes: rows.filter(r => r.formato === 'historia' && r.estado === 'pendiente_validacion').length,
       alcance: rows.reduce((s, r) => s + (r.views_actual || 0), 0),
       premios: cupones.length,
       coste: cupones.reduce((s, c) => s + Number(c.coste_estimado || 0), 0),
@@ -133,6 +139,24 @@ export default function Creadores() {
     cargar()
   }
 
+  // Aceptar una historia (o un vídeo de mesa) en nombre del restaurante. En una
+  // historia, aceptar = premiar: el cupón sale en el acto.
+  async function aceptar(p) {
+    const historia = p.formato === 'historia'
+    if (!await confirmar(historia
+      ? `¿Aceptar la historia de @${p.usuario_red} en ${p.establecimientos?.nombre || 'este restaurante'}? El cliente recibe su premio ahora.`
+      : '¿Aceptar este vídeo de mesa? Empezará a poder ganar premio.')) return
+    setRowBusy(p.id, true)
+    const { data, error } = await supabase.rpc('validar_participacion_creador', { p_participacion_id: p.id })
+    setRowBusy(p.id, false)
+    if (error) { toast(error.message || 'Error al aceptar', 'error'); return }
+    const r = data?.premio?.resultado
+    if (r === 'premiada') toast(`Premio entregado: ${data.premio.descripcion} (${data.premio.codigo})`)
+    else if (r === 'en_espera_tope') toast('Aceptada, pero el restaurante ha llegado a su tope del mes. Queda en espera.', 'error')
+    else toast('Aceptada.')
+    cargar()
+  }
+
   async function rechazar(p) {
     const motivo = window.prompt('Motivo del rechazo (lo verá el restaurante en su panel):')
     if (motivo === null) return
@@ -152,8 +176,11 @@ export default function Creadores() {
          .map(i => [i.establecimiento_id, i.establecimientos.nombre])
   )].sort((a, b) => a[1].localeCompare(b[1]))
 
+  // Vídeos sin leer en 24 h y, desde el 15 oct, historias que el restaurante aún
+  // no ha mirado (en historias no hay umbral: cuanto antes, mejor).
   const porRevisar = items.filter(i =>
-    (i.estado === 'activa' || i.estado === 'en_espera_tope') && (horasSinRevisar(i) ?? 0) >= 24)
+    (i.formato === 'historia' && i.estado === 'pendiente_validacion')
+    || ((i.estado === 'activa' || i.estado === 'en_espera_tope') && (horasSinRevisar(i) ?? 0) >= 24))
 
   const filtrados = items.filter(p => {
     if (filtroEst !== 'todos' && p.establecimiento_id !== filtroEst) return false
@@ -179,15 +206,17 @@ export default function Creadores() {
         <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--c-text)', margin: 0 }}>Creadores</h1>
       </div>
       <p style={{ fontSize: 13, color: 'var(--c-muted)', marginTop: 0, marginBottom: 20, maxWidth: 720, lineHeight: 1.5 }}>
-        Los clientes registran vídeos de sus pedidos. Abre el enlace, mira las visualizaciones
-        que marca la red y escríbelas aquí: el premio se entrega solo y le llega un aviso al
-        cliente. Un vídeo gana un único premio, el escalón más alto que alcance.
+        <strong>Historias</strong> (desde el 15 oct): el cliente sube una historia etiquetando al
+        restaurante y nos da su @. La confirma el restaurante al ver la mención (o tú aquí); al
+        aceptarla se entrega el premio fijo. Si nadie la mira en 48 h, entra sola.{' '}
+        <strong>Vídeos</strong>: abre el enlace, mira las visualizaciones y escríbelas; el premio es
+        el escalón más alto que alcance.
       </p>
 
       {kpis && (
         <div className="ds-cards" style={{ marginBottom: 18 }}>
-          <Kpi label="Vídeos en juego" value={fmtNum(kpis.activas)} />
-          <Kpi label="Alcance total" value={fmtNum(kpis.alcance)} sub="visualizaciones" />
+          <Kpi label="Historias por confirmar" value={fmtNum(kpis.historiasPendientes)} />
+          <Kpi label="Vídeos en juego" value={fmtNum(kpis.activas)} sub={`${fmtNum(kpis.alcance)} visualizaciones`} />
           <Kpi label="Premios entregados" value={fmtNum(kpis.premios)} sub={`${kpis.canjeados} canjeados`} />
           <Kpi label="Coste asumido" value={fmtEur(kpis.coste)} sub="lo pagan los restaurantes" />
           <Kpi
@@ -207,8 +236,8 @@ export default function Creadores() {
         }}>
           <RefreshCw size={15} />
           <span>
-            <strong>{porRevisar.length}</strong> {porRevisar.length === 1 ? 'vídeo lleva' : 'vídeos llevan'} más
-            de 24 h sin mirar. Mientras tanto el cliente ve su barra congelada.
+            <strong>{porRevisar.length}</strong> por revisar: historias que el restaurante aún no ha
+            confirmado (desaparecen a las 24 h) o vídeos que llevan más de 24 h sin mirar.
           </span>
         </div>
       )}
@@ -257,8 +286,8 @@ export default function Creadores() {
           <div style={ds.tableHeader}>
             <span style={{ flex: '2 1 130px', minWidth: 0 }}>Restaurante</span>
             <span data-tablet-sm-hide="true" style={{ flex: '1 1 100px', minWidth: 0 }}>Cliente</span>
-            <span style={{ width: 74, flexShrink: 0 }}>Vídeo</span>
-            <span style={{ width: 178, flexShrink: 0 }}>Visualizaciones</span>
+            <span style={{ width: 74, flexShrink: 0 }}>Enlace</span>
+            <span style={{ width: 178, flexShrink: 0 }}>Visualizaciones · @</span>
             <span style={{ flex: '1 1 96px', minWidth: 0 }}>Estado</span>
             <span data-tablet-hide="true" style={{ width: 96, flexShrink: 0 }}>Registrado</span>
             <span style={{ width: 92, flexShrink: 0 }}></span>
@@ -266,7 +295,11 @@ export default function Creadores() {
 
           {filtrados.map(p => {
             const est = ESTADOS[p.estado] || ESTADOS.activa
-            const editable = p.estado === 'activa' || p.estado === 'en_espera_tope'
+            const historia = p.formato === 'historia'
+            // A una historia no se le teclean visualizaciones (PD178): se acepta o se rechaza.
+            const editable = !historia && (p.estado === 'activa' || p.estado === 'en_espera_tope')
+            const aceptable = p.estado === 'pendiente_validacion'
+            const rechazable = editable || aceptable || (historia && (p.estado === 'activa' || p.estado === 'en_espera_tope'))
             const horas = horasSinRevisar(p)
             const trabajando = !!busy[p.id]
 
@@ -289,15 +322,24 @@ export default function Creadores() {
                   {p.usuarios?.nombre || '—'}
                 </span>
 
-                <span style={{ width: 74, flexShrink: 0 }}>
-                  <a href={p.share_url} target="_blank" rel="noopener noreferrer"
-                     style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: colors.terracotta, fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>
-                    {p.red === 'instagram' ? 'Reel' : 'TikTok'} <ExternalLink size={11} />
-                  </a>
+                <span style={{ width: 74, flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {/^https?:\/\//.test(p.share_url || '') ? (
+                    <a href={p.share_url} target="_blank" rel="noopener noreferrer" title={historia ? `@${p.usuario_red}` : undefined}
+                       style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: colors.terracotta, fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>
+                      {historia ? 'Historia' : (p.red === 'instagram' ? 'Reel' : 'TikTok')} <ExternalLink size={11} />
+                    </a>
+                  ) : (
+                    <span style={{ fontSize: 11, color: 'var(--c-muted)' }}>bono</span>
+                  )}
                 </span>
 
                 <span style={{ width: 178, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {editable ? (
+                  {historia ? (
+                    // El @ es lo que el restaurante busca entre sus menciones.
+                    <span style={{ fontSize: 12.5, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      @{p.usuario_red}
+                    </span>
+                  ) : editable ? (
                     <>
                       <input
                         type="text" inputMode="numeric"
@@ -338,8 +380,14 @@ export default function Creadores() {
                   )}
                 </span>
 
-                <span style={{ width: 92, flexShrink: 0, textAlign: 'right' }}>
-                  {editable && (
+                <span style={{ width: 92, flexShrink: 0, textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                  {aceptable && (
+                    <button onClick={() => aceptar(p)} disabled={trabajando}
+                      style={{ ...ds.actionBtn, padding: '5px 9px', background: colors.terracotta, color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <Check size={13} /> Aceptar
+                    </button>
+                  )}
+                  {rechazable && (
                     <button onClick={() => rechazar(p)} disabled={trabajando}
                       style={{ ...ds.actionBtn, padding: '5px 9px', color: colors.danger, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                       <X size={13} /> Rechazar

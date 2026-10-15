@@ -42,9 +42,17 @@ const costeSugerido = (tipo, valor) => {
   return 5
 }
 
+// HISTORIAS (desde el 15 oct 2026): el premio es FIJO por historia y va en
+// `creadores_premio_historia`, guardado por `creadores_guardar_premio_historia`
+// (mismas reglas que la escalera). Si el programa es de historias o de vídeos lo
+// decide Pidoo desde aquí: `creadores_config.formato`, congelado para el dueño
+// por `creadores_config_guard` (PD174).
+
 export default function CreadoresCard({ establecimiento }) {
   const [cfg, setCfg] = useState(null)
   const [escalones, setEscalones] = useState([])
+  const [premio, setPremio] = useState(null)          // premio de las historias
+  const [editPremio, setEditPremio] = useState(null)  // null = solo lectura
   const [stats, setStats] = useState({ participaciones: 0, cupones: 0 })
   const [busy, setBusy] = useState(false)
   const [cargando, setCargando] = useState(true)
@@ -55,15 +63,18 @@ export default function CreadoresCard({ establecimiento }) {
 
   const load = useCallback(async () => {
     if (!estId) return
-    const [c, e, p, cu] = await Promise.all([
+    const [c, e, p, cu, h] = await Promise.all([
       supabase.from('creadores_config').select('*').eq('establecimiento_id', estId).maybeSingle(),
       supabase.from('escalera_premios').select('nivel, views_necesarias, tipo_premio, valor, producto_id, descripcion, coste_estimado, activo')
         .eq('establecimiento_id', estId).order('nivel'),
       supabase.from('participaciones_creador').select('id', { count: 'exact', head: true }).eq('establecimiento_id', estId),
       supabase.from('cupones_creador').select('id', { count: 'exact', head: true }).eq('establecimiento_id', estId),
+      supabase.from('creadores_premio_historia').select('tipo_premio, valor, producto_id, descripcion, coste_estimado, activo')
+        .eq('establecimiento_id', estId).maybeSingle(),
     ])
     setCfg(c.data || null)
     setEscalones(e.data || [])
+    setPremio(h.data || null)
     setStats({ participaciones: p.count || 0, cupones: cu.count || 0 })
     setTopeInput(c.data?.tope_mensual_euros != null ? String(c.data.tope_mensual_euros) : '')
     setCargando(false)
@@ -74,7 +85,7 @@ export default function CreadoresCard({ establecimiento }) {
   async function toggle() {
     const nuevo = !cfg?.programa_activo
     if (nuevo && !(await confirmar(
-      `Activar Pidoo Creadores en ${establecimiento?.nombre}?\n\nSe le sembrará una escalera por defecto (2 EUR a las 500 visualizaciones, 5 EUR a las 2.000 y 15 EUR a las 10.000) con un tope de 30 EUR al mes. El restaurante podrá cambiarla y pausar el programa, pero no volver a encenderlo.`
+      `Activar Pidoo Creadores en ${establecimiento?.nombre}?\n\nFunciona con HISTORIAS de Instagram: 2 EUR de descuento por cada historia que le etiquete (si no tiene ya otro premio), con un tope de 30 EUR al mes. Comprueba que tiene su @ de Instagram puesto: es a quien etiquetan los clientes. El restaurante podrá cambiar el premio y pausar el programa, pero no volver a encenderlo.`
     ))) return
 
     setBusy(true)
@@ -113,6 +124,41 @@ export default function CreadoresCard({ establecimiento }) {
     load()
   }
 
+  async function cambiarFormato(nuevo) {
+    if (nuevo === (cfg?.formato || 'historia')) return
+    if (!(await confirmar(nuevo === 'historia'
+      ? 'Pasar a HISTORIAS: premio fijo por cada historia que le etiqueten, la confirma el restaurante. Los vídeos que ya estén en juego siguen su curso.'
+      : 'Pasar a VÍDEOS: escalera por visualizaciones que tecleas tú. Las historias pendientes siguen su curso.'))) return
+    setBusy(true)
+    const { error } = await supabase.from('creadores_config')
+      .update({ formato: nuevo }).eq('establecimiento_id', estId).select('establecimiento_id')
+    setBusy(false)
+    if (error) return toast(error.message, 'error')
+    toast(nuevo === 'historia' ? 'Programa de historias' : 'Programa de vídeos')
+    load()
+  }
+
+  async function guardarPremio() {
+    const f = editPremio
+    setBusy(true)
+    const { error } = await supabase.rpc('creadores_guardar_premio_historia', {
+      p_establecimiento_id: estId,
+      p_premio: {
+        tipo_premio: f.tipo_premio,
+        valor: (f.tipo_premio === 'descuento_fijo' || f.tipo_premio === 'porcentaje') ? Number(f.valor) : null,
+        producto_id: f.producto_id || null,
+        descripcion: (f.descripcion || '').trim(),
+        coste_estimado: Number(f.coste_estimado),
+        activo: true,
+      },
+    })
+    setBusy(false)
+    if (error) return toast(error.message, 'error')
+    toast('Premio guardado')
+    setEditPremio(null)
+    load()
+  }
+
   async function guardarTope() {
     const v = topeInput.trim() === '' ? null : Number(topeInput.replace(',', '.'))
     if (v !== null && (!Number.isFinite(v) || v <= 0 || v > 5000)) {
@@ -133,6 +179,7 @@ export default function CreadoresCard({ establecimiento }) {
   const pausado = !!cfg?.pausado_por_restaurante
   const gasto = Number(cfg?.gasto_mes_actual || 0)
   const tope = cfg?.tope_mensual_euros != null ? Number(cfg.tope_mensual_euros) : null
+  const historia = (cfg?.formato || 'historia') === 'historia'
 
   return (
     <div style={{ ...ds.card, marginTop: 20 }}>
@@ -141,8 +188,11 @@ export default function CreadoresCard({ establecimiento }) {
         <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--c-text)', margin: 0 }}>Pidoo Creadores</h3>
       </div>
       <div style={{ fontSize: 12, color: 'var(--c-muted)', marginBottom: 14, lineHeight: 1.5 }}>
-        Los clientes graban vídeos de sus pedidos y ganan cupones de descuento.
-        Va incluido en el alta, sin cuota. <strong>Los premios los paga el restaurante.</strong>
+        Los clientes suben una historia de su pedido etiquetando al restaurante y ganan un cupón
+        de descuento. Va incluido en el alta, sin cuota. <strong>Los premios los paga el restaurante.</strong>
+        {!establecimiento?.instagram_usuario && (
+          <span style={{ color: colors.warning }}> Ojo: este restaurante no tiene su @ de Instagram puesto, y es a quien etiquetan.</span>
+        )}
       </div>
 
       <div style={{
@@ -179,13 +229,119 @@ export default function CreadoresCard({ establecimiento }) {
         <div className="ds-cards" style={{ marginTop: 12 }}>
           <Mini label="Gasto del mes" value={tope != null ? `${fmtEur(gasto)} / ${fmtEur(tope)}` : fmtEur(gasto)}
                 alerta={tope != null && gasto >= tope} />
-          <Mini label="Vídeos" value={stats.participaciones} />
+          <Mini label={historia ? 'Historias' : 'Vídeos'} value={stats.participaciones} />
           <Mini label="Premios dados" value={stats.cupones} />
         </div>
       )}
 
-      {/* ── Escalera de premios ── */}
-      {activo && !edit && (
+      {/* ── Historias o vídeos (lo decide Pidoo) ── */}
+      {activo && (
+        <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Formato
+          </span>
+          {[
+            { id: 'historia', label: 'Historias (premio fijo)' },
+            { id: 'video', label: 'Vídeos (escalera)' },
+          ].map(o => (
+            <button key={o.id} onClick={() => cambiarFormato(o.id)} disabled={busy} style={{
+              padding: '4px 10px', borderRadius: 7, fontSize: 11.5, cursor: busy ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+              border: `1px solid ${(cfg?.formato || 'historia') === o.id ? colors.terracotta : 'var(--c-border)'}`,
+              background: (cfg?.formato || 'historia') === o.id ? 'rgba(197,86,44,0.15)' : 'transparent',
+              color: 'var(--c-text)',
+            }}>{o.label}</button>
+          ))}
+        </div>
+      )}
+
+      {/* ── Premio de las historias ── */}
+      {activo && historia && !editPremio && (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <div style={{ flex: 1, fontSize: 11, fontWeight: 700, color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Premio por historia
+            </div>
+            <button onClick={() => setEditPremio(premio
+              ? { ...premio }
+              : { tipo_premio: 'descuento_fijo', valor: 2, descripcion: '2 € de descuento en tu próximo pedido', coste_estimado: 2 })}
+              style={{ ...ds.secondaryBtn, padding: '4px 9px', fontSize: 11, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+              <Pencil size={11} /> Editar
+            </button>
+          </div>
+          {premio ? (
+            <div style={{ display: 'flex', gap: 10, fontSize: 12.5, padding: '6px 0', borderTop: '1px solid var(--c-border)', opacity: premio.activo ? 1 : 0.45 }}>
+              <span style={{ flex: 1, minWidth: 0 }}>{premio.descripcion}</span>
+              <span style={{ flexShrink: 0, color: 'var(--c-muted)' }}>le cuesta {fmtEur(premio.coste_estimado)}</span>
+            </div>
+          ) : (
+            <div style={{ fontSize: 12, color: colors.warning, padding: '8px 0' }}>
+              Sin premio: los clientes no pueden participar.
+            </div>
+          )}
+        </div>
+      )}
+
+      {activo && historia && editPremio && (
+        <div style={{ marginTop: 12, padding: 12, borderRadius: 10, border: `1px solid ${colors.terracotta}`, background: 'var(--c-surface)' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-text)', marginBottom: 8 }}>
+            Premio por historia de {establecimiento?.nombre}
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+            {TIPOS_ADMIN.map(t => (
+              <button key={t.id}
+                onClick={() => setEditPremio(x => ({
+                  ...x, tipo_premio: t.id, producto_id: null,
+                  valor: t.id === 'porcentaje' ? 10 : (t.id === 'descuento_fijo' ? 2 : null),
+                  coste_estimado: costeSugerido(t.id, t.id === 'descuento_fijo' ? 2 : 10),
+                }))}
+                style={{
+                  padding: '4px 9px', borderRadius: 7, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit',
+                  border: `1px solid ${editPremio.tipo_premio === t.id ? colors.terracotta : 'var(--c-border)'}`,
+                  background: editPremio.tipo_premio === t.id ? 'rgba(197,86,44,0.15)' : 'transparent',
+                  color: 'var(--c-text)',
+                }}>{t.label}</button>
+            ))}
+            {editPremio.tipo_premio === 'producto_gratis' && (
+              <span style={{ fontSize: 11, color: colors.warning, alignSelf: 'center' }}>
+                Producto gratis — solo editable desde el panel del restaurante
+              </span>
+            )}
+          </div>
+          <div className="ds-fields" style={{ gap: 8 }}>
+            {(editPremio.tipo_premio === 'descuento_fijo' || editPremio.tipo_premio === 'porcentaje') && (
+              <div>
+                <label style={{ fontSize: 10, color: 'var(--c-muted)' }}>
+                  {editPremio.tipo_premio === 'porcentaje' ? '% (máx. 50)' : '€ (máx. 25)'}
+                </label>
+                <input style={ds.formInput} type="number" step="0.5" value={editPremio.valor ?? ''}
+                       onChange={ev => setEditPremio(x => ({
+                         ...x, valor: ev.target.value, coste_estimado: costeSugerido(x.tipo_premio, ev.target.value),
+                       }))} />
+              </div>
+            )}
+            <div>
+              <label style={{ fontSize: 10, color: 'var(--c-muted)' }}>Le cuesta (€)</label>
+              <input style={ds.formInput} type="number" step="0.5" value={editPremio.coste_estimado ?? ''}
+                     onChange={ev => setEditPremio(x => ({ ...x, coste_estimado: ev.target.value }))} />
+            </div>
+          </div>
+          <div style={{ marginTop: 6 }}>
+            <label style={{ fontSize: 10, color: 'var(--c-muted)' }}>Cómo lo ve el cliente</label>
+            <input style={ds.formInput} maxLength={80} placeholder="2 € de descuento en tu próximo pedido"
+                   value={editPremio.descripcion || ''}
+                   onChange={ev => setEditPremio(x => ({ ...x, descripcion: ev.target.value }))} />
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 10, justifyContent: 'flex-end' }}>
+            <button onClick={() => setEditPremio(null)} style={ds.secondaryBtn} disabled={busy}>Cancelar</button>
+            <button onClick={guardarPremio} style={ds.primaryBtn} disabled={busy}>
+              {busy ? 'Guardando…' : 'Guardar premio'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Escalera de premios (programas de vídeo) ── */}
+      {activo && !historia && !edit && (
         <div style={{ marginTop: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
             <div style={{ flex: 1, fontSize: 11, fontWeight: 700, color: 'var(--c-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -231,7 +387,7 @@ export default function CreadoresCard({ establecimiento }) {
       )}
 
       {/* ── Editor ── */}
-      {activo && edit && (
+      {activo && !historia && edit && (
         <div style={{ marginTop: 12, padding: 12, borderRadius: 10, border: `1px solid ${colors.terracotta}`, background: 'var(--c-surface)' }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--c-text)', marginBottom: 8 }}>
             Editar escalera de {establecimiento?.nombre}
