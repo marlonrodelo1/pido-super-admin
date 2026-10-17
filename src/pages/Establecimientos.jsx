@@ -21,6 +21,7 @@ import IaTelefonoCard from '../components/IaTelefonoCard'
 import AutomatismosCard from '../components/AutomatismosCard'
 import StockCard from '../components/StockCard'
 import KioskoCard from '../components/KioskoCard'
+import FormasPagoCard from '../components/FormasPagoCard'
 // PlanTiendaCard eliminado: el plan SaaS 39€/mes está muerto. El alta/plan se gestiona en AltaPlanCard (abajo).
 import ResetPasswordModal from '../components/ResetPasswordModal'
 import EliminarEntidadModal from '../components/EliminarEntidadModal'
@@ -661,6 +662,12 @@ export default function Establecimientos() {
 
         {/* Cómo cobra Pidoo a este restaurante (comisión por puerta + reparto) */}
         <ComisionCard
+          establecimiento={detalle}
+          onChanged={async () => { const { data } = await supabase.from('establecimientos').select('*').eq('id', detalle.id).single(); if (data) setDetalle(data) }}
+        />
+
+        {/* Formas de pago — solo las cambia Pidoo (el dueño solo las ve) */}
+        <FormasPagoCard
           establecimiento={detalle}
           onChanged={async () => { const { data } = await supabase.from('establecimientos').select('*').eq('id', detalle.id).single(); if (data) setDetalle(data) }}
         />
