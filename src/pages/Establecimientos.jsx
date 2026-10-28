@@ -11,6 +11,7 @@ import { ds, colors, type, radius } from '../lib/darkStyles'
 import { Card, Chip, EstadoBadge, GhostBtn, GlossyBtn, MiniBtn, PillTabs, SectionLabel, Toggle, Vacio, fmtEUR } from '../lib/ui'
 import { Plus, X, Upload, Save, Trash2, KeyRound, Search, ChevronLeft, ChevronRight, Pencil, Copy, Eye, EyeOff, Wand2, Check, Share2, ExternalLink } from 'lucide-react'
 import { toast, confirmar } from '../App'
+import { useAdmin } from '../context/AdminContext'
 import CargaMasivaModal from '../components/CargaMasivaModal'
 import ImportUrlModal from '../components/ImportUrlModal'
 import RidersCard from '../components/RidersCard'
@@ -56,6 +57,12 @@ const opcionPwd = {
 }
 
 export default function Establecimientos() {
+  // Rol «comercial» (28 oct 2026): ve la lista entera, da de alta y monta cartas,
+  // pero solo escribe en restaurantes pendientes de verificar y en Pidoo Demo, y
+  // no ve nada de dinero, socios, módulos ni reseñas. Lo de aquí solo decide qué
+  // se pinta: quien manda es la BD (RLS + trg_aaa_comercial_solo_ficha_basica).
+  const { rol } = useAdmin()
+  const esComercial = rol === 'comercial'
   const [items, setItems] = useState([])
   const [pendientes, setPendientes] = useState({}) // establecimiento_id -> { vinc, tarifas }
   const [buscar, setBuscar] = useState('')
@@ -114,8 +121,22 @@ export default function Establecimientos() {
   // Reset página al cambiar filtros
   useEffect(() => { setProdPage(1) }, [prodSearchDebounced, prodFiltroCatId, prodPageSize])
 
+  // Si el comercial puede escribir en el restaurante abierto. Se pregunta a la
+  // misma función que usan la RLS y la importación de cartas, para no tener la
+  // regla copiada aquí.
+  const [comercialPuede, setComercialPuede] = useState(false)
   useEffect(() => {
-    if (!detalle?.user_id) { setOwnerEmail(null); return }
+    if (!esComercial || !detalle?.id) { setComercialPuede(false); return }
+    let cancelled = false
+    setComercialPuede(false)
+    supabase.rpc('comercial_puede_editar', { p_establecimiento_id: detalle.id })
+      .then(({ data }) => { if (!cancelled) setComercialPuede(data === true) })
+    return () => { cancelled = true }
+  }, [esComercial, detalle?.id])
+  const editable = !esComercial || comercialPuede
+
+  useEffect(() => {
+    if (!detalle?.user_id || esComercial) { setOwnerEmail(null); return }
     let cancelled = false
     supabase.from('usuarios').select('email').eq('id', detalle.user_id).maybeSingle()
       .then(({ data }) => { if (!cancelled) setOwnerEmail(data?.email || null) })
@@ -130,7 +151,7 @@ export default function Establecimientos() {
   async function load() {
     const { data } = await supabase.from('establecimientos').select('*').order('created_at', { ascending: false })
     setItems(data || [])
-    loadPendientes()
+    if (!esComercial) loadPendientes()
   }
 
   // Sustituye a la página "Aprobaciones" (eliminada el 24 jul 2026): en vez de una bandeja
@@ -194,8 +215,11 @@ export default function Establecimientos() {
     setSaving(true)
     setCrearError(null)
     if (detalle) {
-      const { error } = await supabase.from('establecimientos').update(form).eq('id', detalle.id)
+      // `.select('id')`: bajo RLS un UPDATE sin permiso no da error, solo cambia 0
+      // filas. Pasa al comercial si Pidoo verifica el restaurante mientras lo edita.
+      const { data: guardadas, error } = await supabase.from('establecimientos').update(form).eq('id', detalle.id).select('id')
       if (error) { toast('Error: ' + error.message, 'error'); setSaving(false); return }
+      if (!guardadas?.length) { toast('No se ha guardado: ya no puedes editar este restaurante', 'error'); setSaving(false); return }
       setDetalle({ ...detalle, ...form })
       setEditando(false)
       setForm({})
@@ -385,6 +409,7 @@ export default function Establecimientos() {
 
   // --- Productos ---
   async function loadResenas(estId) {
+    if (esComercial) return
     const { data } = await supabase.from('resenas').select('*, usuarios(nombre, email)').eq('establecimiento_id', estId).order('created_at', { ascending: false }).limit(20)
     setResenas(data || [])
   }
@@ -439,8 +464,9 @@ export default function Establecimientos() {
     }
     let prodId
     if (editProd && editProd !== 'new') {
-      const { error } = await supabase.from('productos').update(baseData).eq('id', editProd.id)
+      const { data: guardados, error } = await supabase.from('productos').update(baseData).eq('id', editProd.id).select('id')
       if (error) { setSavingProd(false); toast('Error al guardar: ' + error.message, 'error'); return }
+      if (!guardados?.length) { setSavingProd(false); toast('No se ha guardado: ya no puedes editar este restaurante', 'error'); return }
       prodId = editProd.id
     } else {
       const insertData = { ...baseData, establecimiento_id: detalle.id, disponible: true, orden: productos.length }
@@ -521,12 +547,14 @@ export default function Establecimientos() {
 
         <Card pad={24}>
           <div className="admin-page-header" style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
-            <div style={{ width: 60, height: 60, borderRadius: radius.md, background: colors.cream2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, overflow: 'hidden', cursor: 'pointer', position: 'relative' }}
-              onClick={() => logoRef.current?.click()}>
+            <div style={{ width: 60, height: 60, borderRadius: radius.md, background: colors.cream2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, overflow: 'hidden', cursor: editable ? 'pointer' : 'default', position: 'relative' }}
+              onClick={() => { if (editable) logoRef.current?.click() }}>
               {(form.logo_url || detalle.logo_url) ? <img src={form.logo_url || detalle.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '🍽️'}
-              <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0 }} onMouseEnter={e => e.currentTarget.style.opacity = 1} onMouseLeave={e => e.currentTarget.style.opacity = 0}>
-                <Upload size={16} color={colors.cream} />
-              </div>
+              {editable && (
+                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0 }} onMouseEnter={e => e.currentTarget.style.opacity = 1} onMouseLeave={e => e.currentTarget.style.opacity = 0}>
+                  <Upload size={16} color={colors.cream} />
+                </div>
+              )}
               <input ref={logoRef} type="file" accept="image/*" hidden onChange={e => handleUpload(e.target.files[0], 'logo_url')} />
             </div>
             <div style={{ flex: 1 }}>
@@ -540,22 +568,28 @@ export default function Establecimientos() {
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {!editando ? (
                 <>
-                  <GhostBtn
-                    onClick={() => setResetPwd(true)}
-                    disabled={!detalle.user_id}
-                    title={detalle.user_id ? 'Restablecer contraseña del dueño' : 'Sin dueño vinculado'}
-                    style={{ opacity: detalle.user_id ? 1 : 0.4 }}
-                  >
-                    <KeyRound size={14} /> Contraseña
-                  </GhostBtn>
-                  <GhostBtn
-                    danger
-                    onClick={() => setShowEliminar(true)}
-                    title="Eliminar restaurante definitivamente"
-                  >
-                    <Trash2 size={14} /> Eliminar
-                  </GhostBtn>
-                  <GlossyBtn accent onClick={() => { setForm(initForm(detalle)); setEditando(true) }}>Editar</GlossyBtn>
+                  {!esComercial && (
+                    <>
+                      <GhostBtn
+                        onClick={() => setResetPwd(true)}
+                        disabled={!detalle.user_id}
+                        title={detalle.user_id ? 'Restablecer contraseña del dueño' : 'Sin dueño vinculado'}
+                        style={{ opacity: detalle.user_id ? 1 : 0.4 }}
+                      >
+                        <KeyRound size={14} /> Contraseña
+                      </GhostBtn>
+                      <GhostBtn
+                        danger
+                        onClick={() => setShowEliminar(true)}
+                        title="Eliminar restaurante definitivamente"
+                      >
+                        <Trash2 size={14} /> Eliminar
+                      </GhostBtn>
+                    </>
+                  )}
+                  {editable && (
+                    <GlossyBtn accent onClick={() => { setForm(initForm(detalle)); setEditando(true) }}>Editar</GlossyBtn>
+                  )}
                 </>
               ) : (
                 <>
@@ -569,13 +603,15 @@ export default function Establecimientos() {
           </div>
 
           {/* Banner upload */}
-          <div style={{ height: 120, borderRadius: radius.md, marginBottom: 16, overflow: 'hidden', cursor: 'pointer', position: 'relative',
+          <div style={{ height: 120, borderRadius: radius.md, marginBottom: 16, overflow: 'hidden', cursor: editable ? 'pointer' : 'default', position: 'relative',
             background: (form.banner_url || detalle.banner_url) ? `url(${form.banner_url || detalle.banner_url}) center/cover` : colors.cream2,
-          }} onClick={() => bannerRef.current?.click()}>
-            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: 0, transition: '0.2s' }}
-              onMouseEnter={e => e.currentTarget.style.opacity = 1} onMouseLeave={e => e.currentTarget.style.opacity = 0}>
-              <Upload size={16} color={colors.cream} /><span style={{ ...type.label, color: colors.cream, fontWeight: 600 }}>{uploading === 'banner_url' ? 'Subiendo...' : 'Cambiar banner (800x300 px)'}</span>
-            </div>
+          }} onClick={() => { if (editable) bannerRef.current?.click() }}>
+            {editable && (
+              <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: 0, transition: '0.2s' }}
+                onMouseEnter={e => e.currentTarget.style.opacity = 1} onMouseLeave={e => e.currentTarget.style.opacity = 0}>
+                <Upload size={16} color={colors.cream} /><span style={{ ...type.label, color: colors.cream, fontWeight: 600 }}>{uploading === 'banner_url' ? 'Subiendo...' : 'Cambiar banner (800x300 px)'}</span>
+              </div>
+            )}
             <input ref={bannerRef} type="file" accept="image/*" hidden onChange={e => handleUpload(e.target.files[0], 'banner_url')} />
           </div>
 
@@ -642,18 +678,36 @@ export default function Establecimientos() {
           )}
         </Card>
 
+        {/* Comercial en un restaurante ya verificado: lo ve, pero no lo toca */}
+        {esComercial && !editable && (
+          <div style={{
+            marginTop: 16, padding: '12px 14px', borderRadius: radius.md,
+            background: colors.cream2, border: `1px solid ${colors.border}`,
+            ...type.body, color: colors.textDim,
+          }}>
+            Solo lectura: este restaurante ya está verificado. Los cambios de ficha y carta los hace el dueño desde su panel o Pidoo.
+          </div>
+        )}
+
         {/* Socios vinculados */}
-        <RidersCard
-          establecimiento={detalle}
-          onChanged={() => load()}
-        />
+        {!esComercial && (
+          <RidersCard
+            establecimiento={detalle}
+            onChanged={() => load()}
+          />
+        )}
 
-        {/* Horario y estado */}
-        <HorarioEstadoCard
-          establecimiento={detalle}
-          onChanged={async () => { const { data } = await supabase.from('establecimientos').select('*').eq('id', detalle.id).single(); if (data) setDetalle(data); load() }}
-        />
+        {/* Horario y estado — el comercial solo ve el horario (el estado lo decide Pidoo) */}
+        {editable && (
+          <HorarioEstadoCard
+            establecimiento={detalle}
+            soloHorario={esComercial}
+            onChanged={async () => { const { data } = await supabase.from('establecimientos').select('*').eq('id', detalle.id).single(); if (data) setDetalle(data); load() }}
+          />
+        )}
 
+        {/* Dinero, módulos y control de Pidoo: fuera para el comercial */}
+        {!esComercial && (<>
         {/* Alta y plan (modelo 10% por pedido — sin cuota) */}
         <AltaPlanCard
           establecimiento={detalle}
@@ -690,6 +744,7 @@ export default function Establecimientos() {
 
         {/* Kiosko de autopedido del local — mismo patrón: lo enciende Pidoo */}
         <KioskoCard establecimiento={detalle} />
+        </>)}
 
         {/* Categorías generales — chips asignadas + dropdown añadir */}
         <Card style={{ marginTop: 20 }}>
@@ -701,7 +756,7 @@ export default function Establecimientos() {
             {catsAsignadas.map(c => (
               <Chip key={c.id} tono="terracotta" style={{ paddingRight: 5 }}>
                 {c.emoji} {c.nombre}
-                <button
+                {editable && <button
                   aria-label={`Quitar categoría ${c.nombre}`}
                   onClick={() => toggleCatGeneral(c.id)}
                   style={{
@@ -711,10 +766,10 @@ export default function Establecimientos() {
                   }}
                 >
                   <X size={12} />
-                </button>
+                </button>}
               </Chip>
             ))}
-            <div style={{ position: 'relative' }}>
+            {editable && <div style={{ position: 'relative' }}>
               <GhostBtn
                 size="sm"
                 aria-label="Añadir categoría general"
@@ -757,7 +812,7 @@ export default function Establecimientos() {
                   </div>
                 </>
               )}
-            </div>
+            </div>}
           </div>
         </Card>
 
@@ -768,7 +823,7 @@ export default function Establecimientos() {
             <Vacio
               titulo="Aún no hay categorías"
               texto="Las categorías agrupan los productos dentro de la carta del restaurante."
-              accion={(
+              accion={editable && (
                 <GlossyBtn accent onClick={abrirCrearCategoriaModal}>
                   <Plus size={14} /> Crea tu primera categoría
                 </GlossyBtn>
@@ -787,10 +842,12 @@ export default function Establecimientos() {
                   <option key={c.id} value={c.id}>{c.nombre} (orden {c.orden})</option>
                 ))}
               </select>
-              <GhostBtn onClick={abrirCrearCategoriaModal} aria-label="Nueva categoría">
-                <Plus size={14} /> Nueva
-              </GhostBtn>
-              {selectedCartCatId && (() => {
+              {editable && (
+                <GhostBtn onClick={abrirCrearCategoriaModal} aria-label="Nueva categoría">
+                  <Plus size={14} /> Nueva
+                </GhostBtn>
+              )}
+              {editable && selectedCartCatId && (() => {
                 const c = categorias.find(x => x.id === selectedCartCatId)
                 if (!c) return null
                 return (
@@ -814,13 +871,15 @@ export default function Establecimientos() {
             <h3 style={ds.h3}>
               Productos ({productosFiltrados.length}{productosFiltrados.length !== productos.length ? ` de ${productos.length}` : ''})
             </h3>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              <GhostBtn size="sm" onClick={() => setShowImportUrl(true)}>🔗 Importar URL</GhostBtn>
-              <GhostBtn size="sm" onClick={() => setShowCargaMasiva(true)}><Upload size={12} /> Carga masiva</GhostBtn>
-              <GlossyBtn size="sm" accent onClick={() => { setEditProd('new'); setProdForm({ nombre: '', descripcion: '', precio: '', precio_local: '', categoria_id: selectedCartCatId || '', imagen_url: '' }); setProdExtras([]) }}>
-                <Plus size={14} /> Producto
-              </GlossyBtn>
-            </div>
+            {editable && (
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <GhostBtn size="sm" onClick={() => setShowImportUrl(true)}>🔗 Importar URL</GhostBtn>
+                <GhostBtn size="sm" onClick={() => setShowCargaMasiva(true)}><Upload size={12} /> Carga masiva</GhostBtn>
+                <GlossyBtn size="sm" accent onClick={() => { setEditProd('new'); setProdForm({ nombre: '', descripcion: '', precio: '', precio_local: '', categoria_id: selectedCartCatId || '', imagen_url: '' }); setProdExtras([]) }}>
+                  <Plus size={14} /> Producto
+                </GlossyBtn>
+              </div>
+            )}
           </div>
 
           {/* Toolbar buscador + filtro */}
@@ -869,11 +928,13 @@ export default function Establecimientos() {
                 {p.descripcion && <div style={{ ...type.label, color: colors.textMute, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.descripcion}</div>}
               </div>
               <span style={{ ...type.body, fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: colors.terracotta2, minWidth: 64, textAlign: 'right' }}>{Number(p.precio).toFixed(2)} €</span>
-              <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                <MiniBtn onClick={() => toggleDisponible(p.id, p.disponible)} aria-label={p.disponible ? 'Desactivar producto' : 'Activar producto'} style={{ color: p.disponible ? colors.text : colors.danger }}>{p.disponible ? 'On' : 'Off'}</MiniBtn>
-                <MiniBtn onClick={() => abrirEditarProd(p)} aria-label="Editar producto">Editar</MiniBtn>
-                <MiniBtn danger onClick={() => eliminarProd(p.id)} aria-label="Eliminar producto">×</MiniBtn>
-              </div>
+              {editable && (
+                <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                  <MiniBtn onClick={() => toggleDisponible(p.id, p.disponible)} aria-label={p.disponible ? 'Desactivar producto' : 'Activar producto'} style={{ color: p.disponible ? colors.text : colors.danger }}>{p.disponible ? 'On' : 'Off'}</MiniBtn>
+                  <MiniBtn onClick={() => abrirEditarProd(p)} aria-label="Editar producto">Editar</MiniBtn>
+                  <MiniBtn danger onClick={() => eliminarProd(p.id)} aria-label="Eliminar producto">×</MiniBtn>
+                </div>
+              )}
             </div>
           ))}
 
@@ -939,8 +1000,8 @@ export default function Establecimientos() {
           )}
         </Card>
 
-        {/* Reseñas */}
-        <Card style={{ marginTop: 20 }}>
+        {/* Reseñas — llevan nombre y email del cliente: no para el comercial */}
+        {!esComercial && <Card style={{ marginTop: 20 }}>
           <h3 style={{ ...ds.h3, marginBottom: 12 }}>Reseñas ({resenas.length})</h3>
           {resenas.map(r => (
             <div key={r.id} style={{ ...filaLista, alignItems: 'flex-start', padding: '12px 14px', marginBottom: 8 }}>
@@ -961,7 +1022,7 @@ export default function Establecimientos() {
           {resenas.length === 0 && (
             <Vacio titulo="Sin reseñas" texto="Cuando un cliente valore un pedido de este restaurante, aparecerá aquí." />
           )}
-        </Card>
+        </Card>}
 
         {/* Modal carga masiva */}
         {showCargaMasiva && (
@@ -1276,15 +1337,18 @@ export default function Establecimientos() {
                   la app del cliente. Va en `sm` (36×20) y envuelto en un span para
                   que la regla móvil `[data-col="acc"] > button { flex: 1 }` no lo
                   estire a media pantalla: no debe ser fácil de pulsar sin querer. */}
-              <span style={{ display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}>
-                <Toggle
-                  size="sm"
-                  on={!!e.activo}
-                  tone="sage"
-                  onChange={() => toggleActivo(e.id, e.activo, e.nombre)}
-                  aria-label={e.activo ? `Cerrar ahora ${e.nombre}` : `Abrir ahora ${e.nombre}`}
-                />
-              </span>
+              {/* Abrir o cerrar es de Pidoo y del dueño, nunca del comercial */}
+              {!esComercial && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}>
+                  <Toggle
+                    size="sm"
+                    on={!!e.activo}
+                    tone="sage"
+                    onChange={() => toggleActivo(e.id, e.activo, e.nombre)}
+                    aria-label={e.activo ? `Cerrar ahora ${e.nombre}` : `Abrir ahora ${e.nombre}`}
+                  />
+                </span>
+              )}
             </span>
           </div>
         ))}

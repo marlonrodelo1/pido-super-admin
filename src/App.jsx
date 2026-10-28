@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Menu } from 'lucide-react'
 import { AdminProvider, useAdmin } from './context/AdminContext'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import Sidebar, { ANCHO_SIDEBAR, ANCHO_SIDEBAR_PLEGADA } from './components/Sidebar'
+import Sidebar, { ANCHO_SIDEBAR, ANCHO_SIDEBAR_PLEGADA, SECCIONES_COMERCIAL } from './components/Sidebar'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Establecimientos from './pages/Establecimientos'
@@ -46,8 +46,14 @@ const SECCION_TITULOS = {
 const FONT = "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif"
 
 function AppContent() {
-  const { user, loading, logout } = useAdmin()
-  const [seccion, setSeccion] = useState('dashboard')
+  const { user, rol, loading, logout } = useAdmin()
+  const [seccionElegida, setSeccion] = useState('dashboard')
+  // El comercial solo tiene sus secciones: cualquier otra (empezando por el
+  // Dashboard, que es la de arranque) se le cambia por la primera suya y no se
+  // llega a montar.
+  const seccion = rol === 'comercial' && !SECCIONES_COMERCIAL.includes(seccionElegida)
+    ? SECCIONES_COMERCIAL[0]
+    : seccionElegida
   const isTabletDown = useMediaQuery(BP.tabletDown)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
@@ -110,6 +116,7 @@ function AppContent() {
           onChange={setSeccion}
           onLogout={logout}
           user={user}
+          rol={rol}
           mobile={isTabletDown}
           onClose={() => setSidebarOpen(false)}
           plegada={plegada}

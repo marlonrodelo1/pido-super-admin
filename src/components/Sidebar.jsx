@@ -69,21 +69,35 @@ const grupos = [
   },
 ]
 
+// Lo único que ve el rol «comercial» (28 oct 2026). App.jsx lo usa también para
+// no montar ninguna otra pantalla: la BD ya le cierra el resto, pero así no se
+// queda mirando una tabla vacía de pedidos o de liquidaciones.
+export const SECCIONES_COMERCIAL = ['establecimientos']
+
 // Ancho de la barra en sus dos estados. `ANCHO_PLEGADA` lo lee también App.jsx
 // para el margen del contenido: si los dos números se separan, queda una franja
 // muerta o el contenido se mete debajo de la barra.
 export const ANCHO_SIDEBAR = 240
 export const ANCHO_SIDEBAR_PLEGADA = 64
 
-export default function Sidebar({ active, onChange, onLogout, user, mobile = false, onClose, plegada = false, onPlegar }) {
+export default function Sidebar({ active, onChange, onLogout, user, rol, mobile = false, onClose, plegada = false, onPlegar }) {
   // En el cajón de tablet nunca se pliega: allí la barra se abre y se cierra
   // entera, y una tira de iconos sobre el contenido no se entendería.
   const mini = plegada && !mobile
+  const esComercial = rol === 'comercial'
+  const gruposVisibles = esComercial
+    ? grupos
+        .map(g => ({ ...g, items: g.items.filter(i => SECCIONES_COMERCIAL.includes(i.id)) }))
+        .filter(g => g.items.length > 0)
+    : grupos
   const [pendientes, setPendientes] = useState(0)
   const [unreadRider, setUnreadRider] = useState(0)
   const [creadoresPend, setCreadoresPend] = useState(0)
 
   useEffect(() => {
+    // Los contadores son de vinculaciones, soporte de riders y Creadores: nada
+    // que el comercial pueda leer ni resolver.
+    if (esComercial) return
     loadPendientes()
     loadUnreadRider()
     loadCreadoresPend()
@@ -99,7 +113,7 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
     // SUBSCRIBED y no llegaría jamás un evento — fallo mudo.
     const t = setInterval(loadCreadoresPend, 60000)
     return () => { supabase.removeChannel(ch1); supabase.removeChannel(ch2); clearInterval(t) }
-  }, [])
+  }, [esComercial])
 
   // Lo que espera decisión del superadmin, agregado sobre "Establecimientos" (donde se resuelve):
   // solicitudes de vinculación, propuestas de tarifa (¡estas se aplican solas al vencer!) y
@@ -217,7 +231,7 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
               fontWeight: 600,
               letterSpacing: '0.1em',
               textTransform: 'uppercase',
-            }}>Super admin</span>
+            }}>{esComercial ? 'Comercial' : 'Super admin'}</span>
           </div>
         )}
         {mobile && (
@@ -249,7 +263,7 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
         gap: 2,
         overflowY: 'auto',
       }}>
-        {grupos.map((grupo, i) => (
+        {gruposVisibles.map((grupo, i) => (
           <div key={grupo.titulo} style={{ marginTop: i === 0 ? 0 : mini ? 8 : 14 }}>
             {/* Plegada no cabe el rótulo del grupo, pero la agrupación sí hay que
                 conservarla: pasa a ser una línea de separación */}
@@ -394,7 +408,7 @@ export default function Sidebar({ active, onChange, onLogout, user, mobile = fal
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
           }}>{userName}</div>
-          <div style={{ ...type.caption, color: colors.stone, letterSpacing: 0 }}>Super admin</div>
+          <div style={{ ...type.caption, color: colors.stone, letterSpacing: 0 }}>{esComercial ? 'Comercial' : 'Super admin'}</div>
         </div>
         <button
           onClick={onLogout}

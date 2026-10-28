@@ -3,39 +3,44 @@ import { supabase } from '../lib/supabase'
 
 const AdminContext = createContext()
 
+// Quién entra en la consola. 'comercial' (28 oct 2026): Edinson, solo
+// Establecimientos y sin dinero, pedidos ni clientes (ver Sidebar.jsx).
+const ROLES_CONSOLA = ['superadmin', 'comercial']
+
 export function AdminProvider({ children }) {
   const [user, setUser] = useState(null)
+  const [rol, setRol] = useState(null)
   const [loading, setLoading] = useState(true)
   const [accessDenied, setAccessDenied] = useState(false)
 
   async function verificarRol(session) {
     if (!session?.user) {
       setUser(null)
+      setRol(null)
       setAccessDenied(false)
       return
     }
 
-    // Primero comprueba el rol en user_metadata del JWT (sin query a BD)
-    const rolJWT = session.user.user_metadata?.rol
-    if (rolJWT === 'superadmin') {
-      setUser(session.user)
-      setAccessDenied(false)
-      return
-    }
-
-    // Fallback: consulta tabla usuarios (por si el usuario no tiene user_metadata)
-    const { data } = await supabase
+    // Siempre desde `usuarios.rol`. Antes se miraba primero `user_metadata.rol`
+    // del JWT, y ese lo puede cambiar el propio usuario con auth.updateUser: no
+    // sirve para decidir qué pantallas ve, y menos ahora que hay dos roles.
+    const { data, error } = await supabase
       .from('usuarios')
       .select('rol')
       .eq('id', session.user.id)
-      .single()
+      .maybeSingle()
 
-    if (data?.rol === 'superadmin') {
+    // Un fallo de red al refrescar el token no debe echar a nadie: se deja como estaba.
+    if (error) return
+
+    if (ROLES_CONSOLA.includes(data?.rol)) {
       setUser(session.user)
+      setRol(data.rol)
       setAccessDenied(false)
     } else {
       await supabase.auth.signOut()
       setUser(null)
+      setRol(null)
       setAccessDenied(true)
     }
   }
@@ -48,6 +53,7 @@ export function AdminProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (_event === 'SIGNED_OUT') {
         setUser(null)
+        setRol(null)
         return
       }
       verificarRol(session)
@@ -71,11 +77,12 @@ export function AdminProvider({ children }) {
   async function logout() {
     await supabase.auth.signOut()
     setUser(null)
+    setRol(null)
     setAccessDenied(false)
   }
 
   return (
-    <AdminContext.Provider value={{ user, loading, login, logout, accessDenied }}>
+    <AdminContext.Provider value={{ user, rol, loading, login, logout, accessDenied }}>
       {children}
     </AdminContext.Provider>
   )

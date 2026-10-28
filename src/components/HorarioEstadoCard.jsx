@@ -20,7 +20,9 @@ function emptyHorario() {
   return obj
 }
 
-export default function HorarioEstadoCard({ establecimiento, onChanged }) {
+// `soloHorario` (rol comercial, 28 oct 2026): sin los botones de estado. Activar,
+// pausar o reanudar un restaurante es solo de Pidoo; la BD también se lo impide.
+export default function HorarioEstadoCard({ establecimiento, onChanged, soloHorario = false }) {
   const [horario, setHorario] = useState(() => establecimiento?.horario || emptyHorario())
   const [estado, setEstado] = useState(establecimiento?.estado || 'pendiente_verificacion')
   const [saving, setSaving] = useState(false)
@@ -132,7 +134,7 @@ export default function HorarioEstadoCard({ establecimiento, onChanged }) {
       </div>
 
       {/* Acciones de estado */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+      {!soloHorario && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
         {estado !== 'activo' && (
           <button
             onClick={() => cambiarEstado('activo')}
@@ -160,7 +162,7 @@ export default function HorarioEstadoCard({ establecimiento, onChanged }) {
             <Play size={14} /> Reanudar
           </button>
         )}
-      </div>
+      </div>}
 
       {/* Editor horario */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
