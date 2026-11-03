@@ -28,7 +28,7 @@ export default function Facturas() {
   async function cargar() {
     setCargando(true)
     const [f, a] = await Promise.all([
-      supabase.from('comercial_facturas').select('id, codigo, fecha, marca, cliente, base, igic, total, origen, forma_pago, periodo, enviada_at, enviada_a').order('fecha', { ascending: false }).order('numero', { ascending: false }),
+      supabase.from('comercial_facturas').select('id, codigo, fecha, marca, cliente, base, igic, total, origen, forma_pago, periodo, enviada_at, enviada_a, prueba').order('fecha', { ascending: false }).order('numero', { ascending: false }),
       supabase.from('comercial_ajustes').select('*').eq('id', 1).single(),
     ])
     if (f.error) toast(mensajeBD(f.error), 'error')
@@ -51,12 +51,14 @@ export default function Facturas() {
   const stats = useMemo(() => {
     const anio = String(new Date().getFullYear())
     const mes = new Date().toISOString().slice(0, 7)
-    const delAnio = facturas.filter(f => f.fecha.startsWith(anio))
+    // Las de PRUEBA (cobradas con la clave de prueba de Stripe) no cuentan.
+    const reales = facturas.filter(f => !f.prueba)
+    const delAnio = reales.filter(f => f.fecha.startsWith(anio))
     return {
       anio: delAnio.reduce((s, f) => s + Number(f.total), 0),
       base: delAnio.reduce((s, f) => s + Number(f.base), 0),
       igic: delAnio.reduce((s, f) => s + Number(f.igic), 0),
-      mes: facturas.filter(f => f.fecha.startsWith(mes)).reduce((s, f) => s + Number(f.total), 0),
+      mes: reales.filter(f => f.fecha.startsWith(mes)).reduce((s, f) => s + Number(f.total), 0),
     }
   }, [facturas])
 
@@ -96,7 +98,7 @@ export default function Facturas() {
 
       <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', alignItems: 'start', marginBottom: 20 }}>
         <ConexionStripe estado={stripeEstado} ocupado={ocupado === 'stripe'} onConectar={conectarStripe} onRefrescar={cargarStripe} />
-        {ajustes && <Ajustes ajustes={ajustes} hayFacturas={facturas.some(f => f.codigo.startsWith(ajustes.factura_serie))} onGuardado={cargar} />}
+        {ajustes && <Ajustes ajustes={ajustes} hayFacturas={facturas.some(f => !f.prueba && f.codigo.startsWith(ajustes.factura_serie))} onGuardado={cargar} />}
       </div>
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -120,6 +122,7 @@ export default function Facturas() {
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                     <span style={{ ...type.mono, fontWeight: 700, fontSize: 13 }}>{f.codigo}</span>
                     <Chip>{ORIGEN[f.origen]}</Chip>
+                    {f.prueba && <Chip tono="warning">PRUEBA · sin validez</Chip>}
                     <Chip tono={f.marca === 'pidoo' ? 'terracotta' : 'info'}>{MARCAS.find(m => m.value === f.marca)?.label}</Chip>
                   </div>
                   <div style={{ ...type.label, fontWeight: 600, marginTop: 3 }}>{f.cliente?.razon_social} <span style={{ color: colors.stone, fontWeight: 400 }}>· {f.cliente?.nif}</span></div>
