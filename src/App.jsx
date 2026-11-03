@@ -21,6 +21,9 @@ import Cargos from './pages/Cargos'
 import Socios from './pages/Socios'
 import Creadores from './pages/Creadores'
 import Promociones from './pages/Promociones'
+import Presupuestos from './pages/Presupuestos'
+import Facturas from './pages/Facturas'
+import Precios from './pages/Precios'
 import { useMediaQuery, BP } from './lib/useMediaQuery'
 import './index.css'
 
@@ -38,6 +41,9 @@ const SECCION_TITULOS = {
   cargos: 'Cargos',
   socios: 'Socios',
   creadores: 'Creadores',
+  presupuestos: 'Presupuestos',
+  facturas: 'Facturas',
+  precios: 'Precios',
   salud: 'Salud del sistema',
   algoritmo: 'Algoritmo',
   config: 'Configuración',
@@ -241,6 +247,9 @@ function AppContent() {
           {seccion === 'socios' && <Socios />}
           {seccion === 'creadores' && <Creadores />}
           {seccion === 'promociones' && <Promociones />}
+          {seccion === 'presupuestos' && <Presupuestos />}
+          {seccion === 'facturas' && <Facturas />}
+          {seccion === 'precios' && <Precios />}
           {seccion === 'salud' && <SaludSistema />}
           {seccion === 'algoritmo' && <Algoritmo />}
           {seccion === 'config' && <Configuracion />}

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   BarChart3, Store, Users, User, ClipboardList, Radar,
   MessageCircle, Settings, LogOut, X, Truck, Bell, RotateCcw, FileText, Receipt,
-  Activity, Scale, Video, PanelLeftClose, PanelLeftOpen, Workflow, Tag,
+  Activity, Scale, Video, PanelLeftClose, PanelLeftOpen, Workflow, Tag, BadgeEuro, Tags,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { colors, type, radius } from '../lib/darkStyles'
@@ -43,6 +43,16 @@ const grupos = [
     ],
   },
   {
+    // 3 nov 2026: presupuestos con firma y cobro por Stripe (cuenta Rogotech),
+    // facturas de Marlon y su catálogo de precios.
+    titulo: 'Comercial',
+    items: [
+      { id: 'presupuestos',     label: 'Presupuestos',      Icon: FileText },
+      { id: 'facturas',         label: 'Facturas',          Icon: BadgeEuro },
+      { id: 'precios',          label: 'Precios',           Icon: Tags },
+    ],
+  },
+  {
     titulo: 'Dinero',
     items: [
       { id: 'liquidaciones',    label: 'Liquidaciones',     Icon: Receipt },
@@ -72,7 +82,8 @@ const grupos = [
 // Lo único que ve el rol «comercial» (28 oct 2026). App.jsx lo usa también para
 // no montar ninguna otra pantalla: la BD ya le cierra el resto, pero así no se
 // queda mirando una tabla vacía de pedidos o de liquidaciones.
-export const SECCIONES_COMERCIAL = ['establecimientos']
+// 3 nov: + Presupuestos (solo los suyos; facturas y precios, no).
+export const SECCIONES_COMERCIAL = ['establecimientos', 'presupuestos']
 
 // Ancho de la barra en sus dos estados. `ANCHO_PLEGADA` lo lee también App.jsx
 // para el margen del contenido: si los dos números se separan, queda una franja
