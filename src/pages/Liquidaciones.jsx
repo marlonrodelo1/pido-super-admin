@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { RefreshCw, Download, Check, AlertTriangle, Link2, FileText } from 'lucide-react'
+import { RefreshCw, Download, Check, AlertTriangle, Link2, FileText, Eraser } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { ds, colors, type, radius } from '../lib/darkStyles'
 import { Card, Chip, GhostBtn, GlossyBtn, MiniBtn, StatCard, Vacio, fmtEUR } from '../lib/ui'
@@ -38,6 +38,7 @@ export default function Liquidaciones() {
   const [recalc, setRecalc] = useState(false)
   const [pack, setPack] = useState(false)
   const [pagoModal, setPagoModal] = useState(null) // { row, referencia, fecha, guardando }
+  const [arrastreModal, setArrastreModal] = useState(null) // { row, previas, guardando }
 
   async function cargar() {
     setLoading(true)
@@ -118,6 +119,45 @@ export default function Liquidaciones() {
     }
     toast('Marcada como pagada', 'success')
     setPagoModal(null)
+    cargar()
+  }
+
+  // Quitar arrastre. El arrastre no se calcula: se hereda de las semanas
+  // anteriores que siguen 'pendiente'/'arrastrada'. Si ya se pagaron por fuera y
+  // nadie pulsó «Pagada», reaparecen cada lunes. La RPC cierra esas semanas como
+  // pagadas y deja esta solo con lo suyo; luego se regenera el PDF del periodo.
+  function abrirQuitarArrastre(row) {
+    const previas = rows
+      .filter(x => x.establecimiento_id === row.establecimiento_id
+        && x.periodo_fin < row.periodo_inicio
+        && ['pendiente', 'arrastrada'].includes(x.estado))
+      .sort((a, b) => (a.periodo_inicio < b.periodo_inicio ? -1 : 1))
+    setArrastreModal({ row, previas, guardando: false })
+  }
+
+  async function confirmarQuitarArrastre() {
+    if (!arrastreModal || arrastreModal.guardando) return
+    const { row } = arrastreModal
+    setArrastreModal(m => ({ ...m, guardando: true }))
+    const { error } = await supabase.rpc('quitar_arrastre_liquidacion', { p_id: row.id })
+    if (error) {
+      toast('No se pudo quitar el arrastre: ' + error.message, 'error')
+      setArrastreModal(m => (m ? { ...m, guardando: false } : m))
+      return
+    }
+    // El dato ya está bien; ahora el PDF. Si falla, el arreglo sigue hecho y
+    // basta con «Generar pack» de esa semana.
+    try {
+      const { data, error: ePack } = await supabase.functions.invoke('generar-pack-liquidacion', {
+        body: { periodo_inicio: row.periodo_inicio, periodo_fin: row.periodo_fin },
+      })
+      if (ePack) throw new Error(data?.error || ePack.message)
+      if (!data?.ok) throw new Error(data?.error || 'Respuesta inesperada')
+      toast(`Arrastre quitado. ${row.establecimientos?.nombre || 'Restaurante'}: ${euro(row.transfer_restaurante)} y PDF nuevo`, 'success')
+    } catch (e) {
+      toast('Arrastre quitado, pero el PDF no se regeneró: ' + e.message + '. Pulsa «Generar pack» con esa semana.', 'error')
+    }
+    setArrastreModal(null)
     cargar()
   }
 
@@ -296,7 +336,14 @@ export default function Liquidaciones() {
                   <div data-col="est" style={{ flex: '1.4 1 150px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
                     <div style={{ ...type.label, fontWeight: 700, color: liqColor }}>{liqTxt}</div>
                     {r.estado === 'pendiente' && Math.abs(arr) >= 0.005 && (
-                      <div style={{ ...type.caption, color: colors.textMute, marginTop: 2 }}>incl. arrastre {euro(arr)}</div>
+                      <>
+                        <div style={{ ...type.caption, color: colors.textMute, marginTop: 2 }}>incl. arrastre {euro(arr)}</div>
+                        <MiniBtn onClick={() => abrirQuitarArrastre(r)} style={{ marginTop: 6 }}
+                          title="Las semanas anteriores ya están pagadas: quitar el arrastre de esta liquidación"
+                          aria-label={`Quitar el arrastre de la liquidación de ${r.establecimientos?.nombre || 'este restaurante'}`}>
+                          <Eraser size={13} /> Quitar arrastre
+                        </MiniBtn>
+                      </>
                     )}
                     {r.estado === 'pagada' && (r.pagado_at || r.referencia_pago) && (
                       <div style={{ ...type.caption, color: colors.textMute, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -324,6 +371,65 @@ export default function Liquidaciones() {
           </div>
         </div>
       )}
+
+      {/* Quitar arrastre: enseña qué semanas se cierran y cómo queda esta */}
+      {arrastreModal && (() => {
+        const { row: r, previas, guardando } = arrastreModal
+        const arr = Number(r.saldo_arrastre || 0)
+        const antes = Number(r.neto_a_pagar || 0)
+        const despues = Number(r.transfer_restaurante || 0)
+        const sumaPrevias = previas.reduce((s, x) => s + Number(x.transfer_restaurante || 0), 0)
+        const cuadra = Math.abs(sumaPrevias - arr) < 0.005
+        const txtImporte = (v) => v > 0 ? `Pido paga ${euro(v)}` : v < 0 ? `Restaurante debe ${euro(Math.abs(v))}` : 'Sin movimiento'
+        return (
+          <div onClick={() => { if (!guardando) setArrastreModal(null) }} style={ds.modal}>
+            <div onClick={e => e.stopPropagation()} className="admin-modal-content" style={{ ...ds.modalContent, maxWidth: 460 }}>
+              <div style={ds.h3}>Quitar arrastre</div>
+              <div style={{ ...type.body, color: colors.textMute, marginTop: 4 }}>
+                {r.establecimientos?.nombre || 'Restaurante'} · {periodoLabel(r.periodo_inicio, r.periodo_fin)}
+              </div>
+
+              <div style={{ ...type.label, color: colors.text, marginTop: 16 }}>
+                {previas.length > 0
+                  ? `Estas semanas se marcan como pagadas (ya se pagaron por fuera):`
+                  : 'No hay semanas anteriores abiertas; solo se pone el arrastre a 0.'}
+              </div>
+              {previas.length > 0 && (
+                <div style={{ marginTop: 8, borderRadius: radius.md, border: `1px solid ${colors.border}`, overflow: 'hidden' }}>
+                  {previas.map(x => (
+                    <div key={x.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '8px 12px', borderBottom: `1px solid ${colors.border}`, ...type.label }}>
+                      <span style={{ color: colors.textMute }}>{periodoLabel(x.periodo_inicio, x.periodo_fin)}</span>
+                      <span style={{ fontVariantNumeric: 'tabular-nums', color: colors.text }}>{euro(x.transfer_restaurante)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {previas.length > 0 && !cuadra && (
+                <div style={{ ...type.caption, color: colors.onTerracottaSoft, marginTop: 6 }}>
+                  Ojo: esas semanas suman {euro(sumaPrevias)} y el arrastre es {euro(arr)}. Se cierran igual.
+                </div>
+              )}
+
+              <div style={{ marginTop: 16, padding: '14px 16px', borderRadius: radius.md, background: colors.elev2, border: `1px solid ${colors.border}` }}>
+                <div style={{ ...type.label, color: colors.textMute }}>Esta semana queda en</div>
+                <div style={{ ...type.num, fontSize: 26, marginTop: 4, color: despues >= 0 ? colors.onSageSoft : colors.onTerracottaSoft }}>
+                  {txtImporte(despues)}
+                </div>
+                <div style={{ ...type.caption, color: colors.textMute, marginTop: 4 }}>
+                  Antes: {txtImporte(antes)} (con {euro(arr)} de arrastre). El PDF se vuelve a generar.
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 20 }}>
+                <GhostBtn onClick={() => setArrastreModal(null)} disabled={guardando}>Cancelar</GhostBtn>
+                <GlossyBtn accent onClick={confirmarQuitarArrastre} disabled={guardando} style={{ opacity: guardando ? 0.6 : 1 }}>
+                  <Eraser size={15} /> {guardando ? 'Quitando y generando PDF…' : 'Quitar arrastre'}
+                </GlossyBtn>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Marcar pagada: fecha + referencia de la transferencia */}
       {pagoModal && (() => {
