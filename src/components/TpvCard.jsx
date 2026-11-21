@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Calculator, Wallet } from 'lucide-react'
+import { Calculator, Wallet, CalendarClock } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { colors, radius, type } from '../lib/darkStyles'
 import { Toggle } from '../lib/ui'
@@ -34,6 +34,9 @@ export default function TpvCard({ establecimiento, onChanged }) {
   const [busy, setBusy] = useState(false)
   const [serie, setSerie] = useState('A')
   const [igic, setIgic] = useState('7')
+  // Liquidación diaria (21 nov 2026): cobros con tarjeta en persona pagados cada día.
+  const [liqDesde, setLiqDesde] = useState(null)
+  const [busyDiaria, setBusyDiaria] = useState(false)
 
   const load = useCallback(async () => {
     if (!estId) return
@@ -41,7 +44,7 @@ export default function TpvCard({ establecimiento, onChanged }) {
     const mes = new Date()
     mes.setDate(1); mes.setHours(0, 0, 0, 0)
 
-    const [c, t, caja, ult] = await Promise.all([
+    const [c, t, caja, ult, est] = await Promise.all([
       supabase.from('tpv_config').select('*').eq('establecimiento_id', estId).maybeSingle(),
       supabase.from('tpv_tickets').select('total')
         .eq('establecimiento_id', estId).gte('emitido_at', mes.toISOString()),
@@ -54,9 +57,11 @@ export default function TpvCard({ establecimiento, onChanged }) {
       supabase.from('tpv_tickets').select('emitido_at')
         .eq('establecimiento_id', estId)
         .order('emitido_at', { ascending: false }).limit(1).maybeSingle(),
+      supabase.from('establecimientos').select('liquidacion_diaria_desde').eq('id', estId).maybeSingle(),
     ])
 
     setCfg(c.data || null)
+    setLiqDesde(est.data?.liquidacion_diaria_desde || null)
     if (c.data) { setSerie(c.data.serie_ticket || 'A'); setIgic(String(c.data.igic_pct ?? 7)) }
     const filas = t.data || []
     setStats({
@@ -92,6 +97,30 @@ export default function TpvCard({ establecimiento, onChanged }) {
     if (error) return toast('Error: ' + error.message, 'error')
     toast(nuevo ? 'TPV activado' : 'TPV desactivado', 'success')
     load()
+    onChanged?.()
+  }
+
+  // La activa SOLO Pidoo (RPC liquidacion_diaria_configurar, superadmin). Empieza con el
+  // siguiente día del negocio (las 05:00 que vienen) para que todos los días vayan completos.
+  async function toggleDiaria() {
+    const nombre = establecimiento?.nombre || 'este restaurante'
+    const nuevo = !liqDesde
+    const ok = await confirmar(nuevo
+      ? `Liquidación diaria para ${nombre}.\n\n` +
+        `Lo que cobre con tarjeta en persona (su lector del local y el móvil del repartidor) se le paga ` +
+        `cada día, al día siguiente, menos la comisión de Stripe. Ese dinero sale de la liquidación de los ` +
+        `lunes: lo de la app y la web sigue el lunes con el 10 %.\n\n` +
+        `Empieza mañana a las 05:00 (días completos de 05:00 a 05:00).`
+      : `Apagar la liquidación diaria de ${nombre}.\n\n` +
+        `Lo que ya está en una liquidación diaria se sigue pagando por la diaria. Lo que cobre a partir de ` +
+        `ahora con tarjeta en persona vuelve a la liquidación de los lunes.`)
+    if (!ok) return
+    setBusyDiaria(true)
+    const { data, error } = await supabase.rpc('liquidacion_diaria_configurar', { p_est: estId, p_activa: nuevo })
+    setBusyDiaria(false)
+    if (error) return toast('Error: ' + error.message, 'error')
+    setLiqDesde(data || null)
+    toast(nuevo ? 'Liquidación diaria activada' : 'Liquidación diaria apagada', 'success')
     onChanged?.()
   }
 
@@ -219,6 +248,25 @@ export default function TpvCard({ establecimiento, onChanged }) {
             se toca al dar de alta, o para arreglar un alta mal hecha.
           </div>
         </>
+      )}
+
+      {/* Se enseña también con el TPV apagado si sigue activa: así siempre se puede apagar. */}
+      {(activo || liqDesde) && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginTop: 14,
+          borderRadius: radius.md, border: `1px solid ${colors.border}`, background: colors.cream,
+        }}>
+          <CalendarClock size={18} color={colors.terracotta} style={{ flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ ...type.body, fontWeight: 600, color: colors.text }}>Liquidación diaria</div>
+            <div style={{ ...type.label, color: colors.textMute, marginTop: 2, lineHeight: 1.45 }}>
+              {liqDesde
+                ? `Activa desde el ${new Date(liqDesde).toLocaleString('es-ES', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}. Lo cobrado con tarjeta en su local y por el repartidor se le paga cada día (Liquidaciones › Diarias).`
+                : 'Apagada: lo cobrado con tarjeta en su local y por el repartidor va en la liquidación de los lunes.'}
+            </div>
+          </div>
+          <Toggle on={!!liqDesde} disabled={busyDiaria} tone="sage" onChange={toggleDiaria} aria-label="Liquidación diaria" />
+        </div>
       )}
     </div>
   )

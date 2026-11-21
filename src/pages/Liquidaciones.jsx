@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { RefreshCw, Download, Check, AlertTriangle, Link2, FileText, Eraser } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { ds, colors, type, radius } from '../lib/darkStyles'
-import { Card, Chip, GhostBtn, GlossyBtn, MiniBtn, StatCard, Vacio, fmtEUR } from '../lib/ui'
+import { Card, Chip, GhostBtn, GlossyBtn, MiniBtn, StatCard, Vacio, Segmented, fmtEUR } from '../lib/ui'
 import { toast } from '../App'
+import LiquidacionesDiarias from './LiquidacionesDiarias'
 
 // Este fichero era el único del panel que NO importaba el sistema de estilos:
 // se definía su propia `card` y su propio `btn`, ya divergidos de los del resto.
@@ -32,6 +33,8 @@ const ESTADOS = {
 }
 
 export default function Liquidaciones() {
+  // Semanales (lunes: app y web) o diarias (cobros con tarjeta en persona, 21 nov 2026).
+  const [vista, setVista] = useState('semanales')
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [periodo, setPeriodo] = useState('todos')
@@ -223,10 +226,12 @@ export default function Liquidaciones() {
         <div>
           <h1 style={{ ...ds.h1, marginBottom: 4 }}>Liquidaciones</h1>
           <div style={{ ...type.body, color: colors.textMute }}>
-            Cortes semanales (lunes). El sistema calcula; el pago lo lanzas tú.
+            {vista === 'semanales'
+              ? 'Cortes semanales (lunes): la app y la web. El sistema calcula; el pago lo lanzas tú.'
+              : 'Cada día: lo cobrado con tarjeta en persona (lector del local y móvil del repartidor).'}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {vista === 'semanales' && <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <GhostBtn onClick={recalcular} disabled={recalc} style={{ opacity: recalc ? 0.6 : 1 }}>
             <RefreshCw size={15} /> {recalc ? 'Recalculando…' : 'Recalcular semana'}
           </GhostBtn>
@@ -238,9 +243,15 @@ export default function Liquidaciones() {
             style={{ opacity: pack || periodo === 'todos' ? 0.6 : 1 }}>
             <FileText size={15} /> {pack ? 'Generando…' : 'Generar pack'}
           </GlossyBtn>
-        </div>
+        </div>}
       </div>
 
+      <Segmented
+        options={[{ value: 'semanales', label: 'Semanales (lunes)' }, { value: 'diarias', label: 'Diarias' }]}
+        value={vista} onChange={setVista} style={{ marginBottom: 16 }}
+      />
+
+      {vista === 'diarias' ? <LiquidacionesDiarias /> : <>
       <div className="ds-cards" style={{ marginBottom: 16 }}>
         <StatCard label="Pido paga (pendiente)" value={euro(totPidoPaga)} sub="A favor del restaurante" tone="sage" />
         <StatCard label="Restaurantes deben (pendiente)" value={euro(totRestPaga)} sub="Comisión por cobrar" tone="terracotta" />
@@ -486,6 +497,7 @@ export default function Liquidaciones() {
           </div>
         )
       })()}
+      </>}
     </div>
   )
 }
